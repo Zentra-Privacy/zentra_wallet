@@ -6,6 +6,8 @@ import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
 import '../core/network/zentra_network.dart';
 import '../core/network/zentra_public_nodes.dart';
+import '../core/seed_utils.dart';
+import '../core/wallet_exception.dart';
 import '../models/wallet_models.dart';
 import '../services/embedded_wallet_service.dart';
 import '../services/settings_store.dart';
@@ -72,7 +74,31 @@ class WalletProvider extends ChangeNotifier {
 
   void _refreshNativeFlag() => nativeAvailable = ZentraNativeWallet.isAvailable;
 
-  Future<bool> connect() async {
+  static String _userMessage(Object e) {
+    final s = e.toString();
+    if (e is NativeWalletUnavailable || e is WalletException) {
+      return s;
+    }
+    return s.replaceFirst(RegExp(r'^Exception:\s*'), '');
+  }
+
+  Future<void> _applyWalletSnapshot() async {
+    balance = await _wallet!.fetchBalance();
+    primaryAddress = await _wallet!.fetchPrimaryAddress();
+    walletHeight = await _wallet!.fetchWalletHeight();
+    daemonBlockHeight = await _wallet!.fetchDaemonHeight();
+    daemonStatus = 'Daemon height $daemonBlockHeight';
+    final list = await _wallet!.fetchTransfers();
+    list.sort((a, b) {
+      final ta = a.timestamp;
+      final tb = b.timestamp;
+      if (ta != tb) return tb.compareTo(ta);
+      return b.height.compareTo(a.height);
+    });
+    transfers = list;
+  }
+
+  Future<bool> connect({String? passwordOverride}) async {
     _refreshNativeFlag();
     if (!nativeAvailable) {
       connectionState = WalletConnectionState.error;
@@ -92,22 +118,18 @@ class WalletProvider extends ChangeNotifier {
 
     try {
       await _ensureWallet();
+      final password = passwordOverride ?? await _settings.loadWalletPassword() ?? '';
       _wallet!.openWallet(
         filename: walletFilename!,
-        password: await _settings.loadWalletPassword() ?? '',
+        password: password,
       );
       await _wallet!.refresh();
-      balance = await _wallet!.fetchBalance();
-      primaryAddress = await _wallet!.fetchPrimaryAddress();
-      walletHeight = await _wallet!.fetchWalletHeight();
-      daemonBlockHeight = await _wallet!.fetchDaemonHeight();
-      daemonStatus = 'Daemon height $daemonBlockHeight';
-      transfers = await _wallet!.fetchTransfers();
+      await _applyWalletSnapshot();
       connectionState = WalletConnectionState.connected;
       return true;
     } catch (e) {
       connectionState = WalletConnectionState.error;
-      errorMessage = e.toString();
+      errorMessage = _userMessage(e);
       return false;
     } finally {
       notifyListeners();
@@ -115,19 +137,15 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
-    if (_wallet == null || !(_wallet!.isOpen)) return;
+    if (_wallet == null || !_wallet!.isOpen) return;
     isRefreshing = true;
     notifyListeners();
     try {
       await _wallet!.refresh();
-      balance = await _wallet!.fetchBalance();
-      primaryAddress = await _wallet!.fetchPrimaryAddress();
-      walletHeight = await _wallet!.fetchWalletHeight();
-      daemonBlockHeight = await _wallet!.fetchDaemonHeight();
-      transfers = await _wallet!.fetchTransfers();
+      await _applyWalletSnapshot();
       errorMessage = null;
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage = _userMessage(e);
     } finally {
       isRefreshing = false;
       notifyListeners();
@@ -145,19 +163,21 @@ class WalletProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    if (!isValidWalletFilename(filename)) {
+      errorMessage = 'Wallet name must be a simple filename (no path separators)';
+      notifyListeners();
+      return false;
+    }
     await _ensureWallet();
     try {
-      _wallet!.createWallet(filename: filename, password: password);
+      _wallet!.createWallet(filename: filename.trim(), password: password);
       final ok = await _syncAfterOpen();
       if (ok) {
-        await _settings.saveWalletFilename(filename);
-        await _settings.saveWalletPassword(password);
-        await _settings.setOnboarded(true);
-        walletFilename = filename;
+        await _persistWalletSession(filename, password);
       }
       return ok;
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage = _userMessage(e);
       notifyListeners();
       return false;
     }
@@ -176,24 +196,32 @@ class WalletProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    final normalized = SeedUtils.normalize(seed);
+    if (!SeedUtils.isValidWordCount(normalized)) {
+      errorMessage = 'Seed must be 12, 13, 24, or 25 words';
+      notifyListeners();
+      return false;
+    }
+    if (!isValidWalletFilename(filename)) {
+      errorMessage = 'Wallet name must be a simple filename (no path separators)';
+      notifyListeners();
+      return false;
+    }
     await _ensureWallet();
     try {
       _wallet!.restoreWallet(
-        filename: filename,
+        filename: filename.trim(),
         password: password,
-        seed: seed,
+        seed: normalized,
         restoreHeight: restoreHeight,
       );
       final ok = await _syncAfterOpen();
       if (ok) {
-        await _settings.saveWalletFilename(filename);
-        await _settings.saveWalletPassword(password);
-        await _settings.setOnboarded(true);
-        walletFilename = filename;
+        await _persistWalletSession(filename, password);
       }
       return ok;
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage = _userMessage(e);
       notifyListeners();
       return false;
     }
@@ -204,32 +232,43 @@ class WalletProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _wallet!.refresh();
-      balance = await _wallet!.fetchBalance();
-      primaryAddress = await _wallet!.fetchPrimaryAddress();
-      walletHeight = await _wallet!.fetchWalletHeight();
-      daemonBlockHeight = await _wallet!.fetchDaemonHeight();
-      daemonStatus = 'Daemon height $daemonBlockHeight';
-      transfers = await _wallet!.fetchTransfers();
+      await _applyWalletSnapshot();
       connectionState = WalletConnectionState.connected;
       return true;
     } catch (e) {
       connectionState = WalletConnectionState.error;
-      errorMessage = e.toString();
+      errorMessage = _userMessage(e);
       return false;
     } finally {
       notifyListeners();
     }
   }
 
-  Future<bool> openExistingWallet({
-    required String filename,
-    required String password,
-  }) async {
+  Future<void> _persistWalletSession(String filename, String password) async {
     await _settings.saveWalletFilename(filename);
     await _settings.saveWalletPassword(password);
     await _settings.setOnboarded(true);
     walletFilename = filename;
-    return connect();
+  }
+
+  Future<bool> openExistingWallet({
+    required String filename,
+    required String password,
+  }) async {
+    final previousFilename = walletFilename;
+    walletFilename = filename;
+    final ok = await connect(passwordOverride: password);
+    if (ok) {
+      await _persistWalletSession(filename, password);
+    } else {
+      walletFilename = previousFilename;
+    }
+    return ok;
+  }
+
+  static bool isValidWalletFilename(String name) {
+    final t = name.trim();
+    return t.isNotEmpty && !t.contains('/') && !t.contains('\\');
   }
 
   Future<String?> sendTransfer({
@@ -251,7 +290,7 @@ class WalletProvider extends ChangeNotifier {
       await refresh();
       return tx;
     } catch (e) {
-      errorMessage = e.toString();
+      errorMessage = _userMessage(e);
       notifyListeners();
       return null;
     }
@@ -264,10 +303,11 @@ class WalletProvider extends ChangeNotifier {
       _wallet?.parseDisplay(display) ?? ZentraCore.instance.displayToAtomic(display);
 
   bool validateAddress(String addr) {
-    if (addr.trim().isEmpty) return false;
-    if (_wallet != null) return _wallet!.validateAddress(addr);
+    final trimmed = addr.trim();
+    if (trimmed.isEmpty) return false;
+    if (_wallet != null) return _wallet!.validateAddress(trimmed);
     if (!nativeAvailable || networkConfig == null) return false;
-    return ZentraNativeWallet.instance.addressValid(addr, networkConfig!.type.index);
+    return ZentraNativeWallet.instance.addressValid(trimmed, networkConfig!.type.index);
   }
 
   bool get isWalletBehindDaemon {
@@ -276,6 +316,7 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<void> updateNetwork(ZentraNetType type) async {
+    final reconnect = walletFilename != null && walletFilename!.isNotEmpty;
     networkType = type;
     networkConfig = ZentraNetworkConfig.fromType(type);
     await _settings.saveNetwork(type);
@@ -293,6 +334,7 @@ class WalletProvider extends ChangeNotifier {
     await _settings.saveNode(nodeSettings!);
     _resetWalletSession();
     notifyListeners();
+    if (reconnect) await connect();
   }
 
   Future<void> updateNode(NodeConnectionSettings settings) async {

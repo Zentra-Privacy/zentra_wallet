@@ -241,7 +241,10 @@ ZENTRA_WM_API int zentra_wm_refresh(ZentraWalletHandle wallet) {
   auto* w = as_wallet(wallet);
   if (!w) return 0;
   try {
-    return w->refresh() ? 1 : 0;
+    if (w->refresh()) return 1;
+    const auto err = w->errorString();
+    set_error(err.empty() ? "refresh failed" : err);
+    return 0;
   } catch (const std::exception& e) {
     set_error(e.what());
     return 0;
@@ -262,24 +265,28 @@ ZENTRA_WM_API int zentra_wm_start_background_refresh(ZentraWalletHandle wallet) 
 }
 
 ZENTRA_WM_API uint64_t zentra_wm_balance(ZentraWalletHandle wallet) {
+  std::lock_guard<std::mutex> lock(g_mutex);
   auto* w = as_wallet(wallet);
   if (!w) return 0;
   return w->balanceAll();
 }
 
 ZENTRA_WM_API uint64_t zentra_wm_unlocked_balance(ZentraWalletHandle wallet) {
+  std::lock_guard<std::mutex> lock(g_mutex);
   auto* w = as_wallet(wallet);
   if (!w) return 0;
   return w->unlockedBalanceAll();
 }
 
 ZENTRA_WM_API uint64_t zentra_wm_wallet_height(ZentraWalletHandle wallet) {
+  std::lock_guard<std::mutex> lock(g_mutex);
   auto* w = as_wallet(wallet);
   if (!w) return 0;
   return w->blockChainHeight();
 }
 
 ZENTRA_WM_API uint64_t zentra_wm_daemon_height(ZentraWalletHandle wallet) {
+  std::lock_guard<std::mutex> lock(g_mutex);
   auto* w = as_wallet(wallet);
   if (!w) return 0;
   return w->daemonBlockChainHeight();

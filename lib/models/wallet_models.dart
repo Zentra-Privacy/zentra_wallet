@@ -45,7 +45,7 @@ class WalletTransfer {
     final paymentId = json['payment_id'] as String?;
     return WalletTransfer(
       txid: json['txid'] as String? ?? '',
-      amountAtomic: (json['amount'] as num?)?.toInt() ?? 0,
+      amountAtomic: ((json['amount'] as num?)?.toInt() ?? 0).abs(),
       isIncoming: json['incoming'] == true,
       timestamp: (json['timestamp'] as num?)?.toInt() ?? 0,
       height: (json['height'] as num?)?.toInt() ?? 0,

@@ -3,6 +3,7 @@ import 'dart:ffi' as ffi;
 import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
 import '../core/network/zentra_network.dart';
+import '../core/wallet_exception.dart';
 import '../models/wallet_models.dart';
 
 /// Embedded wallet2 (Cake/Monero-style) — keys and sync on device; remote zentrad only.
@@ -109,24 +110,23 @@ class EmbeddedWalletService {
   }
 
   bool validateAddress(String address) =>
-      _native.addressValid(address, nettypeIndex);
+      _native.addressValid(address.trim(), nettypeIndex);
 
   String formatAtomic(int atomic) => ZentraCore.instance.atomicToDisplay(atomic);
 
-  int parseDisplay(String display) => ZentraCore.instance.displayToAtomic(display);
+  int parseDisplay(String display) => ZentraCore.instance.displayToAtomic(display.trim());
 
+  /// Sends [amountDisplay] ZTR. Fees are deducted by wallet2 — do not pre-check
+  /// unlocked balance here (amount + fee is validated natively).
   Future<String> send({required String address, required String amountDisplay}) async {
     _requireOpen();
-    if (!validateAddress(address)) {
-      throw NativeWalletUnavailable('Invalid address for ${network.label}');
+    final dest = address.trim();
+    if (!validateAddress(dest)) {
+      throw WalletException('Invalid address for ${network.label}');
     }
     final atomic = parseDisplay(amountDisplay);
-    if (atomic <= 0) throw NativeWalletUnavailable('Invalid amount');
-    final bal = await fetchBalance();
-    if (atomic > bal.unlockedAtomic) {
-      throw NativeWalletUnavailable('Insufficient unlocked balance');
-    }
-    final txid = _native.send(_handle!, address, atomic);
+    if (atomic <= 0) throw WalletException('Invalid amount');
+    final txid = _native.send(_handle!, dest, atomic);
     store();
     return txid;
   }
@@ -142,6 +142,6 @@ class EmbeddedWalletService {
   }
 
   void _requireOpen() {
-    if (!isOpen) throw NativeWalletUnavailable('No wallet open');
+    if (!isOpen) throw WalletException('No wallet open');
   }
 }

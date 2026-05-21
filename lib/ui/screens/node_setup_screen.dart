@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/network/rpc_address.dart';
 import '../../core/network/zentra_network.dart';
 import '../../core/network/zentra_public_nodes.dart';
 import '../../models/wallet_models.dart';
@@ -48,8 +49,15 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
   }
 
   Future<void> _save() async {
+    final addr = _daemon.text.trim();
+    if (RpcAddress.parse(addr) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid daemon address (use host:port)')),
+      );
+      return;
+    }
     final settings = NodeConnectionSettings(
-      daemonAddress: _daemon.text.trim(),
+      daemonAddress: addr,
       publicNodeId: _useCustom ? null : _selectedNodeId,
     );
     await context.read<WalletProvider>().updateNode(settings);
