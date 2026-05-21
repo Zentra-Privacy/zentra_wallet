@@ -59,7 +59,13 @@ class SettingsScreen extends StatelessWidget {
                 await wallet.updateNetwork(v);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Network changed — use Reconnect')),
+                    SnackBar(
+                      content: Text(
+                        wallet.connectionState == WalletConnectionState.connected
+                            ? 'Network changed — reconnecting'
+                            : 'Network changed',
+                      ),
+                    ),
                   );
                 }
               },

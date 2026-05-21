@@ -38,12 +38,6 @@ class _SendScreenState extends State<SendScreen> {
       _msg('Enter a valid amount');
       return;
     }
-    final unlocked = wallet.balance?.unlockedAtomic ?? 0;
-    final atomic = wallet.parseAmount(_amount.text.trim());
-    if (atomic > unlocked) {
-      _msg('Insufficient unlocked balance');
-      return;
-    }
     setState(() => _sending = true);
     final tx = await wallet.sendTransfer(
       address: _address.text.trim(),
@@ -97,7 +91,7 @@ class _SendScreenState extends State<SendScreen> {
                 labelText: 'Amount',
                 suffixText: 'ZTR',
                 helperText: wallet.balance != null
-                    ? 'Unlocked ${wallet.formatAmount(wallet.balance!.unlockedAtomic)} ZTR'
+                    ? 'Unlocked ${wallet.formatAmount(wallet.balance!.unlockedAtomic)} ZTR (fees deducted on send)'
                     : null,
               ),
             ),

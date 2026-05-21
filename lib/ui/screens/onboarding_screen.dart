@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
 import '../../core/network/zentra_network.dart';
+import '../../core/seed_utils.dart';
 import '../../providers/wallet_provider.dart';
 import '../../theme/zentra_theme.dart';
 import '../widgets/zentra_ui.dart';
@@ -44,8 +45,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _snack('Password must be at least 4 characters');
       return;
     }
-    if (_restoreMode && _seed.text.trim().split(RegExp(r'\s+')).length < 12) {
-      _snack('Seed phrase looks too short');
+    if (_restoreMode && !SeedUtils.isValidWordCount(_seed.text)) {
+      _snack('Seed must be 12, 13, 24, or 25 words');
       return;
     }
     final p = context.read<WalletProvider>();
@@ -63,7 +64,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         : _restoreMode
             ? await p.restoreFromSeed(
                 filename: _filename.text.trim(),
-                seed: _seed.text.trim(),
+                seed: SeedUtils.normalize(_seed.text),
                 password: _password.text,
               )
             : await p.createNewWallet(
@@ -73,7 +74,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() => _loading = false);
     if (!mounted) return;
     if (ok) {
-      await p.refresh();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
