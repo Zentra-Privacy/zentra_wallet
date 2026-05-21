@@ -103,10 +103,8 @@ bool bind_wallet_to_daemon(Monero::Wallet* w, bool persist, int64_t refresh_heig
   }
   w->setTrustedDaemon(g_trusted_daemon != 0);
   if (refresh_height >= 0) {
-    uint64_t h = static_cast<uint64_t>(refresh_height);
-    if (h == 0) {
-      h = w->estimateBlockChainHeight();
-    }
+    // Height 0 = scan from genesis (wallet2::generate keeps 0; do not estimate).
+    const uint64_t h = static_cast<uint64_t>(refresh_height);
     w->setRefreshFromBlockHeight(clamp_refresh_height(w, h));
   }
   if (persist && !w->store("")) {
@@ -273,6 +271,7 @@ ZENTRA_WM_API ZentraWalletHandle zentra_wm_restore_wallet(
 }
 
 ZENTRA_WM_API uint64_t zentra_wm_get_restore_height(ZentraWalletHandle wallet) {
+  std::lock_guard<std::mutex> lock(g_mutex);
   auto* w = as_wallet(wallet);
   if (!w) return 0;
   return w->getRefreshFromBlockHeight();
@@ -367,14 +366,16 @@ ZENTRA_WM_API uint64_t zentra_wm_daemon_height(ZentraWalletHandle wallet) {
 }
 
 ZENTRA_WM_API char* zentra_wm_address(ZentraWalletHandle wallet) {
+  std::lock_guard<std::mutex> lock(g_mutex);
   auto* w = as_wallet(wallet);
-  if (!w) return nullptr;
+  if (!check_wallet(w)) return nullptr;
   return dup_string(w->address());
 }
 
 ZENTRA_WM_API char* zentra_wm_seed(ZentraWalletHandle wallet) {
+  std::lock_guard<std::mutex> lock(g_mutex);
   auto* w = as_wallet(wallet);
-  if (!w) return nullptr;
+  if (!check_wallet(w)) return nullptr;
   return dup_string(w->seed());
 }
 
