@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -17,59 +16,40 @@ class ReceiveScreen extends StatelessWidget {
 
     return ZentraScaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text('Receive'),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
+        title: const Text('Receive ZTR'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Your address',
-              style: TextStyle(color: ZentraTheme.textMuted, fontSize: 14),
+              'Share this address or QR code to receive Zentra (ZTR). Only send ZTR on the correct network.',
+              style: TextStyle(color: ZentraTheme.textMuted, fontSize: 13, height: 1.45),
             ),
             const SizedBox(height: 24),
             if (address.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: ZentraTheme.flatCard(color: Colors.white),
-                child: QrImageView(
-                  data: 'zentra:$address',
-                  version: QrVersions.auto,
-                  size: 200,
-                  eyeStyle: const QrEyeStyle(color: ZentraTheme.background),
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: ZentraTheme.flatCard(color: Colors.white),
+                  child: QrImageView(
+                    data: 'zentra:$address',
+                    version: QrVersions.auto,
+                    size: 200,
+                    eyeStyle: const QrEyeStyle(color: ZentraTheme.background),
+                  ),
                 ),
+              )
+            else
+              const ZentraEmptyState(
+                icon: Icons.hourglass_empty,
+                title: 'Address loading',
+                subtitle: 'Pull to refresh on Home if this takes too long.',
               ),
             const SizedBox(height: 24),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: ZentraTheme.flatCard(),
-              child: SelectableText(
-                address.isEmpty ? '—' : address,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, height: 1.5),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: address.isEmpty
-                    ? null
-                    : () {
-                        Clipboard.setData(ClipboardData(text: address));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Address copied')),
-                        );
-                      },
-                icon: const Icon(Icons.copy, size: 18),
-                label: const Text('Copy address'),
-              ),
-            ),
+            ZentraCopyField(label: 'Your address', value: address, maxLines: 4),
           ],
         ),
       ),

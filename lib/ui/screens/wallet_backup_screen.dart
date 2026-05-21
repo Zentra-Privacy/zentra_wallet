@@ -44,9 +44,7 @@ class _WalletBackupScreenState extends State<WalletBackupScreen> {
 
   void _copy(String label, String value) {
     Clipboard.setData(ClipboardData(text: value));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label copied')),
-    );
+    zentraSnack(context, '$label copied');
   }
 
   bool get _canContinue {

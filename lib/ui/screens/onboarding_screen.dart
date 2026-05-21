@@ -32,6 +32,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _restoreMode = false;
   bool _openMode = false;
   bool _customRestoreHeight = false;
+  bool _hidePassword = true;
 
   @override
   void initState() {
@@ -69,8 +70,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _snack('Wallet filename must be a simple name (no path separators)');
       return;
     }
-    if (_password.text.length < 4) {
-      _snack('Password must be at least 4 characters');
+    if (_password.text.length < 8) {
+      _snack('Use at least 8 characters for your wallet password', error: true);
       return;
     }
     if (_restoreMode && !SeedUtils.isValidWordCount(_seed.text)) {
@@ -136,8 +137,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  void _snack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(String msg, {bool error = false}) {
+    zentraSnack(context, msg, isError: error);
   }
 
   void _goCreate() {
@@ -344,8 +345,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _password,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Wallet password'),
+                  obscureText: _hidePassword,
+                  decoration: InputDecoration(
+                    labelText: 'Wallet password',
+                    helperText: 'Encrypts your wallet file on this device',
+                    suffixIcon: IconButton(
+                      icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                      onPressed: () => setState(() => _hidePassword = !_hidePassword),
+                    ),
+                  ),
                 ),
                 if (_restoreMode && !_openMode) ...[
                   const SizedBox(height: 12),

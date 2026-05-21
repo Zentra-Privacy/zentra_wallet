@@ -22,6 +22,46 @@ class SettingsScreen extends StatelessWidget {
     final list = ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: ZentraTheme.flatCard(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    ZentraConnectionChip(
+                      label: wallet.connectionStatusLabel,
+                      isError: wallet.connectionState == WalletConnectionState.error,
+                      isSyncing: wallet.isWalletBehindDaemon,
+                    ),
+                    const Spacer(),
+                    if (wallet.isRefreshing)
+                      const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.accent),
+                      ),
+                  ],
+                ),
+                if (wallet.syncProgressLabel != null) ...[
+                  const SizedBox(height: 10),
+                  Text(wallet.syncProgressLabel!, style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
+                ],
+                if (wallet.primaryAddress != null) ...[
+                  const SizedBox(height: 12),
+                  ZentraAddressChip(address: wallet.primaryAddress!.address),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
+          child: Text('Wallet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ZentraTheme.textMuted)),
+        ),
         ZentraSettingsTile(
           icon: Icons.account_balance_wallet_outlined,
           title: 'My Wallet',
@@ -38,9 +78,7 @@ class SettingsScreen extends StatelessWidget {
                   final backup = await wallet.fetchBackupInfo();
                   if (!context.mounted) return;
                   if (backup == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Could not read wallet backup')),
-                    );
+                    zentraSnack(context, 'Could not read wallet backup', isError: true);
                     return;
                   }
                   Navigator.of(context).push(
@@ -56,6 +94,10 @@ class SettingsScreen extends StatelessWidget {
               : null,
         ),
         const RestoreHeightSettingsPanel(),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
+          child: Text('Network', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ZentraTheme.textMuted)),
+        ),
         ZentraSettingsTile(
           icon: Icons.dns_outlined,
           title: 'Node',
@@ -84,14 +126,11 @@ class SettingsScreen extends StatelessWidget {
                 if (v == null) return;
                 await wallet.updateNetwork(v);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        wallet.connectionState == WalletConnectionState.connected
-                            ? 'Network changed — reconnecting'
-                            : 'Network changed',
-                      ),
-                    ),
+                  zentraSnack(
+                    context,
+                    wallet.connectionState == WalletConnectionState.connected
+                        ? 'Network changed — reconnecting'
+                        : 'Network changed',
                   );
                 }
               },
@@ -111,9 +150,7 @@ class SettingsScreen extends StatelessWidget {
           onTap: () async {
             final ok = await wallet.connect();
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(ok ? 'Connected' : 'Failed')),
-              );
+              zentraSnack(context, ok ? 'Connected to node' : wallet.errorMessage ?? 'Reconnect failed', isError: !ok);
             }
           },
         ),
