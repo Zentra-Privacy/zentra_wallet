@@ -35,6 +35,7 @@ bool is_base58_char(char c) {
 
 extern "C" {
 
+// Prefix/length/base58 only — not checksum-safe. Use wallet FFI addressValid for sends.
 ZENTRA_API int zentra_validate_address(const char* address, int network) {
   if (!address) return 0;
   const auto p = params_for(network);

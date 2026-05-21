@@ -134,7 +134,10 @@ class ZentraNativeWallet {
     if (_lib.refresh(handle) != 1) throw NativeWalletUnavailable(_lastError());
   }
 
-  void startBackgroundRefresh(ffi.Pointer<ffi.Void> handle) => _lib.startBgRefresh(handle);
+  bool startBackgroundRefresh(ffi.Pointer<ffi.Void> handle) =>
+      _lib.startBgRefresh(handle) == 1;
+
+  String lastErrorMessage() => _lastError();
 
   int balance(ffi.Pointer<ffi.Void> handle) => _lib.balance(handle);
 

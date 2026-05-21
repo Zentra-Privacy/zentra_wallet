@@ -259,7 +259,8 @@ ZENTRA_WM_API ZentraWalletHandle zentra_wm_restore_wallet(
       if (w) g_wm->closeWallet(w, false);
       return nullptr;
     }
-    if (!bind_wallet_to_daemon(w, true, -1)) {
+    // Pass restore_height so init()'s new-wallet fast-sync does not override explicit 0.
+    if (!bind_wallet_to_daemon(w, true, static_cast<int64_t>(restore_height))) {
       g_wm->closeWallet(w, false);
       return nullptr;
     }
@@ -452,10 +453,16 @@ ZENTRA_WM_API char* zentra_wm_send(
 }
 
 ZENTRA_WM_API int zentra_wm_store(ZentraWalletHandle wallet) {
+  std::lock_guard<std::mutex> lock(g_mutex);
   auto* w = as_wallet(wallet);
-  if (!w) return 0;
+  if (!check_wallet(w)) return 0;
   try {
-    return w->store("") ? 1 : 0;
+    if (!w->store("")) {
+      const auto err = w->errorString();
+      set_error(err.empty() ? "wallet store failed" : err);
+      return 0;
+    }
+    return 1;
   } catch (const std::exception& e) {
     set_error(e.what());
     return 0;

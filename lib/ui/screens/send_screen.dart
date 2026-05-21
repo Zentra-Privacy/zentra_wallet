@@ -51,16 +51,25 @@ class _SendScreenState extends State<SendScreen> {
       return;
     }
     setState(() => _estimatingFee = true);
-    final fee = await wallet.estimateTransferFee(
-      address: addr,
-      amount: amount,
-      priority: _priority,
-    );
-    if (mounted) {
-      setState(() {
-        _feeAtomic = fee;
-        _estimatingFee = false;
-      });
+    try {
+      final fee = await wallet.estimateTransferFee(
+        address: addr,
+        amount: amount,
+        priority: _priority,
+      );
+      if (mounted) {
+        setState(() {
+          _feeAtomic = fee;
+          _estimatingFee = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _feeAtomic = 0;
+          _estimatingFee = false;
+        });
+      }
     }
   }
 
@@ -137,7 +146,10 @@ class _SendScreenState extends State<SendScreen> {
   Future<void> _send() async {
     final wallet = context.read<WalletProvider>();
     if (!wallet.canTransact) {
-      zentraSnack(context, 'Wallet is not ready. Check connection in Settings.', isError: true);
+      final msg = wallet.isWalletBehindDaemon
+          ? 'Wait for sync to finish before sending'
+          : 'Wallet is not ready. Check connection in Settings.';
+      zentraSnack(context, msg, isError: true);
       return;
     }
     final addr = _address.text.trim();
@@ -152,6 +164,10 @@ class _SendScreenState extends State<SendScreen> {
       return;
     }
     final unlocked = wallet.balance?.unlockedAtomic ?? 0;
+    if (_feeAtomic <= 0) {
+      zentraSnack(context, 'Fee estimate unavailable — check address, amount, and sync', isError: true);
+      return;
+    }
     if (amountAtomic + _feeAtomic > unlocked) {
       zentraSnack(
         context,
@@ -283,6 +299,20 @@ class _SendScreenState extends State<SendScreen> {
                 ],
               ),
             ),
+            if (wallet.isWalletBehindDaemon) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: ZentraTheme.accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  wallet.syncProgressLabel ?? 'Syncing — send disabled until caught up',
+                  style: const TextStyle(color: ZentraTheme.accent, fontSize: 12),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             const Text(
               'After sending, change may show as locked until ~10 confirmations.',

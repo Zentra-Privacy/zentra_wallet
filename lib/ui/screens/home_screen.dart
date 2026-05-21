@@ -62,7 +62,10 @@ class _DashboardTab extends StatelessWidget {
 
   void _openSend(BuildContext context) {
     if (!wallet.canTransact) {
-      zentraSnack(context, 'Wait until the wallet is connected', isError: true);
+      final msg = wallet.isWalletBehindDaemon
+          ? 'Wait for sync to finish before sending'
+          : 'Wait until the wallet is connected';
+      zentraSnack(context, msg, isError: true);
       return;
     }
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SendScreen()));

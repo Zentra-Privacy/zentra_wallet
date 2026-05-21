@@ -13,6 +13,7 @@ class SettingsStore {
   static const _keyWalletPassLegacy = 'wallet_password';
   static const _keyOnboarded = 'onboarded';
   static const _keyRestoreHeight = 'default_restore_height';
+  static const _keyWalletNetwork = 'wallet_network';
   static const _secureWalletPass = 'wallet_password';
 
   static const _secureStorage = FlutterSecureStorage(
@@ -116,5 +117,17 @@ class SettingsStore {
   Future<void> saveDefaultRestoreHeight(int height) async {
     final p = await _prefs;
     await p.setInt(_keyRestoreHeight, height.clamp(0, 0x7FFFFFFF));
+  }
+
+  Future<ZentraNetType?> loadWalletNetwork() async {
+    final p = await _prefs;
+    final idx = p.getInt(_keyWalletNetwork);
+    if (idx == null) return null;
+    return ZentraNetType.values[idx.clamp(0, ZentraNetType.values.length - 1)];
+  }
+
+  Future<void> saveWalletNetwork(ZentraNetType type) async {
+    final p = await _prefs;
+    await p.setInt(_keyWalletNetwork, type.index);
   }
 }
