@@ -148,11 +148,14 @@ class WalletProvider extends ChangeNotifier {
     await _ensureWallet();
     try {
       _wallet!.createWallet(filename: filename, password: password);
-      await _settings.saveWalletFilename(filename);
-      await _settings.saveWalletPassword(password);
-      await _settings.setOnboarded(true);
-      walletFilename = filename;
-      return await _syncAfterOpen();
+      final ok = await _syncAfterOpen();
+      if (ok) {
+        await _settings.saveWalletFilename(filename);
+        await _settings.saveWalletPassword(password);
+        await _settings.setOnboarded(true);
+        walletFilename = filename;
+      }
+      return ok;
     } catch (e) {
       errorMessage = e.toString();
       notifyListeners();
@@ -181,11 +184,14 @@ class WalletProvider extends ChangeNotifier {
         seed: seed,
         restoreHeight: restoreHeight,
       );
-      await _settings.saveWalletFilename(filename);
-      await _settings.saveWalletPassword(password);
-      await _settings.setOnboarded(true);
-      walletFilename = filename;
-      return await _syncAfterOpen();
+      final ok = await _syncAfterOpen();
+      if (ok) {
+        await _settings.saveWalletFilename(filename);
+        await _settings.saveWalletPassword(password);
+        await _settings.setOnboarded(true);
+        walletFilename = filename;
+      }
+      return ok;
     } catch (e) {
       errorMessage = e.toString();
       notifyListeners();
