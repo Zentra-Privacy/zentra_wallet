@@ -1,30 +1,75 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+import 'dart:ffi' as ffi;
+import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zentra_wallet/models/wallet_models.dart';
+import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
-import 'package:zentra_wallet/main.dart';
+bool _nativeAvailable() {
+  try {
+    if (Platform.isLinux) {
+      ffi.DynamicLibrary.open('libzentra_wallet_core_plugin.so');
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('C++ core amount round-trip', () {
+    if (!_nativeAvailable()) {
+      // `flutter test` does not bundle the FFI .so; run after `flutter build linux`.
+      return;
+    }
+    final core = ZentraCore.instance;
+    expect(core.displayToAtomic('1.5'), 1500000000);
+    expect(core.atomicToDisplay(1500000000), '1.5');
+    expect(core.coinTicker, 'ZTR');
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('transfer direction from RPC type field', () {
+    final pending = WalletTransfer.fromRpc({
+      'txid': 'abc',
+      'amount': 1000,
+      'type': 'pending',
+      'timestamp': 1,
+      'height': 0,
+    });
+    expect(pending.isIncoming, isFalse);
+    expect(pending.pending, isTrue);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    final pool = WalletTransfer.fromRpc({
+      'txid': 'def',
+      'amount': 2000,
+      'type': 'pool',
+      'timestamp': 2,
+      'height': 0,
+    });
+    expect(pool.isIncoming, isTrue);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    final failed = WalletTransfer.fromRpc({
+      'txid': 'fail',
+      'amount': 500,
+      'type': 'failed',
+      'timestamp': 3,
+      'height': 0,
+    });
+    expect(failed.isIncoming, isFalse);
+    expect(failed.failed, isTrue);
+  });
+
+  test('address prefix validation mainnet', () {
+    if (!_nativeAvailable()) {
+      return;
+    }
+    final core = ZentraCore.instance;
+    expect(
+      core.validateAddress(
+        'Z7i2zfb8jc9PmBBodytkH5YaSW47CK3X2JhMxdPLvqxHjmuRQMwJLVgDtFkU3h5jgFVSS5evJfmVWbNUeAdHspG82MaXVnZmS',
+        ZentraNetwork.mainnet,
+      ),
+      isTrue,
+    );
+    expect(core.validateAddress('4invalid', ZentraNetwork.mainnet), isFalse);
   });
 }
