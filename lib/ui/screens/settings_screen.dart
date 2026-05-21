@@ -125,14 +125,21 @@ class SettingsScreen extends StatelessWidget {
               onChanged: (v) async {
                 if (v == null) return;
                 await wallet.updateNetwork(v);
-                if (context.mounted) {
+                if (!context.mounted) return;
+                if (wallet.networkType != v) {
                   zentraSnack(
                     context,
-                    wallet.connectionState == WalletConnectionState.connected
-                        ? 'Network changed — reconnecting'
-                        : 'Network changed',
+                    wallet.errorMessage ?? 'Network not changed',
+                    isError: true,
                   );
+                  return;
                 }
+                zentraSnack(
+                  context,
+                  wallet.connectionState == WalletConnectionState.connected
+                      ? 'Network changed — reconnecting'
+                      : 'Network changed',
+                );
               },
             ),
           ),

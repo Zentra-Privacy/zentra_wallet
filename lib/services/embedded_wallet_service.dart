@@ -20,7 +20,13 @@ class EmbeddedWalletService {
     }
     _native = ZentraNativeWallet.instance;
     _native.init(walletDir);
-    _native.setDaemon(daemonAddress, trusted: true);
+    _native.setDaemon(daemonAddress, trusted: _isLocalDaemon(daemonAddress));
+  }
+
+  /// Remote public nodes must not be trusted (Monero wallet2 threat model).
+  static bool _isLocalDaemon(String address) {
+    final host = address.split(':').first.trim().toLowerCase();
+    return host == '127.0.0.1' || host == 'localhost' || host == '::1';
   }
 
   final ZentraNetworkConfig network;
@@ -45,7 +51,9 @@ class EmbeddedWalletService {
       nettypeIndex,
       restoreHeight: restoreHeight,
     );
-    _native.startBackgroundRefresh(_handle!);
+    if (!_native.startBackgroundRefresh(_handle!)) {
+      throw WalletException('Background refresh failed to start');
+    }
   }
 
   int fetchRestoreHeight() {
@@ -61,7 +69,9 @@ class EmbeddedWalletService {
   void openWallet({required String filename, required String password}) {
     _close();
     _handle = _native.openWallet(filename, password, nettypeIndex);
-    _native.startBackgroundRefresh(_handle!);
+    if (!_native.startBackgroundRefresh(_handle!)) {
+      throw WalletException('Background refresh failed to start');
+    }
   }
 
   String restoreWallet({
@@ -78,7 +88,9 @@ class EmbeddedWalletService {
       nettypeIndex,
       restoreHeight: restoreHeight,
     );
-    _native.startBackgroundRefresh(_handle!);
+    if (!_native.startBackgroundRefresh(_handle!)) {
+      throw WalletException('Background refresh failed to start');
+    }
     return _native.address(_handle!);
   }
 
@@ -138,10 +150,16 @@ class EmbeddedWalletService {
   int estimateFee({required String address, required String amountDisplay, int priority = 0}) {
     _requireOpen();
     final dest = address.trim();
-    if (!validateAddress(dest)) return 0;
+    if (!validateAddress(dest)) {
+      throw WalletException('Invalid address for ${network.label}');
+    }
     final atomic = parseDisplay(amountDisplay);
-    if (atomic <= 0) return 0;
-    return _native.estimateFee(_handle!, dest, atomic, priority: priority);
+    if (atomic <= 0) throw WalletException('Invalid amount');
+    final fee = _native.estimateFee(_handle!, dest, atomic, priority: priority);
+    if (fee <= 0) {
+      throw WalletException(_native.lastErrorMessage());
+    }
+    return fee;
   }
 
   /// Sends [amountDisplay] ZTR. Network fee is extra (see [estimateFee]).

@@ -40,6 +40,7 @@ class WalletProvider extends ChangeNotifier {
   bool isRefreshing = false;
 
   String? walletFilename;
+  ZentraNetType? walletNetworkType;
   ZentraPublicNode? selectedPublicNode;
   int defaultRestoreHeight = 0;
   /// Last saved scan checkpoint in wallet file (refresh-from-block-height).
@@ -50,6 +51,7 @@ class WalletProvider extends ChangeNotifier {
     networkConfig = ZentraNetworkConfig.fromType(networkType);
     nodeSettings = await _settings.loadNode();
     walletFilename = await _settings.loadWalletFilename();
+    walletNetworkType = await _settings.loadWalletNetwork();
     defaultRestoreHeight = await _settings.loadDefaultRestoreHeight();
     selectedPublicNode = ZentraPublicNode.byId(nodeSettings?.publicNodeId);
     nativeAvailable = ZentraNativeWallet.isAvailable;
@@ -121,6 +123,15 @@ class WalletProvider extends ChangeNotifier {
     connectionState = WalletConnectionState.connecting;
     errorMessage = null;
     notifyListeners();
+
+    if (walletNetworkType != null && walletNetworkType != networkType) {
+      connectionState = WalletConnectionState.error;
+      errorMessage =
+          'Wallet "${walletFilename!}" is for ${ZentraNetworkConfig.fromType(walletNetworkType!).label}. '
+          'Switch network in Settings or use another wallet file.';
+      notifyListeners();
+      return false;
+    }
 
     try {
       await _ensureWallet();
@@ -285,8 +296,10 @@ class WalletProvider extends ChangeNotifier {
   Future<void> _persistWalletSession(String filename, String password) async {
     await _settings.saveWalletFilename(filename);
     await _settings.saveWalletPassword(password);
+    await _settings.saveWalletNetwork(networkType);
     await _settings.setOnboarded(true);
     walletFilename = filename;
+    walletNetworkType = networkType;
   }
 
   Future<bool> openExistingWallet({
@@ -317,15 +330,11 @@ class WalletProvider extends ChangeNotifier {
     int? priority,
   }) async {
     if (_wallet == null || !_wallet!.isOpen) return 0;
-    try {
-      return _wallet!.estimateFee(
-        address: address,
-        amountDisplay: amount,
-        priority: priority ?? sendPriority,
-      );
-    } catch (_) {
-      return 0;
-    }
+    return _wallet!.estimateFee(
+      address: address,
+      amountDisplay: amount,
+      priority: priority ?? sendPriority,
+    );
   }
 
   Future<String?> sendTransfer({
@@ -338,8 +347,10 @@ class WalletProvider extends ChangeNotifier {
       notifyListeners();
       return null;
     }
-    if (connectionState != WalletConnectionState.connected) {
-      errorMessage = 'Wallet not connected';
+    if (!canTransact) {
+      errorMessage = isWalletBehindDaemon
+          ? 'Wait for sync to finish before sending'
+          : 'Wallet not ready';
       notifyListeners();
       return null;
     }
@@ -400,11 +411,16 @@ class WalletProvider extends ChangeNotifier {
   }
 
   bool get isWalletBehindDaemon {
-    if (daemonBlockHeight <= 0 || walletHeight <= 0) return false;
+    if (daemonBlockHeight <= 0) return false;
+    // Wallet not scanned yet (height 0) while daemon has blocks — still syncing.
+    if (walletHeight <= 0) return true;
     return daemonBlockHeight - walletHeight > 3;
   }
 
-  bool get canTransact => connectionState == WalletConnectionState.connected;
+  bool get canTransact =>
+      connectionState == WalletConnectionState.connected &&
+      !isWalletBehindDaemon &&
+      daemonBlockHeight > 0;
 
   String get connectionStatusLabel {
     switch (connectionState) {
@@ -432,6 +448,15 @@ class WalletProvider extends ChangeNotifier {
 
   Future<void> updateNetwork(ZentraNetType type) async {
     final reconnect = walletFilename != null && walletFilename!.isNotEmpty;
+    if (reconnect &&
+        walletNetworkType != null &&
+        walletNetworkType != type) {
+      errorMessage =
+          'This wallet belongs to ${ZentraNetworkConfig.fromType(walletNetworkType!).label}. '
+          'Use a different wallet file for ${ZentraNetworkConfig.fromType(type).label}.';
+      notifyListeners();
+      return;
+    }
     networkType = type;
     networkConfig = ZentraNetworkConfig.fromType(type);
     await _settings.saveNetwork(type);
