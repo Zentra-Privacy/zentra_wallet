@@ -7,6 +7,7 @@
 #   ./scripts/build_and_run.sh -d chrome    # web (Chrome)
 #   ./scripts/build_and_run.sh -l           # list devices
 #   ./scripts/build_and_run.sh -d android --release
+#   ./scripts/build_and_run.sh -b -d linux -r   # build bundle only (no run)
 #
 # Before using the wallet:
 #   - ./scripts/build_native_wallet.sh  (embedded wallet2; required on Linux)
@@ -148,9 +149,8 @@ if [[ "$_device_ok" != "yes" ]]; then
 fi
 
 FLUTTER_BUILD=(flutter build)
-FLUTTER_RUN=(flutter run -d "$DEVICE")
+FLUTTER_RUN=(flutter run -d "$DEVICE" --no-pub)
 
-# flutter build only accepts --release (debug is the default; there is no --debug flag)
 if [[ "$MODE" == "release" ]]; then
   FLUTTER_BUILD+=(--release)
   FLUTTER_RUN+=(--release)
@@ -166,7 +166,10 @@ _build_target() {
       ;;
     chrome|web)
       DEVICE="chrome"
-      FLUTTER_RUN=(flutter run -d chrome)
+      FLUTTER_RUN=(flutter run -d chrome --no-pub)
+      if [[ "$MODE" == "release" ]]; then
+        FLUTTER_RUN+=(--release)
+      fi
       echo "==> Building Web ($MODE)..."
       "${FLUTTER_BUILD[@]}" web
       ;;
@@ -191,19 +194,18 @@ _build_target() {
       "${FLUTTER_BUILD[@]}" apk
       ;;
     *)
-      # e.g. emulator-5554, physical android serial — flutter run will compile
-      echo "==> Skipping pre-build for '$DEVICE'; flutter run will compile."
+      echo "==> Unknown device type '$DEVICE'; flutter run will compile."
       ;;
   esac
 }
 
-_build_target
-
 if [[ "$BUILD_ONLY" -eq 1 ]]; then
+  _build_target
   echo "==> Build finished (build-only). Artifacts under build/"
   exit 0
 fi
 
-echo "==> Launching app on $DEVICE ..."
+# Run path: flutter run compiles once — skip redundant "flutter build" pre-step.
+echo "==> Launching app on $DEVICE (single compile via flutter run)..."
 echo "    (Ctrl+C to stop)"
 exec "${FLUTTER_RUN[@]}" "${RUN_ARGS[@]}"

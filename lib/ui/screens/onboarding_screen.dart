@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
 import '../../core/network/zentra_network.dart';
+import '../../core/restore_height_utils.dart';
 import '../../core/seed_utils.dart';
 import '../../providers/wallet_provider.dart';
 import '../../theme/zentra_theme.dart';
+import '../widgets/restore_height_field.dart';
 import '../widgets/zentra_ui.dart';
 import 'home_screen.dart';
 import 'node_setup_screen.dart';
@@ -23,16 +25,40 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _filename = TextEditingController(text: 'zentra_mobile');
   final _password = TextEditingController();
   final _seed = TextEditingController();
+  final _restoreHeight = TextEditingController();
   bool _loading = false;
   bool _restoreMode = false;
   bool _openMode = false;
+  bool _customRestoreHeight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final h = context.read<WalletProvider>().defaultRestoreHeight;
+      if (h > 0) {
+        setState(() {
+          _customRestoreHeight = true;
+          _restoreHeight.text = RestoreHeightUtils.format(h);
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
     _filename.dispose();
     _password.dispose();
     _seed.dispose();
+    _restoreHeight.dispose();
     super.dispose();
+  }
+
+  int? _resolveRestoreHeight() {
+    return RestoreHeightField.resolveHeight(
+      enabled: _customRestoreHeight && !_openMode,
+      controller: _restoreHeight,
+    );
   }
 
   Future<void> _finishCreate() async {
@@ -49,6 +75,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _snack('Seed must be 12, 13, 24, or 25 words');
       return;
     }
+    final height = _resolveRestoreHeight();
+    if (_customRestoreHeight && !_openMode && height == null) {
+      _snack('Enter a valid block height');
+      return;
+    }
     final p = context.read<WalletProvider>();
     if (!ZentraNativeWallet.isAvailable) {
       _snack('Native wallet not built. Run: ./scripts/build_native_wallet.sh');
@@ -56,6 +87,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
     setState(() => _loading = true);
     await p.updateNetwork(_network);
+    final syncHeight = _openMode ? null : (height ?? 0);
     final ok = _openMode
         ? await p.openExistingWallet(
             filename: _filename.text.trim(),
@@ -66,10 +98,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 filename: _filename.text.trim(),
                 seed: SeedUtils.normalize(_seed.text),
                 password: _password.text,
+                restoreHeight: _customRestoreHeight ? syncHeight : null,
               )
             : await p.createNewWallet(
                 filename: _filename.text.trim(),
                 password: _password.text,
+                restoreHeight: _customRestoreHeight ? syncHeight : null,
               );
     setState(() => _loading = false);
     if (!mounted) return;
@@ -278,32 +312,52 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: _filename,
-          decoration: const InputDecoration(labelText: 'Wallet name (on this device)'),
-        ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _password,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'Wallet password'),
-        ),
-        if (_restoreMode && !_openMode) ...[
-          const SizedBox(height: 12),
-          TextField(
-            controller: _seed,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: '25-word seed phrase',
-              alignLabelWithHint: true,
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _filename,
+                  decoration: const InputDecoration(labelText: 'Wallet name (on this device)'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _password,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'Wallet password'),
+                ),
+                if (_restoreMode && !_openMode) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _seed,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: '25-word seed phrase',
+                      alignLabelWithHint: true,
+                    ),
+                  ),
+                ],
+                if (!_openMode) ...[
+                  const SizedBox(height: 16),
+                  RestoreHeightField(
+                    enabled: _customRestoreHeight,
+                    onEnabledChanged: (v) => setState(() => _customRestoreHeight = v),
+                    controller: _restoreHeight,
+                    showRestoreHint: _restoreMode,
+                  ),
+                ],
+              ],
             ),
           ),
-        ],
-        const Spacer(),
+        ),
         if (_loading)
-          const Center(child: CircularProgressIndicator(color: ZentraTheme.accent))
-        else ...[
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Center(child: CircularProgressIndicator(color: ZentraTheme.accent)),
+          )
+        else
           FilledButton(
             onPressed: _finishCreate,
             child: Text(
@@ -314,7 +368,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       : 'Create wallet',
             ),
           ),
-        ],
         const SizedBox(height: 24),
       ],
     );

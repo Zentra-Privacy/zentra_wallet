@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/network/zentra_network.dart';
 import '../../providers/wallet_provider.dart';
 import '../../theme/zentra_theme.dart';
+import '../widgets/restore_height_settings_panel.dart';
 import '../widgets/zentra_ui.dart';
 import 'onboarding_screen.dart';
 import 'node_setup_screen.dart';
@@ -28,8 +29,9 @@ class SettingsScreen extends StatelessWidget {
         ZentraSettingsTile(
           icon: Icons.lock_outline,
           title: 'Security',
-          subtitle: 'Wallet password on device',
+          subtitle: 'Password stored in secure storage',
         ),
+        const RestoreHeightSettingsPanel(),
         ZentraSettingsTile(
           icon: Icons.dns_outlined,
           title: 'Node',
