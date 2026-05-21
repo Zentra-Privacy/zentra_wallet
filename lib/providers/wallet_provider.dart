@@ -40,12 +40,14 @@ class WalletProvider extends ChangeNotifier {
 
   String? walletFilename;
   ZentraPublicNode? selectedPublicNode;
+  int defaultRestoreHeight = 0;
 
   Future<void> initialize() async {
     networkType = await _settings.loadNetwork();
     networkConfig = ZentraNetworkConfig.fromType(networkType);
     nodeSettings = await _settings.loadNode();
     walletFilename = await _settings.loadWalletFilename();
+    defaultRestoreHeight = await _settings.loadDefaultRestoreHeight();
     selectedPublicNode = ZentraPublicNode.byId(nodeSettings?.publicNodeId);
     nativeAvailable = ZentraNativeWallet.isAvailable;
     _walletDir = await _resolveWalletDir();
@@ -152,9 +154,35 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateDefaultRestoreHeight(int height) async {
+    defaultRestoreHeight = height.clamp(0, 0x7FFFFFFF);
+    await _settings.saveDefaultRestoreHeight(defaultRestoreHeight);
+    notifyListeners();
+  }
+
+  /// Applies restore height to the open wallet and saves as default.
+  Future<bool> applyRestoreHeightToOpenWallet(int height) async {
+    if (_wallet == null || !_wallet!.isOpen) {
+      errorMessage = 'Open a wallet first';
+      notifyListeners();
+      return false;
+    }
+    try {
+      _wallet!.setRestoreHeight(height);
+      await updateDefaultRestoreHeight(height);
+      await refresh();
+      return true;
+    } catch (e) {
+      errorMessage = _userMessage(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> createNewWallet({
     required String filename,
     required String password,
+    int? restoreHeight,
   }) async {
     _refreshNativeFlag();
     if (!nativeAvailable) {
@@ -170,10 +198,15 @@ class WalletProvider extends ChangeNotifier {
     }
     await _ensureWallet();
     try {
-      _wallet!.createWallet(filename: filename.trim(), password: password);
+      _wallet!.createWallet(
+        filename: filename.trim(),
+        password: password,
+        restoreHeight: restoreHeight ?? defaultRestoreHeight,
+      );
       final ok = await _syncAfterOpen();
       if (ok) {
         await _persistWalletSession(filename, password);
+        if (restoreHeight != null) await updateDefaultRestoreHeight(restoreHeight);
       }
       return ok;
     } catch (e) {
@@ -187,7 +220,7 @@ class WalletProvider extends ChangeNotifier {
     required String filename,
     required String seed,
     required String password,
-    int restoreHeight = 0,
+    int? restoreHeight,
   }) async {
     _refreshNativeFlag();
     if (!nativeAvailable) {
@@ -213,11 +246,12 @@ class WalletProvider extends ChangeNotifier {
         filename: filename.trim(),
         password: password,
         seed: normalized,
-        restoreHeight: restoreHeight,
+        restoreHeight: restoreHeight ?? defaultRestoreHeight,
       );
       final ok = await _syncAfterOpen();
       if (ok) {
         await _persistWalletSession(filename, password);
+        if (restoreHeight != null) await updateDefaultRestoreHeight(restoreHeight);
       }
       return ok;
     } catch (e) {

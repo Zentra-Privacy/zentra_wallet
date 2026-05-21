@@ -68,8 +68,13 @@ class ZentraNativeWallet {
     }
   }
 
-  ffi.Pointer<ffi.Void> createWallet(String path, String password, int nettype) =>
-      _open(path, password, nettype, isRestore: false, seed: null, restoreHeight: 0);
+  ffi.Pointer<ffi.Void> createWallet(
+    String path,
+    String password,
+    int nettype, {
+    int restoreHeight = 0,
+  }) =>
+      _open(path, password, nettype, isRestore: false, seed: null, restoreHeight: restoreHeight);
 
   ffi.Pointer<ffi.Void> openWallet(String path, String password, int nettype) {
     final p = path.toNativeUtf8();
@@ -113,7 +118,7 @@ class ZentraNativeWallet {
           malloc.free(s);
         }
       } else {
-        h = _lib.createWallet(p, pw, nettype);
+        h = _lib.createWallet(p, pw, nettype, restoreHeight);
       }
       if (h == ffi.nullptr) throw NativeWalletUnavailable(_lastError());
       return h;
@@ -156,6 +161,12 @@ class ZentraNativeWallet {
 
   void store(ffi.Pointer<ffi.Void> handle) {
     if (_lib.store(handle) != 1) throw NativeWalletUnavailable(_lastError());
+  }
+
+  void setRestoreHeight(ffi.Pointer<ffi.Void> handle, int height) {
+    if (_lib.setRestoreHeight(handle, height) != 1) {
+      throw NativeWalletUnavailable(_lastError());
+    }
   }
 
   bool addressValid(String address, int nettype) {
@@ -206,7 +217,7 @@ class _NativeLib {
       : init = lib.lookupFunction<_InitNative, _Init>('zentra_wm_init'),
         shutdown = lib.lookupFunction<_VoidNative, _Void>('zentra_wm_shutdown'),
         setDaemon = lib.lookupFunction<_SetDaemonNative, _SetDaemon>('zentra_wm_set_daemon'),
-        createWallet = lib.lookupFunction<_OpenNative, _Open>('zentra_wm_create_wallet'),
+        createWallet = lib.lookupFunction<_CreateNative, _Create>('zentra_wm_create_wallet'),
         openWallet = lib.lookupFunction<_OpenNative, _Open>('zentra_wm_open_wallet'),
         restoreWallet = lib.lookupFunction<_RestoreNative, _Restore>('zentra_wm_restore_wallet'),
         closeWallet = lib.lookupFunction<_CloseNative, _Close>('zentra_wm_close_wallet'),
@@ -220,6 +231,7 @@ class _NativeLib {
         seed = lib.lookupFunction<_StrNative, _Str>('zentra_wm_seed'),
         send = lib.lookupFunction<_SendNative, _Send>('zentra_wm_send'),
         store = lib.lookupFunction<_RefreshNative, _Refresh>('zentra_wm_store'),
+        setRestoreHeight = lib.lookupFunction<_SetHeightNative, _SetHeight>('zentra_wm_set_restore_height'),
         lastError = lib.lookupFunction<_LastErrorNative, _LastError>('zentra_wm_last_error'),
         freeString = lib.lookupFunction<_FreeNative, _Free>('zentra_wm_free_string'),
         addressValid = lib.lookupFunction<_AddrValidNative, _AddrValid>('zentra_wm_address_valid'),
@@ -228,7 +240,7 @@ class _NativeLib {
   final _Init init;
   final _Void shutdown;
   final _SetDaemon setDaemon;
-  final _Open createWallet;
+  final _Create createWallet;
   final _Open openWallet;
   final _Restore restoreWallet;
   final _Close closeWallet;
@@ -242,6 +254,7 @@ class _NativeLib {
   final _Str seed;
   final _Send send;
   final _Refresh store;
+  final _SetHeight setRestoreHeight;
   final _LastError lastError;
   final _Free freeString;
   final _AddrValid addressValid;
@@ -256,6 +269,8 @@ typedef _SetDaemonNative = ffi.Void Function(ffi.Pointer<Utf8>, ffi.Int32);
 typedef _SetDaemon = void Function(ffi.Pointer<Utf8>, int);
 typedef _OpenNative = ffi.Pointer<ffi.Void> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Int32);
 typedef _Open = ffi.Pointer<ffi.Void> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int);
+typedef _CreateNative = ffi.Pointer<ffi.Void> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Int32, ffi.Uint64);
+typedef _Create = ffi.Pointer<ffi.Void> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int, int);
 typedef _RestoreNative = ffi.Pointer<ffi.Void> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Int32, ffi.Uint64);
 typedef _Restore = ffi.Pointer<ffi.Void> Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, ffi.Pointer<Utf8>, int, int);
 typedef _CloseNative = ffi.Void Function(ffi.Pointer<ffi.Void>);
@@ -274,3 +289,5 @@ typedef _FreeNative = ffi.Void Function(ffi.Pointer<Utf8>);
 typedef _Free = void Function(ffi.Pointer<Utf8>);
 typedef _AddrValidNative = ffi.Int32 Function(ffi.Pointer<Utf8>, ffi.Int32);
 typedef _AddrValid = int Function(ffi.Pointer<Utf8>, int);
+typedef _SetHeightNative = ffi.Int32 Function(ffi.Pointer<ffi.Void>, ffi.Uint64);
+typedef _SetHeight = int Function(ffi.Pointer<ffi.Void>, int);

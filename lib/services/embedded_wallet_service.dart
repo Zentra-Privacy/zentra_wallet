@@ -33,10 +33,24 @@ class EmbeddedWalletService {
 
   bool get isOpen => _handle != null && _handle != ffi.nullptr;
 
-  void createWallet({required String filename, required String password}) {
+  void createWallet({
+    required String filename,
+    required String password,
+    int restoreHeight = 0,
+  }) {
     _close();
-    _handle = _native.createWallet(filename, password, nettypeIndex);
+    _handle = _native.createWallet(
+      filename,
+      password,
+      nettypeIndex,
+      restoreHeight: restoreHeight,
+    );
     _native.startBackgroundRefresh(_handle!);
+  }
+
+  void setRestoreHeight(int height) {
+    _requireOpen();
+    _native.setRestoreHeight(_handle!, height);
   }
 
   void openWallet({required String filename, required String password}) {
