@@ -61,11 +61,19 @@ ZENTRA_WM_API char* zentra_wm_address(ZentraWalletHandle wallet);
 /// Caller must free with zentra_wm_free_string
 ZENTRA_WM_API char* zentra_wm_seed(ZentraWalletHandle wallet);
 
+/// [priority] 0=default, 1=low, 2=medium, 3=high (Monero::PendingTransaction::Priority).
+ZENTRA_WM_API uint64_t zentra_wm_estimate_fee(
+    ZentraWalletHandle wallet,
+    const char* address,
+    uint64_t amount_atomic,
+    int priority);
+
 /// Returns txid hex on success; caller frees. NULL on error.
 ZENTRA_WM_API char* zentra_wm_send(
     ZentraWalletHandle wallet,
     const char* address,
-    uint64_t amount_atomic);
+    uint64_t amount_atomic,
+    int priority);
 
 ZENTRA_WM_API int zentra_wm_store(ZentraWalletHandle wallet);
 

@@ -148,10 +148,24 @@ class ZentraNativeWallet {
 
   String seed(ffi.Pointer<ffi.Void> handle) => _takeString(_lib.seed(handle));
 
-  String send(ffi.Pointer<ffi.Void> handle, String to, int amountAtomic) {
+  int estimateFee(ffi.Pointer<ffi.Void> handle, String to, int amountAtomic, {int priority = 0}) {
     final addr = to.toNativeUtf8();
     try {
-      final ptr = _lib.send(handle, addr, amountAtomic);
+      return _lib.estimateFee(handle, addr, amountAtomic, priority);
+    } finally {
+      malloc.free(addr);
+    }
+  }
+
+  String send(
+    ffi.Pointer<ffi.Void> handle,
+    String to,
+    int amountAtomic, {
+    int priority = 0,
+  }) {
+    final addr = to.toNativeUtf8();
+    try {
+      final ptr = _lib.send(handle, addr, amountAtomic, priority);
       if (ptr == ffi.nullptr) throw NativeWalletUnavailable(_lastError());
       return _takeString(ptr);
     } finally {
@@ -231,7 +245,8 @@ class _NativeLib {
         daemonHeight = lib.lookupFunction<_BalNative, _Bal>('zentra_wm_daemon_height'),
         address = lib.lookupFunction<_StrNative, _Str>('zentra_wm_address'),
         seed = lib.lookupFunction<_StrNative, _Str>('zentra_wm_seed'),
-        send = lib.lookupFunction<_SendNative, _Send>('zentra_wm_send'),
+        estimateFee = lib.lookupFunction<_EstimateFeeNative, _EstimateFee>('zentra_wm_estimate_fee'),
+        send = lib.lookupFunction<_SendWithPriorityNative, _SendWithPriority>('zentra_wm_send'),
         store = lib.lookupFunction<_RefreshNative, _Refresh>('zentra_wm_store'),
         getRestoreHeight = lib.lookupFunction<_BalNative, _Bal>('zentra_wm_get_restore_height'),
         setRestoreHeight = lib.lookupFunction<_SetHeightNative, _SetHeight>('zentra_wm_set_restore_height'),
@@ -255,7 +270,8 @@ class _NativeLib {
   final _Bal daemonHeight;
   final _Str address;
   final _Str seed;
-  final _Send send;
+  final _EstimateFee estimateFee;
+  final _SendWithPriority send;
   final _Refresh store;
   final _Bal getRestoreHeight;
   final _SetHeight setRestoreHeight;
@@ -287,8 +303,11 @@ typedef _StrNative = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Void>);
 typedef _Str = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Void>);
 typedef _LastErrorNative = ffi.Pointer<Utf8> Function();
 typedef _LastError = ffi.Pointer<Utf8> Function();
-typedef _SendNative = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Void>, ffi.Pointer<Utf8>, ffi.Uint64);
-typedef _Send = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Void>, ffi.Pointer<Utf8>, int);
+typedef _EstimateFeeNative = ffi.Uint64 Function(ffi.Pointer<ffi.Void>, ffi.Pointer<Utf8>, ffi.Uint64, ffi.Int32);
+typedef _EstimateFee = int Function(ffi.Pointer<ffi.Void>, ffi.Pointer<Utf8>, int, int);
+typedef _SendWithPriorityNative = ffi.Pointer<Utf8> Function(
+    ffi.Pointer<ffi.Void>, ffi.Pointer<Utf8>, ffi.Uint64, ffi.Int32);
+typedef _SendWithPriority = ffi.Pointer<Utf8> Function(ffi.Pointer<ffi.Void>, ffi.Pointer<Utf8>, int, int);
 typedef _FreeNative = ffi.Void Function(ffi.Pointer<Utf8>);
 typedef _Free = void Function(ffi.Pointer<Utf8>);
 typedef _AddrValidNative = ffi.Int32 Function(ffi.Pointer<Utf8>, ffi.Int32);
