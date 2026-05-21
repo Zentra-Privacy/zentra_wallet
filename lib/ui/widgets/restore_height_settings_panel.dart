@@ -5,6 +5,7 @@ import '../../core/restore_height_utils.dart';
 import '../../providers/wallet_provider.dart';
 import '../../theme/zentra_theme.dart';
 import 'restore_height_field.dart';
+import 'zentra_ui.dart';
 
 class RestoreHeightSettingsPanel extends StatefulWidget {
   const RestoreHeightSettingsPanel({super.key});
@@ -69,9 +70,7 @@ class _RestoreHeightSettingsPanelState extends State<RestoreHeightSettingsPanel>
     _snack(ok ? 'Applied — resyncing from block ${height ?? 0}' : context.read<WalletProvider>().errorMessage ?? 'Failed');
   }
 
-  void _snack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
+  void _snack(String msg) => zentraSnack(context, msg);
 
   @override
   Widget build(BuildContext context) {

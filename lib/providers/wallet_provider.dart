@@ -369,6 +369,32 @@ class WalletProvider extends ChangeNotifier {
     return daemonBlockHeight - walletHeight > 3;
   }
 
+  bool get canTransact => connectionState == WalletConnectionState.connected;
+
+  String get connectionStatusLabel {
+    switch (connectionState) {
+      case WalletConnectionState.connected:
+        return isWalletBehindDaemon ? 'Syncing' : 'Connected';
+      case WalletConnectionState.connecting:
+        return 'Connecting';
+      case WalletConnectionState.error:
+        return 'Error';
+      case WalletConnectionState.disconnected:
+        return 'Offline';
+    }
+  }
+
+  /// e.g. "Block 650 of 668" while catching up.
+  String? get syncProgressLabel {
+    if (!isWalletBehindDaemon || daemonBlockHeight <= 0) return null;
+    return 'Block $walletHeight of $daemonBlockHeight';
+  }
+
+  double? get syncProgressFraction {
+    if (!isWalletBehindDaemon || daemonBlockHeight <= 0) return null;
+    return (walletHeight / daemonBlockHeight).clamp(0.0, 1.0);
+  }
+
   Future<void> updateNetwork(ZentraNetType type) async {
     final reconnect = walletFilename != null && walletFilename!.isNotEmpty;
     networkType = type;

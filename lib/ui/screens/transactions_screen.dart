@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/ui_format.dart';
 import '../../models/wallet_models.dart';
 import '../../providers/wallet_provider.dart';
 import '../../theme/zentra_theme.dart';
@@ -27,27 +27,43 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     if (_filter == 2) list = list.where((t) => !t.isIncoming).toList();
 
     final listBody = list.isEmpty
-        ? const Center(child: Text('No transactions', style: TextStyle(color: ZentraTheme.textMuted)))
-        : ListView(
-            padding: const EdgeInsets.only(bottom: 80),
-            children: [
-              Container(
-                margin: ZentraTheme.pagePadding,
-                decoration: ZentraTheme.flatCard(),
-                child: Column(
-                  children: [
-                    for (var i = 0; i < list.length; i++)
-                      _row(list[i], wallet.formatAmount, i < list.length - 1),
-                  ],
+        ? ZentraEmptyState(
+            icon: Icons.history,
+            title: 'No transactions',
+            subtitle: _filter == 0
+                ? 'Your incoming and outgoing transfers will appear here.'
+                : 'Nothing in this filter yet.',
+          )
+        : RefreshIndicator(
+            color: ZentraTheme.accent,
+            onRefresh: wallet.refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 80),
+              children: [
+                Container(
+                  margin: ZentraTheme.pagePadding,
+                  decoration: ZentraTheme.flatCard(),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < list.length; i++)
+                        _row(context, list[i], wallet.formatAmount, i < list.length - 1),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.embedded) const ZentraDashboardHeader(title: 'History'),
+        if (widget.embedded)
+          ZentraDashboardHeader(
+            title: 'History',
+            isRefreshing: wallet.isRefreshing,
+            onRefresh: wallet.refresh,
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
           child: SegmentedButton<int>(
@@ -59,8 +75,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             ),
             segments: const [
               ButtonSegment(value: 0, label: Text('All')),
-              ButtonSegment(value: 1, label: Text('In')),
-              ButtonSegment(value: 2, label: Text('Out')),
+              ButtonSegment(value: 1, label: Text('Received')),
+              ButtonSegment(value: 2, label: Text('Sent')),
             ],
             selected: {_filter},
             onSelectionChanged: (s) => setState(() => _filter = s.first),
@@ -83,26 +99,48 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     );
   }
 
-  Widget _row(WalletTransfer t, String Function(int) format, bool showDivider) {
+  Widget _row(BuildContext context, WalletTransfer t, String Function(int) format, bool showDivider) {
     final incoming = t.isIncoming;
-    String timeLabel = 'Pending';
-    if (t.timestamp > 0) {
-      final dt = DateTime.fromMillisecondsSinceEpoch(t.timestamp * 1000);
-      final diff = DateTime.now().difference(dt);
-      if (diff.inMinutes < 60) {
-        timeLabel = '${diff.inMinutes}m ago';
-      } else if (diff.inHours < 48) {
-        timeLabel = '${diff.inHours}h ago';
-      } else {
-        timeLabel = DateFormat.MMMd().format(dt);
-      }
-    }
     return ZentraTxRow(
       title: incoming ? 'Received' : 'Sent',
-      subtitle: '${t.txid.length > 8 ? '${t.txid.substring(0, 8)}…' : t.txid} · $timeLabel',
-      amount: '${incoming ? '+' : '-'}${format(t.amountAtomic)}',
+      subtitle: '${UiFormat.truncateMiddle(t.txid, head: 8, tail: 6)} · ${UiFormat.relativeTime(t.timestamp)}',
+      amount: '${incoming ? '+' : '-'}${format(t.amountAtomic)} ZTR',
       isIncoming: incoming,
+      pending: t.pending,
       showDivider: showDivider,
+      onTap: () => _showDetail(context, t, format),
+    );
+  }
+
+  void _showDetail(BuildContext context, WalletTransfer t, String Function(int) format) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: ZentraTheme.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              t.isIncoming ? 'Received' : 'Sent',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            ZentraCopyField(label: 'Amount', value: '${format(t.amountAtomic)} ZTR', maxLines: 1),
+            const SizedBox(height: 12),
+            ZentraCopyField(label: 'Transaction ID', value: t.txid),
+            const SizedBox(height: 8),
+            Text(
+              '${UiFormat.relativeTime(t.timestamp)} · ${t.confirmations} confirmations',
+              style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
