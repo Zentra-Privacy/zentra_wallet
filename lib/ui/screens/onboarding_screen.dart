@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
 import '../../core/network/zentra_network.dart';
 import '../../providers/wallet_provider.dart';
+import '../../theme/zentra_theme.dart';
+import '../widgets/zentra_ui.dart';
 import 'home_screen.dart';
 import 'node_setup_screen.dart';
 
@@ -86,26 +87,89 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  void _goCreate() {
+    setState(() {
+      _restoreMode = false;
+      _openMode = false;
+      _step = 1;
+    });
+  }
+
+  void _goRestore() {
+    setState(() {
+      _restoreMode = true;
+      _openMode = false;
+      _step = 1;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Setup Zentra Wallet'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_ethernet),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const NodeSetupScreen()),
-            ),
-          ),
-        ],
-      ),
+    return ZentraGradientScaffold(
+      appBar: _step > 0
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _step = _step == 2 ? 1 : 0),
+              ),
+              title: Text(_step == 1 ? 'Network' : 'Your wallet'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.dns_outlined),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const NodeSetupScreen()),
+                  ),
+                ),
+              ],
+            )
+          : null,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: _step == 0 ? _networkStep() : _walletStep(),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: switch (_step) {
+            0 => _welcomeStep(),
+            1 => _networkStep(),
+            _ => _walletStep(),
+          },
         ),
       ),
+    );
+  }
+
+  Widget _welcomeStep() {
+    return Column(
+      children: [
+        const Spacer(flex: 2),
+        const ZentraLogo(size: 96),
+        const SizedBox(height: 28),
+        const Text(
+          'Zentra Wallet',
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Private. Secure. Unstoppable.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: ZentraTheme.textMuted, fontSize: 15),
+        ),
+        const Spacer(flex: 3),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _goCreate,
+            child: const Text('Create New Wallet'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: _goRestore,
+            child: const Text('Restore Wallet'),
+          ),
+        ),
+        const SizedBox(height: 32),
+      ],
     );
   }
 
@@ -113,30 +177,69 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Choose network',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        const SizedBox(height: 8),
+        Text(
+          _restoreMode ? 'Restore wallet' : 'Create wallet',
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         const Text(
-          'Wallet runs on this device. Sync uses zentrad on the network (seed VPS).',
+          'Choose network. Sync uses remote zentrad (seed nodes on mainnet).',
+          style: TextStyle(color: ZentraTheme.textMuted),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         ...ZentraNetType.values.map((n) {
           final cfg = ZentraNetworkConfig.fromType(n);
-          return RadioListTile<ZentraNetType>(
-            value: n,
-            groupValue: _network,
-            title: Text(cfg.label),
-            subtitle: Text('Addresses start with ${cfg.addressPrefix} · daemon :${cfg.daemonRpcPort}'),
-            onChanged: (v) => setState(() => _network = v!),
+          final selected = _network == n;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Material(
+              color: selected ? ZentraTheme.surface : ZentraTheme.card,
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                onTap: () => setState(() => _network = n),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: selected ? ZentraTheme.accent : ZentraTheme.border,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                        color: selected ? ZentraTheme.accent : ZentraTheme.textMuted,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(cfg.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            Text(
+                              'Prefix ${cfg.addressPrefix} · :${cfg.daemonRpcPort}',
+                              style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           );
         }),
         const Spacer(),
         FilledButton(
-          onPressed: () => setState(() => _step = 1),
+          onPressed: () => setState(() => _step = 2),
           child: const Text('Continue'),
         ),
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -145,10 +248,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           children: [
-            ChoiceChip(
+            FilterChip(
               label: const Text('New'),
               selected: !_restoreMode && !_openMode,
               onSelected: (_) => setState(() {
@@ -156,7 +260,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 _openMode = false;
               }),
             ),
-            ChoiceChip(
+            FilterChip(
               label: const Text('Restore'),
               selected: _restoreMode,
               onSelected: (_) => setState(() {
@@ -164,7 +268,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 _openMode = false;
               }),
             ),
-            ChoiceChip(
+            FilterChip(
               label: const Text('Open existing'),
               selected: _openMode,
               onSelected: (_) => setState(() {
@@ -177,7 +281,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: 16),
         TextField(
           controller: _filename,
-          decoration: const InputDecoration(labelText: 'Wallet filename (stored on device)'),
+          decoration: const InputDecoration(labelText: 'Wallet name (on this device)'),
         ),
         const SizedBox(height: 12),
         TextField(
@@ -196,19 +300,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
         ],
-        const SizedBox(height: 16),
-        const Text(
-          'Build native wallet first: ./scripts/build_native_wallet.sh',
-          style: TextStyle(fontSize: 12, color: Colors.white54),
-        ),
         const Spacer(),
-        if (_loading) const Center(child: CircularProgressIndicator()),
-        if (!_loading) ...[
-          OutlinedButton(
-            onPressed: () => setState(() => _step = 0),
-            child: const Text('Back'),
-          ),
-          const SizedBox(height: 8),
+        if (_loading)
+          const Center(child: CircularProgressIndicator(color: ZentraTheme.accent))
+        else ...[
           FilledButton(
             onPressed: _finishCreate,
             child: Text(
@@ -220,6 +315,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
         ],
+        const SizedBox(height: 24),
       ],
     );
   }

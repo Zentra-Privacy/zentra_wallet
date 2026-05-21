@@ -52,7 +52,7 @@ bool check_wallet(Monero::Wallet* w) {
 }
 
 /// wallet2::init — required before refresh/balance/daemon RPC (Monero/Cake flow).
-bool bind_wallet_to_daemon(Monero::Wallet* w, bool persist) {
+bool bind_wallet_to_daemon(Monero::Wallet* w, bool persist, bool reset_scan_from_genesis) {
   if (!check_wallet(w)) return false;
   if (g_daemon_address.empty()) {
     set_error("Daemon address not set");
@@ -64,6 +64,10 @@ bool bind_wallet_to_daemon(Monero::Wallet* w, bool persist) {
     return false;
   }
   w->setTrustedDaemon(g_trusted_daemon != 0);
+  // Only new wallets: scan from genesis. Restore keeps recoveryWallet() height.
+  if (reset_scan_from_genesis) {
+    w->setRefreshFromBlockHeight(0);
+  }
   if (persist && !w->store("")) {
     const auto err = w->errorString();
     set_error(err.empty() ? "wallet store failed" : err);
@@ -154,7 +158,7 @@ ZENTRA_WM_API ZentraWalletHandle zentra_wm_create_wallet(
       if (w) g_wm->closeWallet(w, false);
       return nullptr;
     }
-    if (!bind_wallet_to_daemon(w, true)) {
+    if (!bind_wallet_to_daemon(w, true, true)) {
       g_wm->closeWallet(w, false);
       return nullptr;
     }
@@ -181,7 +185,7 @@ ZENTRA_WM_API ZentraWalletHandle zentra_wm_open_wallet(
       if (w) g_wm->closeWallet(w, false);
       return nullptr;
     }
-    if (!bind_wallet_to_daemon(w, false)) {
+    if (!bind_wallet_to_daemon(w, false, false)) {
       g_wm->closeWallet(w, false);
       return nullptr;
     }
@@ -215,7 +219,7 @@ ZENTRA_WM_API ZentraWalletHandle zentra_wm_restore_wallet(
       if (w) g_wm->closeWallet(w, false);
       return nullptr;
     }
-    if (!bind_wallet_to_daemon(w, true)) {
+    if (!bind_wallet_to_daemon(w, true, false)) {
       g_wm->closeWallet(w, false);
       return nullptr;
     }
