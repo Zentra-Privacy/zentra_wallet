@@ -69,7 +69,9 @@ ZENTRA_WM_API char* zentra_wm_send(
 
 ZENTRA_WM_API int zentra_wm_store(ZentraWalletHandle wallet);
 
-/// Updates refresh-from-block-height on an open wallet and persists it.
+ZENTRA_WM_API uint64_t zentra_wm_get_restore_height(ZentraWalletHandle wallet);
+
+/// Updates refresh-from-block-height on an open wallet and persists it (clamped below daemon tip).
 ZENTRA_WM_API int zentra_wm_set_restore_height(ZentraWalletHandle wallet, uint64_t height);
 
 /// Last error message; caller frees.

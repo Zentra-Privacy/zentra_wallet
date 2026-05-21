@@ -51,10 +51,46 @@ bool check_wallet(Monero::Wallet* w) {
   return true;
 }
 
-enum class RefreshMode { Unchanged, FromGenesis, FromHeight };
+/// Blocks below daemon tip — wallet2 resets refresh height to 0 if height >= daemon.
+constexpr uint64_t kScanHeightMargin = 12;
+
+/// Resolve refresh-from height: never >= daemon tip (avoids full rescan loop on mobile).
+uint64_t clamp_refresh_height(Monero::Wallet* w, uint64_t height) {
+  const uint64_t daemon_h = w->daemonBlockChainHeight();
+  if (daemon_h == 0) return height;
+  if (height == 0) return 0;
+  if (height >= daemon_h) {
+    return daemon_h > kScanHeightMargin ? daemon_h - kScanHeightMargin : 0;
+  }
+  return height;
+}
+
+/// After sync, persist incremental scan start (wallet file) so next open does not rescan from 0.
+bool persist_scan_checkpoint(Monero::Wallet* w) {
+  if (!check_wallet(w)) return false;
+  const uint64_t daemon_h = w->daemonBlockChainHeight();
+  const uint64_t wallet_h = w->blockChainHeight();
+  if (daemon_h == 0 || wallet_h == 0) return true;
+
+  uint64_t checkpoint = 0;
+  if (wallet_h + kScanHeightMargin >= daemon_h) {
+    checkpoint = daemon_h > kScanHeightMargin ? daemon_h - kScanHeightMargin : 0;
+  } else {
+    checkpoint = wallet_h > kScanHeightMargin ? wallet_h - kScanHeightMargin : 0;
+  }
+
+  w->setRefreshFromBlockHeight(checkpoint);
+  if (!w->store("")) {
+    const auto err = w->errorString();
+    set_error(err.empty() ? "wallet store failed" : err);
+    return false;
+  }
+  return true;
+}
 
 /// wallet2::init — required before refresh/balance/daemon RPC (Monero/Cake flow).
-bool bind_wallet_to_daemon(Monero::Wallet* w, bool persist, RefreshMode mode, uint64_t height) {
+/// refresh_height < 0: keep height already in wallet file (open / restore).
+bool bind_wallet_to_daemon(Monero::Wallet* w, bool persist, int64_t refresh_height) {
   if (!check_wallet(w)) return false;
   if (g_daemon_address.empty()) {
     set_error("Daemon address not set");
@@ -66,15 +102,12 @@ bool bind_wallet_to_daemon(Monero::Wallet* w, bool persist, RefreshMode mode, ui
     return false;
   }
   w->setTrustedDaemon(g_trusted_daemon != 0);
-  switch (mode) {
-    case RefreshMode::FromGenesis:
-      w->setRefreshFromBlockHeight(0);
-      break;
-    case RefreshMode::FromHeight:
-      w->setRefreshFromBlockHeight(height);
-      break;
-    case RefreshMode::Unchanged:
-      break;
+  if (refresh_height >= 0) {
+    uint64_t h = static_cast<uint64_t>(refresh_height);
+    if (h == 0) {
+      h = w->estimateBlockChainHeight();
+    }
+    w->setRefreshFromBlockHeight(clamp_refresh_height(w, h));
   }
   if (persist && !w->store("")) {
     const auto err = w->errorString();
@@ -167,8 +200,7 @@ ZENTRA_WM_API ZentraWalletHandle zentra_wm_create_wallet(
       if (w) g_wm->closeWallet(w, false);
       return nullptr;
     }
-    const auto mode = restore_height == 0 ? RefreshMode::FromGenesis : RefreshMode::FromHeight;
-    if (!bind_wallet_to_daemon(w, true, mode, restore_height)) {
+    if (!bind_wallet_to_daemon(w, true, static_cast<int64_t>(restore_height))) {
       g_wm->closeWallet(w, false);
       return nullptr;
     }
@@ -195,7 +227,7 @@ ZENTRA_WM_API ZentraWalletHandle zentra_wm_open_wallet(
       if (w) g_wm->closeWallet(w, false);
       return nullptr;
     }
-    if (!bind_wallet_to_daemon(w, false, RefreshMode::Unchanged, 0)) {
+    if (!bind_wallet_to_daemon(w, false, -1)) {
       g_wm->closeWallet(w, false);
       return nullptr;
     }
@@ -229,7 +261,7 @@ ZENTRA_WM_API ZentraWalletHandle zentra_wm_restore_wallet(
       if (w) g_wm->closeWallet(w, false);
       return nullptr;
     }
-    if (!bind_wallet_to_daemon(w, true, RefreshMode::Unchanged, 0)) {
+    if (!bind_wallet_to_daemon(w, true, -1)) {
       g_wm->closeWallet(w, false);
       return nullptr;
     }
@@ -240,12 +272,19 @@ ZENTRA_WM_API ZentraWalletHandle zentra_wm_restore_wallet(
   }
 }
 
+ZENTRA_WM_API uint64_t zentra_wm_get_restore_height(ZentraWalletHandle wallet) {
+  auto* w = as_wallet(wallet);
+  if (!w) return 0;
+  return w->getRefreshFromBlockHeight();
+}
+
 ZENTRA_WM_API int zentra_wm_set_restore_height(ZentraWalletHandle wallet, uint64_t height) {
   std::lock_guard<std::mutex> lock(g_mutex);
   auto* w = as_wallet(wallet);
   if (!check_wallet(w)) return 0;
   try {
-    w->setRefreshFromBlockHeight(height);
+    const uint64_t clamped = clamp_refresh_height(w, height);
+    w->setRefreshFromBlockHeight(clamped);
     if (!w->store("")) {
       const auto err = w->errorString();
       set_error(err.empty() ? "wallet store failed" : err);
@@ -261,7 +300,11 @@ ZENTRA_WM_API int zentra_wm_set_restore_height(ZentraWalletHandle wallet, uint64
 ZENTRA_WM_API void zentra_wm_close_wallet(ZentraWalletHandle wallet) {
   std::lock_guard<std::mutex> lock(g_mutex);
   if (!g_wm || !wallet) return;
-  g_wm->closeWallet(as_wallet(wallet), true);
+  auto* w = as_wallet(wallet);
+  if (w) {
+    persist_scan_checkpoint(w);
+  }
+  g_wm->closeWallet(w, true);
 }
 
 ZENTRA_WM_API int zentra_wm_refresh(ZentraWalletHandle wallet) {
@@ -269,10 +312,13 @@ ZENTRA_WM_API int zentra_wm_refresh(ZentraWalletHandle wallet) {
   auto* w = as_wallet(wallet);
   if (!w) return 0;
   try {
-    if (w->refresh()) return 1;
-    const auto err = w->errorString();
-    set_error(err.empty() ? "refresh failed" : err);
-    return 0;
+    if (!w->refresh()) {
+      const auto err = w->errorString();
+      set_error(err.empty() ? "refresh failed" : err);
+      return 0;
+    }
+    persist_scan_checkpoint(w);
+    return 1;
   } catch (const std::exception& e) {
     set_error(e.what());
     return 0;

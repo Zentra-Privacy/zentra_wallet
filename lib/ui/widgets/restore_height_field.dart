@@ -24,17 +24,32 @@ class RestoreHeightField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Custom sync height', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-          subtitle: Text(
-            showRestoreHint
-                ? 'Block when wallet was first used (restore) or scan start (new)'
-                : 'Start blockchain scan from a specific block',
-            style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
-          ),
-          value: enabled,
-          onChanged: onEnabledChanged,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Custom sync height',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    showRestoreHint
+                        ? 'Block when wallet was first used (restore) or scan start (new)'
+                        : 'Start blockchain scan from a specific block',
+                    style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: enabled,
+              onChanged: onEnabledChanged,
+            ),
+          ],
         ),
         if (enabled) ...[
           const SizedBox(height: 4),
@@ -46,8 +61,8 @@ class RestoreHeightField extends StatelessWidget {
               labelText: 'Block height',
               hintText: 'e.g. 2500000',
               helperText: showRestoreHint
-                  ? 'Restore: height when you created this wallet. New: 0 = full chain.'
-                  : '0 = scan from genesis. Higher = faster sync if you know your height.',
+                  ? 'Restore: block when wallet was first used. Leave off to use saved/default height.'
+                  : 'Leave off to use estimated height. Must be below chain tip (not equal to daemon height).',
               helperMaxLines: 3,
             ),
           ),
