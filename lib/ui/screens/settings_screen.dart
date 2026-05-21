@@ -8,6 +8,7 @@ import '../widgets/restore_height_settings_panel.dart';
 import '../widgets/zentra_ui.dart';
 import 'onboarding_screen.dart';
 import 'node_setup_screen.dart';
+import 'wallet_backup_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, this.embedded = false});
@@ -28,8 +29,31 @@ class SettingsScreen extends StatelessWidget {
         ),
         ZentraSettingsTile(
           icon: Icons.lock_outline,
-          title: 'Security',
-          subtitle: 'Password stored in secure storage',
+          title: 'Backup & seed phrase',
+          subtitle: wallet.connectionState == WalletConnectionState.connected
+              ? 'View address and seed to copy'
+              : 'Connect wallet first',
+          onTap: wallet.connectionState == WalletConnectionState.connected
+              ? () async {
+                  final backup = await wallet.fetchBackupInfo();
+                  if (!context.mounted) return;
+                  if (backup == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not read wallet backup')),
+                    );
+                    return;
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => WalletBackupScreen(
+                        backup: backup,
+                        requireSeedAcknowledgement: false,
+                        blockBack: false,
+                      ),
+                    ),
+                  );
+                }
+              : null,
         ),
         const RestoreHeightSettingsPanel(),
         ZentraSettingsTile(

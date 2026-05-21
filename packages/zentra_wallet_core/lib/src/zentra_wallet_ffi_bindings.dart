@@ -163,6 +163,8 @@ class ZentraNativeWallet {
     if (_lib.store(handle) != 1) throw NativeWalletUnavailable(_lastError());
   }
 
+  int restoreHeight(ffi.Pointer<ffi.Void> handle) => _lib.getRestoreHeight(handle);
+
   void setRestoreHeight(ffi.Pointer<ffi.Void> handle, int height) {
     if (_lib.setRestoreHeight(handle, height) != 1) {
       throw NativeWalletUnavailable(_lastError());
@@ -231,6 +233,7 @@ class _NativeLib {
         seed = lib.lookupFunction<_StrNative, _Str>('zentra_wm_seed'),
         send = lib.lookupFunction<_SendNative, _Send>('zentra_wm_send'),
         store = lib.lookupFunction<_RefreshNative, _Refresh>('zentra_wm_store'),
+        getRestoreHeight = lib.lookupFunction<_BalNative, _Bal>('zentra_wm_get_restore_height'),
         setRestoreHeight = lib.lookupFunction<_SetHeightNative, _SetHeight>('zentra_wm_set_restore_height'),
         lastError = lib.lookupFunction<_LastErrorNative, _LastError>('zentra_wm_last_error'),
         freeString = lib.lookupFunction<_FreeNative, _Free>('zentra_wm_free_string'),
@@ -254,6 +257,7 @@ class _NativeLib {
   final _Str seed;
   final _Send send;
   final _Refresh store;
+  final _Bal getRestoreHeight;
   final _SetHeight setRestoreHeight;
   final _LastError lastError;
   final _Free freeString;

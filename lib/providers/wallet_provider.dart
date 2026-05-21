@@ -8,6 +8,7 @@ import '../core/network/zentra_network.dart';
 import '../core/network/zentra_public_nodes.dart';
 import '../core/seed_utils.dart';
 import '../core/wallet_exception.dart';
+import '../models/wallet_backup_info.dart';
 import '../models/wallet_models.dart';
 import '../services/embedded_wallet_service.dart';
 import '../services/settings_store.dart';
@@ -41,6 +42,8 @@ class WalletProvider extends ChangeNotifier {
   String? walletFilename;
   ZentraPublicNode? selectedPublicNode;
   int defaultRestoreHeight = 0;
+  /// Last saved scan checkpoint in wallet file (refresh-from-block-height).
+  int walletScanHeight = 0;
 
   Future<void> initialize() async {
     networkType = await _settings.loadNetwork();
@@ -98,6 +101,7 @@ class WalletProvider extends ChangeNotifier {
       return b.height.compareTo(a.height);
     });
     transfers = list;
+    walletScanHeight = _wallet!.fetchRestoreHeight();
   }
 
   Future<bool> connect({String? passwordOverride}) async {
@@ -336,6 +340,22 @@ class WalletProvider extends ChangeNotifier {
   int parseAmount(String display) =>
       _wallet?.parseDisplay(display) ?? ZentraCore.instance.displayToAtomic(display);
 
+  /// Seed + address from the open wallet (for backup screen).
+  Future<WalletBackupInfo?> fetchBackupInfo() async {
+    if (_wallet == null || !_wallet!.isOpen) return null;
+    try {
+      final addr = primaryAddress ?? await _wallet!.fetchPrimaryAddress();
+      final seed = _wallet!.fetchSeed();
+      return WalletBackupInfo(
+        address: addr.address,
+        seedPhrase: seed?.trim().isNotEmpty == true ? seed!.trim() : null,
+        walletName: walletFilename ?? 'wallet',
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   bool validateAddress(String addr) {
     final trimmed = addr.trim();
     if (trimmed.isEmpty) return false;
@@ -392,6 +412,7 @@ class WalletProvider extends ChangeNotifier {
     walletHeight = 0;
     daemonBlockHeight = 0;
     daemonStatus = null;
+    walletScanHeight = 0;
     connectionState = WalletConnectionState.disconnected;
     errorMessage = null;
   }

@@ -184,24 +184,28 @@ class _AssetsTab extends StatelessWidget {
         Container(
           margin: ZentraTheme.pagePadding,
           decoration: ZentraTheme.flatCard(),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: ZentraTheme.surface,
-                borderRadius: BorderRadius.circular(ZentraTheme.radiusSm),
-                border: Border.all(color: ZentraTheme.border),
+          clipBehavior: Clip.antiAlias,
+          child: Material(
+            color: ZentraTheme.card,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: ZentraTheme.surface,
+                  borderRadius: BorderRadius.circular(ZentraTheme.radiusSm),
+                  border: Border.all(color: ZentraTheme.border),
+                ),
+                child: const Text('Z', style: TextStyle(fontWeight: FontWeight.w700, color: ZentraTheme.accent)),
               ),
-              child: const Text('Z', style: TextStyle(fontWeight: FontWeight.w700, color: ZentraTheme.accent)),
-            ),
-            title: const Text('Zentra', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: const Text('ZTR', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
-            trailing: Text(
-              balance != null ? wallet.formatAmount(balance.balanceAtomic) : '0',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              title: const Text('Zentra', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text('ZTR', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
+              trailing: Text(
+                balance != null ? wallet.formatAmount(balance.balanceAtomic) : '0',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ),

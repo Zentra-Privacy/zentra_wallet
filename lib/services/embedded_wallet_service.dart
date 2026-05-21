@@ -48,6 +48,11 @@ class EmbeddedWalletService {
     _native.startBackgroundRefresh(_handle!);
   }
 
+  int fetchRestoreHeight() {
+    _requireOpen();
+    return _native.restoreHeight(_handle!);
+  }
+
   void setRestoreHeight(int height) {
     _requireOpen();
     _native.setRestoreHeight(_handle!, height);

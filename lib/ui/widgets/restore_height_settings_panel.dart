@@ -80,11 +80,15 @@ class _RestoreHeightSettingsPanelState extends State<RestoreHeightSettingsPanel>
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(16),
       decoration: ZentraTheme.flatCard(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: ZentraTheme.card,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
           const Row(
             children: [
               Icon(Icons.height, size: 20, color: ZentraTheme.textMuted),
@@ -93,9 +97,12 @@ class _RestoreHeightSettingsPanelState extends State<RestoreHeightSettingsPanel>
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Default for new wallets and seed restore. Applying to an open wallet triggers a rescan from that block.',
-            style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12, height: 1.4),
+          Text(
+            wallet.connectionState == WalletConnectionState.connected
+                ? 'Wallet file scans from block ${wallet.walletScanHeight} (auto-saved after sync). '
+                  'Default below is for new restore/create only.'
+                : 'Default for new wallets and seed restore. Scan progress is saved in the wallet file after each sync.',
+            style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12, height: 1.4),
           ),
           const SizedBox(height: 12),
           RestoreHeightField(
@@ -130,7 +137,9 @@ class _RestoreHeightSettingsPanelState extends State<RestoreHeightSettingsPanel>
                 style: TextStyle(color: ZentraTheme.textMuted, fontSize: 11),
               ),
             ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

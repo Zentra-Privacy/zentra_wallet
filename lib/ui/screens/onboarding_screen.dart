@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
 import '../../core/network/zentra_network.dart';
+import '../../models/wallet_backup_info.dart';
 import '../../core/restore_height_utils.dart';
 import '../../core/seed_utils.dart';
 import '../../providers/wallet_provider.dart';
@@ -11,6 +12,7 @@ import '../widgets/restore_height_field.dart';
 import '../widgets/zentra_ui.dart';
 import 'home_screen.dart';
 import 'node_setup_screen.dart';
+import 'wallet_backup_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -109,6 +111,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (!mounted) return;
     if (ok) {
       if (!mounted) return;
+      final isNewWallet = !_openMode && !_restoreMode;
+      if (isNewWallet) {
+        final backup = await p.fetchBackupInfo();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => WalletBackupScreen(
+              backup: backup ??
+                  WalletBackupInfo(
+                    address: p.primaryAddress?.address ?? '',
+                    walletName: _filename.text.trim(),
+                  ),
+            ),
+          ),
+        );
+        return;
+      }
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
