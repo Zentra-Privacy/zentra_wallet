@@ -122,11 +122,13 @@ class ZentraHeroBalanceCard extends StatelessWidget {
     super.key,
     required this.amountZtr,
     this.unlockedZtr,
+    this.lockedZtr,
     this.secondaryLabel,
   });
 
   final String amountZtr;
   final String? unlockedZtr;
+  final String? lockedZtr;
   final String? secondaryLabel;
 
   @override
@@ -159,17 +161,36 @@ class ZentraHeroBalanceCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(amountZtr, style: Theme.of(context).textTheme.headlineLarge),
-          if (unlockedZtr != null) ...[
+          if (unlockedZtr != null || lockedZtr != null) ...[
             const SizedBox(height: 12),
             const Divider(height: 1),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.lock_open_outlined, size: 16, color: ZentraTheme.textMuted),
-                const SizedBox(width: 8),
-                Text('Unlocked $unlockedZtr', style: const TextStyle(fontSize: 13, color: ZentraTheme.textMuted)),
-              ],
-            ),
+            if (unlockedZtr != null)
+              Row(
+                children: [
+                  const Icon(Icons.lock_open_outlined, size: 16, color: ZentraTheme.success),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('Unlocked $unlockedZtr', style: const TextStyle(fontSize: 13, color: ZentraTheme.textMuted)),
+                  ),
+                ],
+              ),
+            if (lockedZtr != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lock_outline, size: 16, color: ZentraTheme.textMuted),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Locked $lockedZtr — waiting for confirmations (~10 blocks)',
+                      style: const TextStyle(fontSize: 12, color: ZentraTheme.textMuted, height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ],
       ),

@@ -378,10 +378,38 @@ ZENTRA_WM_API char* zentra_wm_seed(ZentraWalletHandle wallet) {
   return dup_string(w->seed());
 }
 
+static Monero::PendingTransaction::Priority to_priority(int priority) {
+  if (priority < 0) priority = 0;
+  if (priority > 3) priority = 3;
+  return static_cast<Monero::PendingTransaction::Priority>(priority);
+}
+
+ZENTRA_WM_API uint64_t zentra_wm_estimate_fee(
+    ZentraWalletHandle wallet,
+    const char* address,
+    uint64_t amount_atomic,
+    int priority) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  auto* w = as_wallet(wallet);
+  if (!w || !address || amount_atomic == 0) {
+    set_error("Invalid fee estimate parameters");
+    return 0;
+  }
+  try {
+    std::vector<std::pair<std::string, uint64_t>> dests;
+    dests.emplace_back(std::string(address), amount_atomic);
+    return w->estimateTransactionFee(dests, to_priority(priority));
+  } catch (const std::exception& e) {
+    set_error(e.what());
+    return 0;
+  }
+}
+
 ZENTRA_WM_API char* zentra_wm_send(
     ZentraWalletHandle wallet,
     const char* address,
-    uint64_t amount_atomic) {
+    uint64_t amount_atomic,
+    int priority) {
   std::lock_guard<std::mutex> lock(g_mutex);
   auto* w = as_wallet(wallet);
   if (!w || !address) {
@@ -389,29 +417,33 @@ ZENTRA_WM_API char* zentra_wm_send(
     return nullptr;
   }
   try {
+    // mixin 0 = wallet default ring size (avoids "ring size 17 too high" warnings).
     auto* tx = w->createTransaction(
         address,
         "",
         amount_atomic,
-        16,
-        Monero::PendingTransaction::Priority_Default);
+        0,
+        to_priority(priority));
     if (!tx || tx->status() != Monero::PendingTransaction::Status_Ok) {
       set_error(tx ? tx->errorString() : "createTransaction failed");
       if (tx) w->disposeTransaction(tx);
       return nullptr;
     }
+    // txid() must be read BEFORE commit() — commit clears m_pending_tx.
+    const auto ids = tx->txid();
+    if (ids.empty()) {
+      set_error("No txid from pending transaction");
+      w->disposeTransaction(tx);
+      return nullptr;
+    }
+    const std::string txid = ids.front();
     if (!tx->commit()) {
       set_error(tx->errorString());
       w->disposeTransaction(tx);
       return nullptr;
     }
-    const auto ids = tx->txid();
     w->disposeTransaction(tx);
-    if (ids.empty()) {
-      set_error("No txid returned");
-      return nullptr;
-    }
-    return dup_string(ids.front());
+    return dup_string(txid);
   } catch (const std::exception& e) {
     set_error(e.what());
     return nullptr;

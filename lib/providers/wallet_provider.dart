@@ -309,9 +309,29 @@ class WalletProvider extends ChangeNotifier {
     return t.isNotEmpty && !t.contains('/') && !t.contains('\\');
   }
 
+  int sendPriority = 0;
+
+  Future<int> estimateTransferFee({
+    required String address,
+    required String amount,
+    int? priority,
+  }) async {
+    if (_wallet == null || !_wallet!.isOpen) return 0;
+    try {
+      return _wallet!.estimateFee(
+        address: address,
+        amountDisplay: amount,
+        priority: priority ?? sendPriority,
+      );
+    } catch (_) {
+      return 0;
+    }
+  }
+
   Future<String?> sendTransfer({
     required String address,
     required String amount,
+    int? priority,
   }) async {
     if (_wallet == null || !_wallet!.isOpen) {
       errorMessage = 'Wallet not open';
@@ -324,14 +344,29 @@ class WalletProvider extends ChangeNotifier {
       return null;
     }
     try {
-      final tx = await _wallet!.send(address: address, amountDisplay: amount);
-      await refresh();
+      final tx = await _wallet!.send(
+        address: address,
+        amountDisplay: amount,
+        priority: priority ?? sendPriority,
+      );
+      try {
+        await refresh();
+      } catch (_) {
+        // Send may have succeeded; refresh will catch up on Home.
+      }
       return tx;
     } catch (e) {
       errorMessage = _userMessage(e);
       notifyListeners();
       return null;
     }
+  }
+
+  int get lockedBalanceAtomic {
+    final b = balance;
+    if (b == null) return 0;
+    final locked = b.balanceAtomic - b.unlockedAtomic;
+    return locked > 0 ? locked : 0;
   }
 
   String formatAmount(int atomic) =>

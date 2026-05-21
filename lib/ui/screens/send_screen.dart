@@ -17,12 +17,51 @@ class _SendScreenState extends State<SendScreen> {
   final _address = TextEditingController();
   final _amount = TextEditingController();
   bool _sending = false;
+  int _feeAtomic = 0;
+  bool _estimatingFee = false;
+  int _priority = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _address.addListener(_scheduleFeeEstimate);
+    _amount.addListener(_scheduleFeeEstimate);
+  }
 
   @override
   void dispose() {
     _address.dispose();
     _amount.dispose();
     super.dispose();
+  }
+
+  void _scheduleFeeEstimate() {
+    if (mounted) setState(() {});
+    Future<void>.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) _updateFeeEstimate();
+    });
+  }
+
+  Future<void> _updateFeeEstimate() async {
+    final wallet = context.read<WalletProvider>();
+    final addr = _address.text.trim();
+    final amount = _amount.text.trim();
+    if (!wallet.validateAddress(addr) || wallet.parseAmount(amount) <= 0) {
+      if (mounted) setState(() => _feeAtomic = 0);
+      return;
+    }
+    setState(() => _estimatingFee = true);
+    final fee = await wallet.estimateTransferFee(
+      address: addr,
+      amount: amount,
+      priority: _priority,
+    );
+    if (mounted) {
+      setState(() {
+        _feeAtomic = fee;
+        _estimatingFee = false;
+      });
+    }
   }
 
   Future<void> _pasteAddress() async {
@@ -36,10 +75,18 @@ class _SendScreenState extends State<SendScreen> {
   void _fillMaxAmount(WalletProvider wallet) {
     final unlocked = wallet.balance?.unlockedAtomic ?? 0;
     if (unlocked <= 0) return;
-    setState(() => _amount.text = wallet.formatAmount(unlocked));
+    final spendable = unlocked - _feeAtomic;
+    if (spendable <= 0) {
+      zentraSnack(context, 'Not enough unlocked balance for amount + fee', isError: true);
+      return;
+    }
+    setState(() => _amount.text = wallet.formatAmount(spendable));
+    _scheduleFeeEstimate();
   }
 
   Future<bool> _confirmSend(WalletProvider wallet, String addr, String amount) async {
+    final amountAtomic = wallet.parseAmount(amount);
+    final totalAtomic = amountAtomic + _feeAtomic;
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -49,16 +96,14 @@ class _SendScreenState extends State<SendScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('You are about to send $amount ZTR', style: const TextStyle(fontWeight: FontWeight.w600)),
+            _confirmRow('Amount', '$amount ZTR'),
+            _confirmRow('Network fee', '${wallet.formatAmount(_feeAtomic)} ZTR'),
+            _confirmRow('Total deducted', '${wallet.formatAmount(totalAtomic)} ZTR',
+                bold: true),
             const SizedBox(height: 12),
-            Text('To:', style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
+            const Text('To:', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
             const SizedBox(height: 4),
             SelectableText(addr, style: const TextStyle(fontSize: 12)),
-            const SizedBox(height: 12),
-            const Text(
-              'Network fees will be deducted from your balance. This cannot be undone.',
-              style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
-            ),
           ],
         ),
         actions: [
@@ -68,6 +113,25 @@ class _SendScreenState extends State<SendScreen> {
       ),
     );
     return result == true;
+  }
+
+  Widget _confirmRow(String label, String value, {bool bold = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 13)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: bold ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _send() async {
@@ -82,14 +146,25 @@ class _SendScreenState extends State<SendScreen> {
       return;
     }
     final amountStr = _amount.text.trim();
-    if (wallet.parseAmount(amountStr) <= 0) {
+    final amountAtomic = wallet.parseAmount(amountStr);
+    if (amountAtomic <= 0) {
       zentraSnack(context, 'Enter an amount greater than zero', isError: true);
+      return;
+    }
+    final unlocked = wallet.balance?.unlockedAtomic ?? 0;
+    if (amountAtomic + _feeAtomic > unlocked) {
+      zentraSnack(
+        context,
+        'Need ${wallet.formatAmount(amountAtomic + _feeAtomic)} ZTR unlocked (amount + fee)',
+        isError: true,
+      );
       return;
     }
     if (!await _confirmSend(wallet, addr, amountStr)) return;
 
+    wallet.sendPriority = _priority;
     setState(() => _sending = true);
-    final tx = await wallet.sendTransfer(address: addr, amount: amountStr);
+    final tx = await wallet.sendTransfer(address: addr, amount: amountStr, priority: _priority);
     setState(() => _sending = false);
     if (!mounted) return;
     if (tx != null && tx.isNotEmpty) {
@@ -105,6 +180,8 @@ class _SendScreenState extends State<SendScreen> {
     final wallet = context.watch<WalletProvider>();
     final prefix = wallet.networkConfig?.addressPrefix ?? 'Z';
     final unlocked = wallet.balance?.unlockedAtomic;
+    final amountAtomic = wallet.parseAmount(_amount.text.trim());
+    final totalNeeded = amountAtomic > 0 ? amountAtomic + _feeAtomic : 0;
 
     return ZentraScaffold(
       appBar: AppBar(
@@ -130,6 +207,22 @@ class _SendScreenState extends State<SendScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            DropdownButtonFormField<int>(
+              value: _priority,
+              decoration: const InputDecoration(labelText: 'Fee priority'),
+              items: const [
+                DropdownMenuItem(value: 0, child: Text('Standard')),
+                DropdownMenuItem(value: 1, child: Text('Slow (lower fee)')),
+                DropdownMenuItem(value: 2, child: Text('Medium')),
+                DropdownMenuItem(value: 3, child: Text('Fast')),
+              ],
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() => _priority = v);
+                _updateFeeEstimate();
+              },
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _amount,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -137,7 +230,7 @@ class _SendScreenState extends State<SendScreen> {
                 labelText: 'Amount',
                 suffixText: 'ZTR',
                 helperText: unlocked != null
-                    ? 'Available to send: ${wallet.formatAmount(unlocked)} ZTR (fees extra)'
+                    ? 'Unlocked: ${wallet.formatAmount(unlocked)} ZTR'
                     : null,
               ),
             ),
@@ -146,10 +239,56 @@ class _SendScreenState extends State<SendScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () => _fillMaxAmount(wallet),
-                  child: const Text('Use max unlocked'),
+                  child: const Text('Max (minus fee)'),
                 ),
               ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: ZentraTheme.flatCard(),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Estimated fee', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 13)),
+                      if (_estimatingFee)
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.accent),
+                        )
+                      else
+                        Text(
+                          '${wallet.formatAmount(_feeAtomic)} ZTR',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                    ],
+                  ),
+                  if (amountAtomic > 0) ...[
+                    const SizedBox(height: 8),
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Total from wallet', style: TextStyle(fontSize: 13)),
+                        Text(
+                          '${wallet.formatAmount(totalNeeded)} ZTR',
+                          style: const TextStyle(fontWeight: FontWeight.w600, color: ZentraTheme.accent),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'After sending, change may show as locked until ~10 confirmations.',
+              style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12, height: 1.4),
+            ),
+            const SizedBox(height: 24),
             FilledButton(
               onPressed: _sending || !wallet.canTransact ? null : _send,
               child: _sending

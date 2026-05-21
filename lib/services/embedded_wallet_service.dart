@@ -135,9 +135,21 @@ class EmbeddedWalletService {
 
   int parseDisplay(String display) => ZentraCore.instance.displayToAtomic(display.trim());
 
-  /// Sends [amountDisplay] ZTR. Fees are deducted by wallet2 — do not pre-check
-  /// unlocked balance here (amount + fee is validated natively).
-  Future<String> send({required String address, required String amountDisplay}) async {
+  int estimateFee({required String address, required String amountDisplay, int priority = 0}) {
+    _requireOpen();
+    final dest = address.trim();
+    if (!validateAddress(dest)) return 0;
+    final atomic = parseDisplay(amountDisplay);
+    if (atomic <= 0) return 0;
+    return _native.estimateFee(_handle!, dest, atomic, priority: priority);
+  }
+
+  /// Sends [amountDisplay] ZTR. Network fee is extra (see [estimateFee]).
+  Future<String> send({
+    required String address,
+    required String amountDisplay,
+    int priority = 0,
+  }) async {
     _requireOpen();
     final dest = address.trim();
     if (!validateAddress(dest)) {
@@ -145,7 +157,7 @@ class EmbeddedWalletService {
     }
     final atomic = parseDisplay(amountDisplay);
     if (atomic <= 0) throw WalletException('Invalid amount');
-    final txid = _native.send(_handle!, dest, atomic);
+    final txid = _native.send(_handle!, dest, atomic, priority: priority);
     store();
     return txid;
   }

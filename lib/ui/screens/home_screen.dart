@@ -112,6 +112,9 @@ class _DashboardTab extends StatelessWidget {
             unlockedZtr: balance != null
                 ? '${wallet.formatAmount(balance.unlockedAtomic)} ZTR'
                 : null,
+            lockedZtr: wallet.lockedBalanceAtomic > 0
+                ? '${wallet.formatAmount(wallet.lockedBalanceAtomic)} ZTR'
+                : null,
             secondaryLabel: wallet.networkConfig?.label,
           ),
           if (address.isNotEmpty)
@@ -220,14 +223,17 @@ class _AssetsTab extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           const ZentraDashboardHeader(title: 'Assets'),
-          ZentraHeroBalanceCard(
-            amountZtr: balance != null
-                ? '${wallet.formatAmount(balance.balanceAtomic)} ZTR'
-                : '— ZTR',
-            unlockedZtr: balance != null
-                ? '${wallet.formatAmount(balance.unlockedAtomic)} ZTR'
-                : null,
-          ),
+        ZentraHeroBalanceCard(
+          amountZtr: balance != null
+              ? '${wallet.formatAmount(balance.balanceAtomic)} ZTR'
+              : '— ZTR',
+          unlockedZtr: balance != null
+              ? '${wallet.formatAmount(balance.unlockedAtomic)} ZTR'
+              : null,
+          lockedZtr: wallet.lockedBalanceAtomic > 0
+              ? '${wallet.formatAmount(wallet.lockedBalanceAtomic)} ZTR'
+              : null,
+        ),
           const SizedBox(height: 8),
           Container(
             margin: ZentraTheme.pagePadding,
