@@ -1,13 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
-import '../core/network/rpc_address.dart';
 import '../core/network/zentra_network.dart';
 import '../core/network/zentra_public_nodes.dart';
-import '../core/rpc/daemon_rpc_client.dart';
 import '../models/wallet_models.dart';
+import '../services/embedded_wallet_service.dart';
 import '../services/settings_store.dart';
-import '../services/wallet_service.dart';
 
 enum WalletConnectionState { disconnected, connecting, connected, error }
 
@@ -19,11 +20,13 @@ class WalletProvider extends ChangeNotifier {
 
   WalletConnectionState connectionState = WalletConnectionState.disconnected;
   String? errorMessage;
+  bool nativeAvailable = ZentraNativeWallet.isAvailable;
 
   ZentraNetType networkType = ZentraNetType.mainnet;
   ZentraNetworkConfig? networkConfig;
-  RpcConnectionSettings? rpcSettings;
-  WalletService? _service;
+  NodeConnectionSettings? nodeSettings;
+  EmbeddedWalletService? _wallet;
+  String? _walletDir;
 
   WalletBalance? balance;
   WalletAddress? primaryAddress;
@@ -39,54 +42,67 @@ class WalletProvider extends ChangeNotifier {
   Future<void> initialize() async {
     networkType = await _settings.loadNetwork();
     networkConfig = ZentraNetworkConfig.fromType(networkType);
-    rpcSettings = await _settings.loadRpc();
+    nodeSettings = await _settings.loadNode();
     walletFilename = await _settings.loadWalletFilename();
-    selectedPublicNode = ZentraPublicNode.byId(rpcSettings?.publicNodeId);
+    selectedPublicNode = ZentraPublicNode.byId(nodeSettings?.publicNodeId);
+    nativeAvailable = ZentraNativeWallet.isAvailable;
+    _walletDir = await _resolveWalletDir();
     notifyListeners();
   }
 
-  Future<void> pingDaemon() async {
-    final daemon = rpcSettings?.daemonAddress;
-    if (daemon == null || !daemon.contains(':')) {
-      daemonStatus = null;
-      return;
+  Future<String> _resolveWalletDir() async {
+    final base = await getApplicationSupportDirectory();
+    final dir = Directory('${base.path}/zentra_wallets');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
     }
-    final parsed = RpcAddress.parse(daemon);
-    if (parsed == null) {
-      daemonStatus = 'Invalid daemon address';
-      notifyListeners();
-      return;
-    }
-    final client = DaemonRpcClient(host: parsed.host, port: parsed.port);
-    try {
-      final info = await client.getInfo();
-      daemonBlockHeight = (info['height'] as num?)?.toInt() ?? 0;
-      daemonStatus = 'Daemon OK · height $daemonBlockHeight';
-    } catch (e) {
-      daemonBlockHeight = 0;
-      daemonStatus = 'Daemon unreachable: $e';
-    } finally {
-      client.dispose();
-      notifyListeners();
-    }
+    return dir.path;
   }
 
+  Future<void> _ensureWallet() async {
+    if (_wallet != null) return;
+    if (networkConfig == null || nodeSettings == null) await initialize();
+    _walletDir ??= await _resolveWalletDir();
+    _wallet = EmbeddedWalletService(
+      network: networkConfig!,
+      walletDir: _walletDir!,
+      daemonAddress: nodeSettings!.daemonAddress,
+    );
+  }
+
+  void _refreshNativeFlag() => nativeAvailable = ZentraNativeWallet.isAvailable;
+
   Future<bool> connect() async {
-    if (rpcSettings == null) await initialize();
+    _refreshNativeFlag();
+    if (!nativeAvailable) {
+      connectionState = WalletConnectionState.error;
+      errorMessage =
+          'Embedded wallet not built. Run: ./scripts/build_native_wallet.sh';
+      notifyListeners();
+      return false;
+    }
+    if (walletFilename == null || walletFilename!.isEmpty) {
+      connectionState = WalletConnectionState.disconnected;
+      return false;
+    }
+
     connectionState = WalletConnectionState.connecting;
     errorMessage = null;
     notifyListeners();
 
     try {
-      await pingDaemon();
-      _service?.dispose();
-      _service = WalletService(
-        network: networkConfig!,
-        rpc: rpcSettings!,
+      await _ensureWallet();
+      _wallet!.openWallet(
+        filename: walletFilename!,
+        password: await _settings.loadWalletPassword() ?? '',
       );
-      balance = await _service!.fetchBalance();
-      primaryAddress = await _service!.fetchPrimaryAddress();
-      walletHeight = await _service!.fetchWalletHeight();
+      await _wallet!.refresh();
+      balance = await _wallet!.fetchBalance();
+      primaryAddress = await _wallet!.fetchPrimaryAddress();
+      walletHeight = await _wallet!.fetchWalletHeight();
+      daemonBlockHeight = await _wallet!.fetchDaemonHeight();
+      daemonStatus = 'Daemon height $daemonBlockHeight';
+      transfers = await _wallet!.fetchTransfers();
       connectionState = WalletConnectionState.connected;
       return true;
     } catch (e) {
@@ -99,14 +115,16 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
-    if (_service == null) return;
+    if (_wallet == null || !(_wallet!.isOpen)) return;
     isRefreshing = true;
     notifyListeners();
     try {
-      balance = await _service!.fetchBalance();
-      primaryAddress = await _service!.fetchPrimaryAddress();
-      walletHeight = await _service!.fetchWalletHeight();
-      transfers = await _service!.fetchTransfers();
+      await _wallet!.refresh();
+      balance = await _wallet!.fetchBalance();
+      primaryAddress = await _wallet!.fetchPrimaryAddress();
+      walletHeight = await _wallet!.fetchWalletHeight();
+      daemonBlockHeight = await _wallet!.fetchDaemonHeight();
+      transfers = await _wallet!.fetchTransfers();
       errorMessage = null;
     } catch (e) {
       errorMessage = e.toString();
@@ -120,13 +138,21 @@ class WalletProvider extends ChangeNotifier {
     required String filename,
     required String password,
   }) async {
-    await _ensureService();
+    _refreshNativeFlag();
+    if (!nativeAvailable) {
+      errorMessage =
+          'Embedded wallet not built. Run: ./scripts/build_native_wallet.sh';
+      notifyListeners();
+      return false;
+    }
+    await _ensureWallet();
     try {
-      await _service!.createWallet(filename: filename, password: password);
+      _wallet!.createWallet(filename: filename, password: password);
       await _settings.saveWalletFilename(filename);
+      await _settings.saveWalletPassword(password);
       await _settings.setOnboarded(true);
       walletFilename = filename;
-      return await connect();
+      return await _syncAfterOpen();
     } catch (e) {
       errorMessage = e.toString();
       notifyListeners();
@@ -140,22 +166,52 @@ class WalletProvider extends ChangeNotifier {
     required String password,
     int restoreHeight = 0,
   }) async {
-    await _ensureService();
+    _refreshNativeFlag();
+    if (!nativeAvailable) {
+      errorMessage =
+          'Embedded wallet not built. Run: ./scripts/build_native_wallet.sh';
+      notifyListeners();
+      return false;
+    }
+    await _ensureWallet();
     try {
-      await _service!.restoreWallet(
+      _wallet!.restoreWallet(
         filename: filename,
-        seed: seed,
         password: password,
+        seed: seed,
         restoreHeight: restoreHeight,
       );
       await _settings.saveWalletFilename(filename);
+      await _settings.saveWalletPassword(password);
       await _settings.setOnboarded(true);
       walletFilename = filename;
-      return await connect();
+      return await _syncAfterOpen();
     } catch (e) {
       errorMessage = e.toString();
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<bool> _syncAfterOpen() async {
+    connectionState = WalletConnectionState.connecting;
+    notifyListeners();
+    try {
+      await _wallet!.refresh();
+      balance = await _wallet!.fetchBalance();
+      primaryAddress = await _wallet!.fetchPrimaryAddress();
+      walletHeight = await _wallet!.fetchWalletHeight();
+      daemonBlockHeight = await _wallet!.fetchDaemonHeight();
+      daemonStatus = 'Daemon height $daemonBlockHeight';
+      transfers = await _wallet!.fetchTransfers();
+      connectionState = WalletConnectionState.connected;
+      return true;
+    } catch (e) {
+      connectionState = WalletConnectionState.error;
+      errorMessage = e.toString();
+      return false;
+    } finally {
+      notifyListeners();
     }
   }
 
@@ -163,27 +219,29 @@ class WalletProvider extends ChangeNotifier {
     required String filename,
     required String password,
   }) async {
-    await _ensureService();
-    try {
-      await _service!.openWallet(filename: filename, password: password);
-      await _settings.saveWalletFilename(filename);
-      await _settings.setOnboarded(true);
-      walletFilename = filename;
-      return await connect();
-    } catch (e) {
-      errorMessage = e.toString();
-      notifyListeners();
-      return false;
-    }
+    await _settings.saveWalletFilename(filename);
+    await _settings.saveWalletPassword(password);
+    await _settings.setOnboarded(true);
+    walletFilename = filename;
+    return connect();
   }
 
   Future<String?> sendTransfer({
     required String address,
     required String amount,
   }) async {
-    if (_service == null) return null;
+    if (_wallet == null || !_wallet!.isOpen) {
+      errorMessage = 'Wallet not open';
+      notifyListeners();
+      return null;
+    }
+    if (connectionState != WalletConnectionState.connected) {
+      errorMessage = 'Wallet not connected';
+      notifyListeners();
+      return null;
+    }
     try {
-      final tx = await _service!.send(address: address, amountDisplay: amount);
+      final tx = await _wallet!.send(address: address, amountDisplay: amount);
       await refresh();
       return tx;
     } catch (e) {
@@ -194,18 +252,18 @@ class WalletProvider extends ChangeNotifier {
   }
 
   String formatAmount(int atomic) =>
-      _service?.formatAtomic(atomic) ?? ZentraCore.instance.atomicToDisplay(atomic);
+      _wallet?.formatAtomic(atomic) ?? ZentraCore.instance.atomicToDisplay(atomic);
 
   int parseAmount(String display) =>
-      _service?.parseDisplay(display) ?? ZentraCore.instance.displayToAtomic(display);
+      _wallet?.parseDisplay(display) ?? ZentraCore.instance.displayToAtomic(display);
 
   bool validateAddress(String addr) {
-    if (_service != null) return _service!.validateAddress(addr);
-    final net = networkConfig?.ffiNetwork ?? ZentraNetwork.mainnet;
-    return ZentraCore.instance.validateAddress(addr, net);
+    if (addr.trim().isEmpty) return false;
+    if (_wallet != null) return _wallet!.validateAddress(addr);
+    if (!nativeAvailable || networkConfig == null) return false;
+    return ZentraNativeWallet.instance.addressValid(addr, networkConfig!.type.index);
   }
 
-  /// True when wallet is behind daemon by more than 3 blocks.
   bool get isWalletBehindDaemon {
     if (daemonBlockHeight <= 0 || walletHeight <= 0) return false;
     return daemonBlockHeight - walletHeight > 3;
@@ -217,56 +275,48 @@ class WalletProvider extends ChangeNotifier {
     await _settings.saveNetwork(type);
     if (type == ZentraNetType.mainnet) {
       final node = ZentraPublicNode.seedPrimary;
-      rpcSettings = node.toRpcSettings(
-        username: rpcSettings?.username,
-        password: rpcSettings?.password,
-      );
+      nodeSettings = node.toNodeSettings();
       selectedPublicNode = node;
     } else {
       final cfg = networkConfig!;
-      rpcSettings = RpcConnectionSettings(
-        host: '127.0.0.1',
-        port: cfg.defaultWalletRpcPort,
-        username: rpcSettings?.username,
-        password: rpcSettings?.password,
+      nodeSettings = NodeConnectionSettings(
         daemonAddress: '127.0.0.1:${cfg.daemonRpcPort}',
-        publicNodeId: null,
       );
       selectedPublicNode = null;
     }
-    await _settings.saveRpc(rpcSettings!);
-    connectionState = WalletConnectionState.disconnected;
-    _service?.dispose();
-    _service = null;
+    await _settings.saveNode(nodeSettings!);
+    _resetWalletSession();
     notifyListeners();
   }
 
-  Future<void> updateRpc(RpcConnectionSettings settings) async {
-    rpcSettings = settings;
+  Future<void> updateNode(NodeConnectionSettings settings) async {
+    final reconnect = connectionState == WalletConnectionState.connected &&
+        walletFilename != null &&
+        walletFilename!.isNotEmpty;
+    nodeSettings = settings;
     selectedPublicNode = ZentraPublicNode.byId(settings.publicNodeId);
-    await _settings.saveRpc(settings);
+    await _settings.saveNode(settings);
+    _resetWalletSession();
     notifyListeners();
+    if (reconnect) await connect();
   }
 
-  Future<void> applyPublicNode(ZentraPublicNode node) async {
-    rpcSettings = node.toRpcSettings(
-      username: rpcSettings?.username,
-      password: rpcSettings?.password,
-    );
-    selectedPublicNode = node;
-    await _settings.saveRpc(rpcSettings!);
-    notifyListeners();
-  }
-
-  Future<void> _ensureService() async {
-    if (_service != null) return;
-    if (networkConfig == null || rpcSettings == null) await initialize();
-    _service = WalletService(network: networkConfig!, rpc: rpcSettings!);
+  void _resetWalletSession() {
+    _wallet?.dispose();
+    _wallet = null;
+    balance = null;
+    primaryAddress = null;
+    transfers = [];
+    walletHeight = 0;
+    daemonBlockHeight = 0;
+    daemonStatus = null;
+    connectionState = WalletConnectionState.disconnected;
+    errorMessage = null;
   }
 
   @override
   void dispose() {
-    _service?.dispose();
+    _wallet?.dispose();
     super.dispose();
   }
 }

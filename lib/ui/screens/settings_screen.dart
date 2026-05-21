@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/network/zentra_network.dart';
 import '../../providers/wallet_provider.dart';
 import 'onboarding_screen.dart';
-import 'rpc_setup_screen.dart';
+import 'node_setup_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -44,13 +44,19 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           ListTile(
-            title: const Text('Wallet RPC'),
-            subtitle: Text('${wallet.rpcSettings?.host}:${wallet.rpcSettings?.port}'),
+            title: const Text('Network node (zentrad)'),
+            subtitle: Text(wallet.nodeSettings?.daemonAddress ?? '—'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const RpcSetupScreen()),
+              MaterialPageRoute(builder: (_) => const NodeSetupScreen()),
             ),
           ),
+          if (!wallet.nativeAvailable)
+            const ListTile(
+              leading: Icon(Icons.build, color: Colors.orangeAccent),
+              title: Text('Native wallet missing'),
+              subtitle: Text('./scripts/build_native_wallet.sh'),
+            ),
           ListTile(
             title: const Text('Wallet file'),
             subtitle: Text(wallet.walletFilename ?? '—'),

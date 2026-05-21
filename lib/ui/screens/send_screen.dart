@@ -25,7 +25,7 @@ class _SendScreenState extends State<SendScreen> {
   Future<void> _send() async {
     final wallet = context.read<WalletProvider>();
     if (wallet.connectionState != WalletConnectionState.connected) {
-      _msg('Wallet not connected. Check RPC in Settings.');
+      _msg('Wallet not connected. Open the app again or check node in Settings.');
       return;
     }
     if (!wallet.validateAddress(_address.text.trim())) {
@@ -39,7 +39,10 @@ class _SendScreenState extends State<SendScreen> {
     }
     final unlocked = wallet.balance?.unlockedAtomic ?? 0;
     if (amountAtomic > unlocked) {
-      _msg('Insufficient unlocked balance (${wallet.formatAmount(unlocked)} ZTR)');
+      _msg(
+        'Insufficient unlocked balance (${wallet.formatAmount(unlocked)} ZTR). '
+        'Network fee is charged on top of the amount.',
+      );
       return;
     }
     setState(() => _sending = true);

@@ -7,14 +7,12 @@ class ZentraNetworkConfig {
     required this.type,
     required this.label,
     required this.daemonRpcPort,
-    required this.defaultWalletRpcPort,
     required this.addressPrefix,
   });
 
   final ZentraNetType type;
   final String label;
   final int daemonRpcPort;
-  final int defaultWalletRpcPort;
   final String addressPrefix;
 
   static List<ZentraNetworkConfig> all() => [
@@ -32,7 +30,6 @@ class ZentraNetworkConfig {
         ZentraNetType.stagenet => 'Stagenet',
       },
       daemonRpcPort: core.daemonRpcPort(ffiNet),
-      defaultWalletRpcPort: core.defaultWalletRpcPort(),
       addressPrefix: core.addressPrefixChar(ffiNet),
     );
   }

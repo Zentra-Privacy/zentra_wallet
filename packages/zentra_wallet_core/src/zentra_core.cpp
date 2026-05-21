@@ -35,7 +35,7 @@ bool is_base58_char(char c) {
 
 extern "C" {
 
-int zentra_validate_address(const char* address, int network) {
+ZENTRA_API int zentra_validate_address(const char* address, int network) {
   if (!address) return 0;
   const auto p = params_for(network);
   const size_t len = strlen(address);
@@ -47,7 +47,7 @@ int zentra_validate_address(const char* address, int network) {
   return 1;
 }
 
-char* zentra_atomic_to_display(uint64_t atomic) {
+ZENTRA_API char* zentra_atomic_to_display(uint64_t atomic) {
   const uint64_t whole = atomic / ZENTRA_ATOMIC_UNITS;
   const uint64_t frac = atomic % ZENTRA_ATOMIC_UNITS;
   char buf[64];
@@ -78,7 +78,7 @@ static std::string trim(const char* s) {
   return str;
 }
 
-uint64_t zentra_display_to_atomic(const char* display) {
+ZENTRA_API uint64_t zentra_display_to_atomic(const char* display) {
   if (!display || !*display) return 0;
   std::string s = trim(display);
   if (s.empty()) return 0;
@@ -106,11 +106,11 @@ uint64_t zentra_display_to_atomic(const char* display) {
   return whole * ZENTRA_ATOMIC_UNITS + frac;
 }
 
-void zentra_free_string(char* ptr) {
+ZENTRA_API void zentra_free_string(char* ptr) {
   free(ptr);
 }
 
-uint16_t zentra_daemon_rpc_port(int network) {
+ZENTRA_API uint16_t zentra_daemon_rpc_port(int network) {
   switch (network) {
     case ZENTRA_TESTNET:
       return 29081;
@@ -121,15 +121,11 @@ uint16_t zentra_daemon_rpc_port(int network) {
   }
 }
 
-uint16_t zentra_default_wallet_rpc_port(void) {
-  return 8082;
-}
-
-char zentra_address_prefix_char(int network) {
+ZENTRA_API char zentra_address_prefix_char(int network) {
   return params_for(network).prefix;
 }
 
-const char* zentra_coin_ticker(void) {
+ZENTRA_API const char* zentra_coin_ticker(void) {
   return "ZTR";
 }
 

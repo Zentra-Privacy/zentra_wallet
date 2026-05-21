@@ -209,7 +209,7 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (state) {
-      WalletConnectionState.connected => ('Connected to wallet RPC', Colors.green),
+      WalletConnectionState.connected => ('Wallet synced', Colors.green),
       WalletConnectionState.connecting => ('Connecting…', Colors.orange),
       WalletConnectionState.error => ('Error', Colors.red),
       _ => ('Disconnected', Colors.grey),

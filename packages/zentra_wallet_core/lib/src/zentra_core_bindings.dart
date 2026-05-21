@@ -59,8 +59,6 @@ class ZentraCore {
 
   int daemonRpcPort(ZentraNetwork network) => _lib.daemonRpcPort(network.index);
 
-  int defaultWalletRpcPort() => _lib.defaultWalletRpcPort();
-
   String addressPrefixChar(ZentraNetwork network) {
     final c = _lib.addressPrefixChar(network.index);
     return String.fromCharCode(c);
@@ -86,9 +84,6 @@ class _Lib {
         daemonRpcPort = lib.lookupFunction<_DaemonPortNative, _DaemonPort>(
           'zentra_daemon_rpc_port',
         ),
-        defaultWalletRpcPort = lib.lookupFunction<_WalletPortNative, _WalletPort>(
-          'zentra_default_wallet_rpc_port',
-        ),
         addressPrefixChar = lib.lookupFunction<_PrefixCharNative, _PrefixChar>(
           'zentra_address_prefix_char',
         ),
@@ -101,7 +96,6 @@ class _Lib {
   final _DisplayToAtomic displayToAtomic;
   final _FreeString freeString;
   final _DaemonPort daemonRpcPort;
-  final _WalletPort defaultWalletRpcPort;
   final _PrefixChar addressPrefixChar;
   final _CoinTicker coinTicker;
 }
@@ -120,9 +114,6 @@ typedef _FreeString = void Function(ffi.Pointer<Utf8>);
 
 typedef _DaemonPortNative = ffi.Uint16 Function(ffi.Int32);
 typedef _DaemonPort = int Function(int);
-
-typedef _WalletPortNative = ffi.Uint16 Function();
-typedef _WalletPort = int Function();
 
 typedef _PrefixCharNative = ffi.Int8 Function(ffi.Int32);
 typedef _PrefixChar = int Function(int);

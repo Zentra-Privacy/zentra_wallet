@@ -40,72 +40,38 @@ class WalletTransfer {
   final bool pending;
   final bool failed;
 
-  bool get isFailed => failed;
-
-  factory WalletTransfer.fromRpc(Map<String, dynamic> json, {bool? incoming}) {
-    final type = json['type'] as String?;
-    final isIncoming = incoming ?? _incomingFromRpcType(type);
+  /// Parsed from embedded wallet2 [TransactionHistory] JSON (native FFI).
+  factory WalletTransfer.fromNative(Map<String, dynamic> json) {
+    final paymentId = json['payment_id'] as String?;
     return WalletTransfer(
       txid: json['txid'] as String? ?? '',
       amountAtomic: (json['amount'] as num?)?.toInt() ?? 0,
-      isIncoming: isIncoming,
+      isIncoming: json['incoming'] == true,
       timestamp: (json['timestamp'] as num?)?.toInt() ?? 0,
       height: (json['height'] as num?)?.toInt() ?? 0,
       confirmations: (json['confirmations'] as num?)?.toInt() ?? 0,
-      paymentId: json['payment_id'] as String?,
-      pending: type == 'pending' || json['pending'] == true,
-      failed: type == 'failed',
+      paymentId: paymentId != null && paymentId.isNotEmpty ? paymentId : null,
+      pending: json['pending'] == true,
+      failed: json['failed'] == true,
     );
-  }
-
-  /// Matches zentra `wallet_rpc_server::fill_transfer_entry` type strings.
-  static bool _incomingFromRpcType(String? type) {
-    switch (type) {
-      case 'in':
-      case 'pool':
-      case 'block':
-        return true;
-      case 'out':
-      case 'pending':
-      case 'failed':
-        return false;
-      default:
-        return true;
-    }
   }
 }
 
-class RpcConnectionSettings {
-  const RpcConnectionSettings({
-    required this.host,
-    required this.port,
-    this.username,
-    this.password,
-    this.daemonAddress,
+/// Remote zentrad node (daemon) — wallet runs inside the app.
+class NodeConnectionSettings {
+  const NodeConnectionSettings({
+    required this.daemonAddress,
     this.publicNodeId,
   });
 
-  final String host;
-  final int port;
-  final String? username;
-  final String? password;
-  final String? daemonAddress;
-  /// `seed1` / `seed2` when using a built-in mainnet VPS node.
+  final String daemonAddress;
   final String? publicNodeId;
 
-  RpcConnectionSettings copyWith({
-    String? host,
-    int? port,
-    String? username,
-    String? password,
+  NodeConnectionSettings copyWith({
     String? daemonAddress,
     String? publicNodeId,
   }) =>
-      RpcConnectionSettings(
-        host: host ?? this.host,
-        port: port ?? this.port,
-        username: username ?? this.username,
-        password: password ?? this.password,
+      NodeConnectionSettings(
         daemonAddress: daemonAddress ?? this.daemonAddress,
         publicNodeId: publicNodeId ?? this.publicNodeId,
       );

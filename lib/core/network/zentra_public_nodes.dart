@@ -7,7 +7,6 @@ class ZentraPublicNode {
     required this.label,
     required this.host,
     required this.daemonRpcPort,
-    this.walletRpcPort = 8082,
     this.dnsName,
   });
 
@@ -15,21 +14,11 @@ class ZentraPublicNode {
   final String label;
   final String host;
   final int daemonRpcPort;
-  /// Wallet-RPC on VPS (if exposed). Daemon RPC is always [daemonRpcPort].
-  final int walletRpcPort;
   final String? dnsName;
 
   String get daemonAddress => '$host:$daemonRpcPort';
 
-  RpcConnectionSettings toRpcSettings({
-    String? username,
-    String? password,
-  }) =>
-      RpcConnectionSettings(
-        host: host,
-        port: walletRpcPort,
-        username: username,
-        password: password,
+  NodeConnectionSettings toNodeSettings() => NodeConnectionSettings(
         daemonAddress: daemonAddress,
         publicNodeId: id,
       );

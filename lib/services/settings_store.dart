@@ -6,13 +6,10 @@ import '../models/wallet_models.dart';
 
 class SettingsStore {
   static const _keyNetwork = 'network';
-  static const _keyRpcHost = 'rpc_host';
-  static const _keyRpcPort = 'rpc_port';
-  static const _keyRpcUser = 'rpc_user';
-  static const _keyRpcPass = 'rpc_pass';
   static const _keyDaemon = 'daemon_address';
   static const _keyPublicNode = 'public_node_id';
   static const _keyWalletName = 'wallet_filename';
+  static const _keyWalletPass = 'wallet_password';
   static const _keyOnboarded = 'onboarded';
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
@@ -29,7 +26,7 @@ class SettingsStore {
 
   Future<ZentraNetType> loadNetwork() async {
     final p = await _prefs;
-    final idx = p.getInt(_keyNetwork) ?? 0; // default mainnet (VPS seeds)
+    final idx = p.getInt(_keyNetwork) ?? 0;
     return ZentraNetType.values[idx.clamp(0, ZentraNetType.values.length - 1)];
   }
 
@@ -38,7 +35,7 @@ class SettingsStore {
     await p.setInt(_keyNetwork, type.index);
   }
 
-  Future<RpcConnectionSettings> loadRpc() async {
+  Future<NodeConnectionSettings> loadNode() async {
     final p = await _prefs;
     final net = await loadNetwork();
     final cfg = ZentraNetworkConfig.fromType(net);
@@ -46,43 +43,20 @@ class SettingsStore {
     if (net == ZentraNetType.mainnet) {
       final nodeId = p.getString(_keyPublicNode) ?? ZentraPublicNode.seedPrimary.id;
       final node = ZentraPublicNode.byId(nodeId) ?? ZentraPublicNode.seedPrimary;
-      return RpcConnectionSettings(
-        host: p.getString(_keyRpcHost) ?? node.host,
-        port: p.getInt(_keyRpcPort) ?? node.walletRpcPort,
-        username: p.getString(_keyRpcUser),
-        password: p.getString(_keyRpcPass),
+      return NodeConnectionSettings(
         daemonAddress: p.getString(_keyDaemon) ?? node.daemonAddress,
         publicNodeId: node.id,
       );
     }
 
-    return RpcConnectionSettings(
-      host: p.getString(_keyRpcHost) ?? '127.0.0.1',
-      port: p.getInt(_keyRpcPort) ?? cfg.defaultWalletRpcPort,
-      username: p.getString(_keyRpcUser),
-      password: p.getString(_keyRpcPass),
-      daemonAddress: p.getString(_keyDaemon) ??
-          '127.0.0.1:${cfg.daemonRpcPort}',
+    return NodeConnectionSettings(
+      daemonAddress: p.getString(_keyDaemon) ?? '127.0.0.1:${cfg.daemonRpcPort}',
     );
   }
 
-  Future<void> saveRpc(RpcConnectionSettings settings) async {
+  Future<void> saveNode(NodeConnectionSettings settings) async {
     final p = await _prefs;
-    await p.setString(_keyRpcHost, settings.host);
-    await p.setInt(_keyRpcPort, settings.port);
-    if (settings.username != null) {
-      await p.setString(_keyRpcUser, settings.username!);
-    } else {
-      await p.remove(_keyRpcUser);
-    }
-    if (settings.password != null) {
-      await p.setString(_keyRpcPass, settings.password!);
-    } else {
-      await p.remove(_keyRpcPass);
-    }
-    if (settings.daemonAddress != null) {
-      await p.setString(_keyDaemon, settings.daemonAddress!);
-    }
+    await p.setString(_keyDaemon, settings.daemonAddress);
     if (settings.publicNodeId != null) {
       await p.setString(_keyPublicNode, settings.publicNodeId!);
     } else {
@@ -98,5 +72,15 @@ class SettingsStore {
   Future<void> saveWalletFilename(String name) async {
     final p = await _prefs;
     await p.setString(_keyWalletName, name);
+  }
+
+  Future<String?> loadWalletPassword() async {
+    final p = await _prefs;
+    return p.getString(_keyWalletPass);
+  }
+
+  Future<void> saveWalletPassword(String password) async {
+    final p = await _prefs;
+    await p.setString(_keyWalletPass, password);
   }
 }

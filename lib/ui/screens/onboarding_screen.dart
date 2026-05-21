@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:zentra_wallet_core/zentra_wallet_core.dart';
+
 import '../../core/network/zentra_network.dart';
 import '../../providers/wallet_provider.dart';
 import 'home_screen.dart';
-import 'rpc_setup_screen.dart';
+import 'node_setup_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -45,12 +47,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _snack('Seed phrase looks too short');
       return;
     }
-    setState(() => _loading = true);
     final p = context.read<WalletProvider>();
-    await p.updateNetwork(_network);
-    if (_network == ZentraNetType.mainnet) {
-      await p.pingDaemon();
+    if (!ZentraNativeWallet.isAvailable) {
+      _snack('Native wallet not built. Run: ./scripts/build_native_wallet.sh');
+      return;
     }
+    setState(() => _loading = true);
+    await p.updateNetwork(_network);
     final ok = _openMode
         ? await p.openExistingWallet(
             filename: _filename.text.trim(),
@@ -92,7 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           IconButton(
             icon: const Icon(Icons.settings_ethernet),
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const RpcSetupScreen()),
+              MaterialPageRoute(builder: (_) => const NodeSetupScreen()),
             ),
           ),
         ],
@@ -116,7 +119,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Connect to zentra-wallet-rpc on the same network as your zentrad node.',
+          'Wallet runs on this device. Sync uses zentrad on the network (seed VPS).',
         ),
         const SizedBox(height: 24),
         ...ZentraNetType.values.map((n) {
@@ -174,7 +177,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: 16),
         TextField(
           controller: _filename,
-          decoration: const InputDecoration(labelText: 'Wallet filename (on RPC server)'),
+          decoration: const InputDecoration(labelText: 'Wallet filename (stored on device)'),
         ),
         const SizedBox(height: 12),
         TextField(
@@ -195,7 +198,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ],
         const SizedBox(height: 16),
         const Text(
-          'Requires zentra-wallet-rpc running with --disable-rpc-login (dev) or matching credentials in Settings.',
+          'Build native wallet first: ./scripts/build_native_wallet.sh',
           style: TextStyle(fontSize: 12, color: Colors.white54),
         ),
         const Spacer(),
