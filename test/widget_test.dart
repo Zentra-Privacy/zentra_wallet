@@ -18,7 +18,6 @@ bool _nativeAvailable() {
 void main() {
   test('C++ core amount round-trip', () {
     if (!_nativeAvailable()) {
-      // `flutter test` does not bundle the FFI .so; run after `flutter build linux`.
       return;
     }
     final core = ZentraCore.instance;
@@ -27,35 +26,33 @@ void main() {
     expect(core.coinTicker, 'ZTR');
   });
 
-  test('transfer direction from RPC type field', () {
-    final pending = WalletTransfer.fromRpc({
-      'txid': 'abc',
+  test('transfer from embedded wallet2 JSON', () {
+    final tx = WalletTransfer.fromNative({
+      'txid': 'abc123',
       'amount': 1000,
-      'type': 'pending',
+      'incoming': false,
       'timestamp': 1,
-      'height': 0,
+      'height': 100,
+      'confirmations': 5,
+      'payment_id': '',
+      'pending': true,
+      'failed': false,
     });
-    expect(pending.isIncoming, isFalse);
-    expect(pending.pending, isTrue);
+    expect(tx.isIncoming, isFalse);
+    expect(tx.pending, isTrue);
+    expect(tx.amountAtomic, 1000);
 
-    final pool = WalletTransfer.fromRpc({
-      'txid': 'def',
+    final incoming = WalletTransfer.fromNative({
+      'txid': 'def456',
       'amount': 2000,
-      'type': 'pool',
+      'incoming': true,
       'timestamp': 2,
-      'height': 0,
+      'height': 101,
+      'confirmations': 10,
+      'pending': false,
+      'failed': false,
     });
-    expect(pool.isIncoming, isTrue);
-
-    final failed = WalletTransfer.fromRpc({
-      'txid': 'fail',
-      'amount': 500,
-      'type': 'failed',
-      'timestamp': 3,
-      'height': 0,
-    });
-    expect(failed.isIncoming, isFalse);
-    expect(failed.failed, isTrue);
+    expect(incoming.isIncoming, isTrue);
   });
 
   test('address prefix validation mainnet', () {

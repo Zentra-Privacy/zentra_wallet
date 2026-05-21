@@ -1,0 +1,118 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/network/zentra_network.dart';
+import '../../core/network/zentra_public_nodes.dart';
+import '../../models/wallet_models.dart';
+import '../../providers/wallet_provider.dart';
+
+/// Configure remote zentrad (daemon) — wallet keys stay on device.
+class NodeSetupScreen extends StatefulWidget {
+  const NodeSetupScreen({super.key});
+
+  @override
+  State<NodeSetupScreen> createState() => _NodeSetupScreenState();
+}
+
+class _NodeSetupScreenState extends State<NodeSetupScreen> {
+  final _daemon = TextEditingController();
+  String? _selectedNodeId;
+  bool _useCustom = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final wallet = context.read<WalletProvider>();
+    final node = wallet.nodeSettings;
+    if (node != null) {
+      _daemon.text = node.daemonAddress;
+      _selectedNodeId = node.publicNodeId;
+    }
+    if (wallet.networkType == ZentraNetType.mainnet &&
+        _selectedNodeId == null &&
+        !_useCustom) {
+      _applyNode(ZentraPublicNode.seedPrimary);
+    }
+  }
+
+  void _applyNode(ZentraPublicNode node) {
+    _daemon.text = node.daemonAddress;
+    _selectedNodeId = node.id;
+    _useCustom = false;
+  }
+
+  @override
+  void dispose() {
+    _daemon.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final settings = NodeConnectionSettings(
+      daemonAddress: _daemon.text.trim(),
+      publicNodeId: _useCustom ? null : _selectedNodeId,
+    );
+    await context.read<WalletProvider>().updateNode(settings);
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final wallet = context.watch<WalletProvider>();
+    final isMainnet = wallet.networkType == ZentraNetType.mainnet;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Network node (zentrad)')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Embedded wallet — like Monero/Cake Wallet. Keys stay on this device; '
+            'only blockchain sync uses zentrad on the network.',
+            style: TextStyle(fontSize: 13, color: Colors.white54),
+          ),
+          if (!wallet.nativeAvailable) ...[
+            const SizedBox(height: 12),
+            const Card(
+              child: ListTile(
+                leading: Icon(Icons.warning, color: Colors.orangeAccent),
+                title: Text('Native wallet not built'),
+                subtitle: Text('Run: ./scripts/build_native_wallet.sh'),
+              ),
+            ),
+          ],
+          if (isMainnet) ...[
+            const SizedBox(height: 16),
+            const Text('Mainnet seed nodes', style: TextStyle(fontWeight: FontWeight.bold)),
+            ...ZentraPublicNode.mainnetNodes.map((node) {
+              return RadioListTile<String>(
+                value: node.id,
+                groupValue: _useCustom ? '' : (_selectedNodeId ?? ''),
+                title: Text(node.label),
+                subtitle: Text('Daemon ${node.daemonAddress}'),
+                onChanged: (_) => setState(() => _applyNode(node)),
+              );
+            }),
+            RadioListTile<String>(
+              value: 'custom',
+              groupValue: _useCustom ? 'custom' : '',
+              title: const Text('Custom daemon'),
+              onChanged: (_) => setState(() => _useCustom = true),
+            ),
+          ],
+          const SizedBox(height: 12),
+          TextField(
+            controller: _daemon,
+            decoration: const InputDecoration(
+              labelText: 'Daemon address (host:port)',
+              helperText: 'Mainnet: 185.182.185.127:19081 or 213.136.78.112:19081',
+            ),
+            onChanged: (_) => setState(() => _useCustom = true),
+          ),
+          const SizedBox(height: 24),
+          FilledButton(onPressed: _save, child: const Text('Save')),
+        ],
+      ),
+    );
+  }
+}

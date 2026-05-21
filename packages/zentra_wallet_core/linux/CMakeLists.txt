@@ -15,7 +15,9 @@ target_compile_definitions(${PLUGIN_NAME} PUBLIC DART_SHARED_LIB)
 target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/../src")
 
-set(zentra_wallet_core_bundled_libraries
-  "$<TARGET_FILE:${PLUGIN_NAME}>"
-  PARENT_SCOPE
-)
+set(_bundled_libs "$<TARGET_FILE:${PLUGIN_NAME}>")
+set(_ffi_lib "${CMAKE_CURRENT_SOURCE_DIR}/libzentra_wallet_ffi.so")
+if(EXISTS "${_ffi_lib}")
+  list(APPEND _bundled_libs "${_ffi_lib}")
+endif()
+set(zentra_wallet_core_bundled_libraries ${_bundled_libs} PARENT_SCOPE)
