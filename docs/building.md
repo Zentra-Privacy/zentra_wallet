@@ -123,7 +123,7 @@ Match what the [Zentra](https://github.com/Zentra-Privacy/zentra) README require
 
 ## iOS / macOS / Windows
 
-Flutter platform folders exist, but the **full wallet engine** is not wired into those plugin CMake projects by default. Linux is the reference implementation.
+Flutter platform folders exist. **macOS/iOS** build the light `zentra_core` plugin via CocoaPods (`packages/zentra_wallet_core/macos|ios/`). The **full wallet engine** (`libzentra_wallet_ffi`) is only bundled on **Linux** today.
 
 ---
 
