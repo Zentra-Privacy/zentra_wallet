@@ -159,8 +159,56 @@ jobs:
           path: zentra-wallet-macos.zip
           if-no-files-found: error
 
+  draft-release:
+    name: Draft release (review before publish)
+    needs: [build-linux, build-windows, build-android, build-macos]
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-files
+
+      - name: Stage release assets
+        run: |
+          set -euo pipefail
+          mkdir -p staged
+          test -f release-files/zentra-wallet-linux-x64/zentra-wallet-linux-x64.tar.gz
+          test -f release-files/zentra-wallet-windows-x64/zentra-wallet-windows-x64.zip
+          test -f release-files/zentra-wallet-android-apk/app-release.apk
+          test -f release-files/zentra-wallet-macos/zentra-wallet-macos.zip
+          cp release-files/zentra-wallet-linux-x64/zentra-wallet-linux-x64.tar.gz staged/
+          cp release-files/zentra-wallet-windows-x64/zentra-wallet-windows-x64.zip staged/
+          cp release-files/zentra-wallet-android-apk/app-release.apk staged/zentra-wallet-android.apk
+          cp release-files/zentra-wallet-macos/zentra-wallet-macos.zip staged/
+          ls -la staged/
+
+      - name: Create draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: draft-${{ github.run_number }}
+          name: Draft build #${{ github.run_number }}
+          draft: true
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            **Automated draft** — CI finished on `${{ github.ref_name }}` @ `${{ github.sha }}`.
+
+            1. Download and test the assets below.
+            2. When ready: **Edit release** → **Publish release** (makes it public).
+            3. For a stable version name, publish a proper tag instead: `git tag v1.0.0 && git push origin v1.0.0`
+
+            Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          files: staged/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   github-release:
-    name: Attach to GitHub Release
+    name: Publish release (version tag)
     needs: [build-linux, build-windows, build-android, build-macos]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
