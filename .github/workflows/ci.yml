@@ -1,12 +1,11 @@
-# Fast checks on every push and PR: Dart analyze, tests, Linux app build.
+# Fast PR checks: analyze, tests, Linux debug build (committed .so).
+# Production Linux / Windows / Android: Release pipeline on push to main (build-artifacts.yml).
 name: CI
 
 permissions:
   contents: read
 
 on:
-  push:
-    branches: [main, master]
   pull_request:
     branches: [main, master]
 

@@ -28,16 +28,7 @@ Scripts:
 
 First run can take **2–6+ hours** (Zentra `contrib/depends`). GitHub cache speeds up later runs.
 
-### Skip engine rebuild (manual)
-
-**Actions → Release pipeline → Run workflow** → **skip_engine_rebuild**.
-
-Requires these **committed** files (not only Linux):
-
-- `packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so`
-- `packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll`
-- `packages/zentra_wallet_core/android/src/main/jniLibs/arm64-v8a/libzentra_wallet_ffi.so`
-- `packages/zentra_wallet_core/android/src/main/jniLibs/armeabi-v7a/libzentra_wallet_ffi.so`
+Every run builds the engine from **Zentra v0.1.0** (no “skip rebuild” shortcut).
 
 ---
 
@@ -64,9 +55,14 @@ Draft release is created only when **all three** app jobs succeed (iOS/macOS not
 
 ---
 
-## PR / fast CI
+## PR / fast CI (pull requests only)
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — analyze, test, Linux **debug** build using committed `libzentra_wallet_ffi.so`.
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on **pull requests** only (not on push to `main`):
+
+- `flutter analyze` + `flutter test`
+- Linux **debug** build using committed `libzentra_wallet_ffi.so`
+
+Push to `main` uses **Release pipeline** only — no duplicate Linux CI build.
 
 ---
 

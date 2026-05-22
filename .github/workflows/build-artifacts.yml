@@ -8,11 +8,6 @@ name: Release pipeline
 
 on:
   workflow_dispatch:
-    inputs:
-      skip_engine_rebuild:
-        description: "Use committed native libs in repo (skip Zentra rebuild; needs all 3 platforms)"
-        type: boolean
-        default: false
   push:
     tags:
       - "v*"
@@ -36,9 +31,6 @@ jobs:
   # ─── Phase 1: Native engine (Linux + Android + Windows on one Ubuntu runner) ─
   engine-ubuntu:
     name: "Phase 1 · Engine (Linux + Android + Windows)"
-    if: >-
-      github.event_name != 'workflow_dispatch' ||
-      github.event.inputs.skip_engine_rebuild != true
     runs-on: ubuntu-22.04
     timeout-minutes: 360
     steps:
@@ -72,9 +64,6 @@ jobs:
   package-engine:
     name: "Phase 1 · Package native-engine-bundle"
     needs: [engine-ubuntu]
-    if: >-
-      (github.event_name != 'workflow_dispatch' || github.event.inputs.skip_engine_rebuild != true) &&
-      needs.engine-ubuntu.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -98,49 +87,10 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-  use-committed-engine:
-    name: "Phase 1 · Use committed engine (skip rebuild)"
-    if: >-
-      github.event_name == 'workflow_dispatch' &&
-      github.event.inputs.skip_engine_rebuild == true
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Assemble bundle from repo
-        run: |
-          chmod +x scripts/ci-verify-native-engine.sh
-          B=build/native-engine-bundle
-          mkdir -p "$B/linux" "$B/windows" "$B/macos/lib" \
-            "$B/android/arm64-v8a" "$B/android/armeabi-v7a"
-          _need() {
-            if [[ ! -f "$1" ]]; then
-              echo "::error::skip_engine_rebuild requires committed file: $1"
-              echo "Run a full Release pipeline first, or commit Windows DLL + Android .so files."
-              exit 1
-            fi
-            cp -f "$1" "$2"
-          }
-          _need packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so "$B/linux/libzentra_wallet_ffi.so"
-          _need packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll "$B/windows/libzentra_wallet_ffi.dll"
-          _need packages/zentra_wallet_core/android/src/main/jniLibs/arm64-v8a/libzentra_wallet_ffi.so \
-            "$B/android/arm64-v8a/libzentra_wallet_ffi.so"
-          _need packages/zentra_wallet_core/android/src/main/jniLibs/armeabi-v7a/libzentra_wallet_ffi.so \
-            "$B/android/armeabi-v7a/libzentra_wallet_ffi.so"
-          echo "zentra_tag=committed-in-repo" > "$B/VERSION.txt"
-          ./scripts/ci-verify-native-engine.sh "$B"
-
-      - uses: actions/upload-artifact@v6
-        with:
-          name: native-engine-bundle
-          path: build/native-engine-bundle/
-          if-no-files-found: error
-
   # ─── Phase 2: Flutter apps ───────────────────────────────────────────────────
   build-linux:
     name: "Phase 2 · Linux app"
-    needs: [package-engine, use-committed-engine]
-    if: ${{ always() && (needs.package-engine.result == 'success' || needs.use-committed-engine.result == 'success') }}
+    needs: [package-engine]
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
@@ -169,8 +119,7 @@ jobs:
 
   build-windows:
     name: "Phase 2 · Windows app"
-    needs: [package-engine, use-committed-engine]
-    if: ${{ always() && (needs.package-engine.result == 'success' || needs.use-committed-engine.result == 'success') }}
+    needs: [package-engine]
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
@@ -199,8 +148,7 @@ jobs:
 
   build-android:
     name: "Phase 2 · Android APK"
-    needs: [package-engine, use-committed-engine]
-    if: ${{ always() && (needs.package-engine.result == 'success' || needs.use-committed-engine.result == 'success') }}
+    needs: [package-engine]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

@@ -161,7 +161,7 @@ Build the `.so` on the same OS/glibc you ship on:
 
 | Workflow | When | What it does |
 |----------|------|----------------|
-| [**CI**](.github/workflows/ci.yml) | Every push / PR to `main` | Analyze, test, Linux debug (committed engine) |
+| [**CI**](.github/workflows/ci.yml) | Pull requests to `main` | Analyze, test, Linux debug (committed engine) |
 | [**Release pipeline**](.github/workflows/build-artifacts.yml) | Push to `main`, tag `v*`, manual | **Phase 1:** engine from [Zentra v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0) → **Phase 2:** all apps → draft/published release |
 
 ### Download built apps (Linux / Windows / APK from CI)
