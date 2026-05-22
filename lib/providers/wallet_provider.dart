@@ -31,6 +31,7 @@ class WalletProvider extends ChangeNotifier {
   NodeConnectionSettings? nodeSettings;
   EmbeddedWalletService? _wallet;
   String? _walletDir;
+  int _connectGeneration = 0;
 
   WalletBalance? balance;
   WalletAddress? primaryAddress;
@@ -109,6 +110,7 @@ class WalletProvider extends ChangeNotifier {
 
   /// Called when [connect] is aborted externally (e.g. splash screen timeout).
   void markConnectFailed(String message) {
+    _connectGeneration++;
     connectionState = WalletConnectionState.error;
     errorMessage = message;
     _wallet?.dispose();
@@ -117,6 +119,7 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<bool> connect({String? passwordOverride}) async {
+    final gen = ++_connectGeneration;
     _refreshNativeFlag();
     if (!nativeAvailable) {
       connectionState = WalletConnectionState.error;
@@ -145,30 +148,37 @@ class WalletProvider extends ChangeNotifier {
 
     try {
       await _ensureWallet();
+      if (gen != _connectGeneration) return false;
       final password = passwordOverride ?? await _settings.loadWalletPassword() ?? '';
       _wallet!.openWallet(
         filename: walletFilename!,
         password: password,
       );
+      if (gen != _connectGeneration) return false;
       await _wallet!.refresh();
+      if (gen != _connectGeneration) return false;
       await _applyWalletSnapshot();
+      if (gen != _connectGeneration) return false;
       connectionState = WalletConnectionState.connected;
       errorMessage = null;
       return true;
     } catch (e) {
+      if (gen != _connectGeneration) return false;
       connectionState = WalletConnectionState.error;
       errorMessage = _userMessage(e);
       _wallet?.dispose();
       _wallet = null;
       return false;
     } finally {
-      if (connectionState == WalletConnectionState.connecting) {
-        connectionState = WalletConnectionState.error;
-        errorMessage ??= 'Connection interrupted';
-        _wallet?.dispose();
-        _wallet = null;
+      if (gen == _connectGeneration) {
+        if (connectionState == WalletConnectionState.connecting) {
+          connectionState = WalletConnectionState.error;
+          errorMessage ??= 'Connection interrupted';
+          _wallet?.dispose();
+          _wallet = null;
+        }
+        notifyListeners();
       }
-      notifyListeners();
     }
   }
 
