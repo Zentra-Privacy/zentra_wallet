@@ -1,8 +1,16 @@
 cmake_minimum_required(VERSION 3.16)
 project(zentra_wallet_ffi LANGUAGES CXX)
 
-set(ZENTRA_ROOT "$ENV{ZENTRA_ROOT}")
-set(ZENTRA_BUILD "$ENV{ZENTRA_BUILD_DIR}")
+if(DEFINED ZENTRA_ROOT)
+  set(ZENTRA_ROOT "${ZENTRA_ROOT}")
+else()
+  set(ZENTRA_ROOT "$ENV{ZENTRA_ROOT}")
+endif()
+if(DEFINED ZENTRA_BUILD_DIR)
+  set(ZENTRA_BUILD "${ZENTRA_BUILD_DIR}")
+else()
+  set(ZENTRA_BUILD "$ENV{ZENTRA_BUILD_DIR}")
+endif()
 
 if(NOT ZENTRA_ROOT OR NOT EXISTS "${ZENTRA_ROOT}/src/wallet/api/wallet2_api.h")
   message(FATAL_ERROR "Set ZENTRA_ROOT to the zentra source tree")
@@ -10,16 +18,15 @@ endif()
 if(NOT ZENTRA_BUILD OR NOT EXISTS "${ZENTRA_BUILD}/lib/libwallet_api.a")
   message(
     FATAL_ERROR
-    "Set ZENTRA_BUILD_DIR to zentra/build/release and build wallet_api first")
+    "Set ZENTRA_BUILD_DIR to zentra build dir and build wallet_api first")
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
 
-# --- Zentra static archives (paths match out-of-tree CMake build layout) ---
 macro(zentra_lib outvar relpath)
   set(_lib "${ZENTRA_BUILD}/${relpath}")
   if(NOT EXISTS "${_lib}")
-    message(FATAL_ERROR "Missing Zentra library: ${_lib}\nRun: cmake --build \"${ZENTRA_BUILD}\" --target wallet_api")
+    message(FATAL_ERROR "Missing Zentra library: ${_lib}")
   endif()
   list(APPEND ${outvar} "${_lib}")
 endmacro()
@@ -51,18 +58,25 @@ zentra_lib(ZENTRA_STATIC_LIBS external/easylogging++/libeasylogging.a)
 zentra_lib(ZENTRA_STATIC_LIBS src/mnemonics/libmnemonics.a)
 zentra_lib(ZENTRA_STATIC_LIBS src/libversion.a)
 
-find_package(Boost REQUIRED COMPONENTS
-  chrono filesystem thread serialization locale regex program_options date_time)
-find_package(OpenSSL REQUIRED)
-find_package(Protobuf REQUIRED)
-
-find_library(UNBOUND_LIB unbound)
-find_library(ZMQ_LIB zmq)
-find_library(USB_LIB usb-1.0)
-find_library(HIDAPI_LIB hidapi-libusb)
-find_library(SODIUM_LIB sodium)
-find_library(PGM_LIB pgm)
-find_library(NORM_LIB norm)
+# Cross builds use Zentra contrib/depends toolchain (sets DEPENDS=ON).
+if(DEPENDS OR ANDROID)
+  find_package(Threads REQUIRED)
+  if(ANDROID)
+    find_library(LOG_LIB log)
+  endif()
+else()
+  find_package(Boost REQUIRED COMPONENTS
+    chrono filesystem thread serialization locale regex program_options date_time)
+  find_package(OpenSSL REQUIRED)
+  find_package(Protobuf REQUIRED)
+  find_library(UNBOUND_LIB unbound)
+  find_library(ZMQ_LIB zmq)
+  find_library(USB_LIB usb-1.0)
+  find_library(HIDAPI_LIB hidapi-libusb)
+  find_library(SODIUM_LIB sodium)
+  find_library(PGM_LIB pgm)
+  find_library(NORM_LIB norm)
+endif()
 
 add_library(zentra_wallet_ffi SHARED src/zentra_wallet_ffi.cpp)
 
@@ -75,33 +89,40 @@ target_include_directories(zentra_wallet_ffi PRIVATE
 
 target_compile_options(zentra_wallet_ffi PRIVATE -fPIC)
 
-# Same dependency closure as zentra-wallet-cli (static libs + system libs).
-target_link_libraries(zentra_wallet_ffi PRIVATE
-  -Wl,--start-group
-  ${ZENTRA_STATIC_LIBS}
-  -Wl,--end-group
-  Boost::chrono
-  Boost::filesystem
-  Boost::thread
-  Boost::serialization
-  Boost::locale
-  Boost::regex
-  Boost::program_options
-  Boost::date_time
-  OpenSSL::SSL
-  OpenSSL::Crypto
-  protobuf::libprotobuf
-  ${UNBOUND_LIB}
-  ${ZMQ_LIB}
-  ${USB_LIB}
-  ${HIDAPI_LIB}
-  ${SODIUM_LIB}
-  ${PGM_LIB}
-  ${NORM_LIB}
-  ${CMAKE_DL_LIBS}
-  pthread
-  rt
-)
+if(DEPENDS OR ANDROID)
+  target_link_libraries(zentra_wallet_ffi PRIVATE
+    -Wl,--start-group
+    ${ZENTRA_STATIC_LIBS}
+    -Wl,--end-group
+    boost_chrono boost_filesystem boost_thread boost_serialization
+    boost_locale boost_regex boost_program_options boost_date_time
+    ssl crypto protobuf z sodium
+    ${CMAKE_DL_LIBS}
+    Threads::Threads
+  )
+  if(ANDROID)
+    target_link_libraries(zentra_wallet_ffi PRIVATE ${LOG_LIB})
+  endif()
+  if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_link_libraries(zentra_wallet_ffi PRIVATE ws2_32 bcrypt iphlpapi)
+  endif()
+  if(APPLE)
+    target_link_libraries(zentra_wallet_ffi PRIVATE
+      "-framework Foundation" "-framework IOKit" "-framework AppKit")
+  endif()
+else()
+  target_link_libraries(zentra_wallet_ffi PRIVATE
+    -Wl,--start-group
+    ${ZENTRA_STATIC_LIBS}
+    -Wl,--end-group
+    Boost::chrono Boost::filesystem Boost::thread Boost::serialization
+    Boost::locale Boost::regex Boost::program_options Boost::date_time
+    OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf
+    ${UNBOUND_LIB} ${ZMQ_LIB} ${USB_LIB} ${HIDAPI_LIB}
+    ${SODIUM_LIB} ${PGM_LIB} ${NORM_LIB}
+    ${CMAKE_DL_LIBS} pthread rt
+  )
+endif()
 
 set_target_properties(zentra_wallet_ffi PROPERTIES
   CXX_VISIBILITY_PRESET default

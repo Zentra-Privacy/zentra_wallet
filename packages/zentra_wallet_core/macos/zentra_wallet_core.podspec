@@ -1,6 +1,5 @@
 #
-# FFI plugin — builds zentra_core (light helpers) for macOS.
-# Full wallet2 lives in libzentra_wallet_ffi.so (Linux only today).
+# FFI plugin — zentra_core helpers + vendored libzentra_wallet_ffi.dylib (after build-native / CI).
 #
 Pod::Spec.new do |s|
   s.name             = 'zentra_wallet_core'
@@ -13,6 +12,8 @@ Pod::Spec.new do |s|
 
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'
+  s.vendored_libraries = 'lib/libzentra_wallet_ffi.dylib'
+  s.preserve_paths   = 'lib/libzentra_wallet_ffi.dylib'
 
   s.dependency 'FlutterMacOS'
 

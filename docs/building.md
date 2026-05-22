@@ -163,7 +163,7 @@ GitHub Actions workflows in `.github/workflows/`:
 | Workflow | Purpose |
 |----------|---------|
 | `ci.yml` | Analyze, test, Linux debug build — every **PR** and push to `main` / `master` |
-| `build-artifacts.yml` | Release builds + draft/published releases — push to `main` / `master`, tag `v*`, or manual dispatch (not on PR) |
+| `build-artifacts.yml` | Two-phase release: engine from Zentra **v0.1.0**, then Linux/Windows/Android/macOS apps |
 
 Install the same Ubuntu packages locally: `sudo ./scripts/ci-install-linux-deps.sh all`
 

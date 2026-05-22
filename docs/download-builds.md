@@ -2,7 +2,7 @@
 
 CI builds **Linux**, **Windows**, **Android (APK)**, and **macOS** apps automatically.
 
-Workflow: **[Build apps (all platforms)](../.github/workflows/build-artifacts.yml)**
+Workflow: **[Release pipeline](../.github/workflows/build-artifacts.yml)**
 
 ---
 
@@ -18,7 +18,7 @@ Workflow: **[Build apps (all platforms)](../.github/workflows/build-artifacts.ym
 
 ## Draft release (auto on `main` — review then publish)
 
-Every **fully green** **Build apps** run on **`main`** creates a **draft** release (not public until you publish). If any platform job fails, no draft is created — use **Artifacts** on that run for whatever succeeded.
+Every **fully green** **Release pipeline** run on **`main`** creates a **draft** release (not public until you publish). If any platform job fails, no draft is created — use **Artifacts** on that run for whatever succeeded.
 
 1. Repo → **Releases** → find **Draft** (e.g. `Draft build #42`, tag `draft-42`).
 2. Download assets and test Linux / Windows / APK / macOS.
@@ -48,7 +48,7 @@ Use this for any completed workflow run (including pushes to `main`).
 
 2. Click the **Actions** tab.
 
-3. In the left sidebar, choose **Build apps (all platforms)**.
+3. In the left sidebar, choose **Release pipeline**.
 
 4. Click the **latest green** run (✓).
 
@@ -67,7 +67,7 @@ Artifacts are kept for **90 days** (GitHub default), then removed.
 
 ### Run builds manually
 
-1. **Actions** → **Build apps (all platforms)** → **Run workflow** (right side).
+1. **Actions** → **Release pipeline** → **Run workflow** (right side).
 2. Branch: `main` → **Run workflow**.
 3. Wait ~10–30 minutes (four platform jobs in parallel).
 4. Download from **Artifacts** as above.
@@ -137,21 +137,28 @@ sudo apt install libgtk-3-0 libsecret-1-0
 
 | Platform | App installs | Full wallet (`wallet2`) |
 |----------|--------------|-------------------------|
-| **Linux** | ✓ | ✓ (includes `libzentra_wallet_ffi.so`) |
-| Windows | ✓ | ✗ UI only until Windows FFI is added |
-| Android | ✓ | ✗ UI only until Android FFI is added |
-| macOS | ✓ | ✗ UI only until macOS FFI is added |
+| **Linux** | ✓ | ✓ |
+| **Windows** | ✓ | ✓ (CI builds `libzentra_wallet_ffi.dll`) |
+| **Android** | ✓ | ✓ arm64 in CI; more ABIs via `./wallet.sh build-android` |
+| **macOS** | ✓ | ✓ (CI builds on `macos-latest`) |
+| **iOS** | — | ✗ not in CI yet |
 
-On Windows / Android / macOS you may see **“Wallet engine unavailable”** until native `libzentra_wallet_ffi` is built for that platform.
+**Release pipeline** ([ci-pipeline.md](ci-pipeline.md)): Phase 1 builds the wallet engine from [Zentra v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0), Phase 2 builds all apps, Phase 3 creates the draft release. First run can take **several hours**; cache helps later runs.
 
-### Native library (Linux)
+### Native libraries
 
-CI uses `packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so` from the repo. To update it locally:
+**Linux** — CI uses the committed `.so`:
 
 ```bash
 ./wallet.sh build
 git add packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
-git commit -m "Update native wallet library"
+```
+
+**Android** — see [building-android.md](building-android.md):
+
+```bash
+./wallet.sh build-android
+git add packages/zentra_wallet_core/android/src/main/jniLibs/
 ```
 
 ---
@@ -161,7 +168,7 @@ git commit -m "Update native wallet library"
 | Problem | Fix |
 |---------|-----|
 | No **Artifacts** section | Workflow still running or failed — open the run and check red jobs |
-| Artifact expired | Re-run **Build apps (all platforms)** |
+| Artifact expired | Re-run **Release pipeline** |
 | Linux app won’t start | Install `libgtk-3-0` and `libsecret-1-0` |
 | Android won’t install | Allow installs from unknown sources |
 

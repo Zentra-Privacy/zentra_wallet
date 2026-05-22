@@ -1,11 +1,17 @@
-# Build installable apps for Linux, Windows, Android, and macOS.
-# Uses libzentra_wallet_ffi.so committed in the repo (packages/zentra_wallet_core/linux/).
-# - push / workflow_dispatch (non-tag): draft release
-# - tag v*: published GitHub Release
-name: Build apps (all platforms)
+# Production release pipeline (two phases):
+#   1) Build native wallet engine from Zentra v0.1.0 → native-engine-bundle
+#   2) Build Flutter apps (Linux / Windows / Android / macOS) → draft or tag release
+#
+# Zentra core: https://github.com/Zentra-Privacy/zentra.git @ v0.1.0
+name: Release pipeline
 
 on:
   workflow_dispatch:
+    inputs:
+      skip_engine_rebuild:
+        description: "Use committed native libs in repo (skip Zentra rebuild)"
+        type: boolean
+        default: false
   push:
     tags:
       - "v*"
@@ -17,162 +23,284 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-artifacts-${{ github.ref }}
+  group: release-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  ZENTRA_REPO: https://github.com/Zentra-Privacy/zentra.git
+  ZENTRA_REF: v0.1.0
 
 jobs:
+  # ─── Phase 1: Native engine from Zentra v0.1.0 ─────────────────────────────
+  engine-ubuntu:
+    name: "Phase 1 · Engine (Linux + Android + Windows)"
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.event.inputs.skip_engine_rebuild != true
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install native build dependencies
+        run: sudo ./scripts/ci-install-linux-deps.sh all
+
+      - name: Cache Zentra tree (depends + builds)
+        uses: actions/cache@v5
+        with:
+          path: |
+            third_party/zentra/contrib/depends
+            third_party/zentra/build
+          key: zentra-${{ env.ZENTRA_REF }}-${{ hashFiles('scripts/**', 'native/zentra_wallet_ffi/**') }}
+          restore-keys: |
+            zentra-${{ env.ZENTRA_REF }}-
+
+      - name: Build engine (Ubuntu)
+        run: |
+          chmod +x scripts/*.sh scripts/lib/*.sh
+          ./scripts/ci-build-native-engine-ubuntu.sh build/engine-ubuntu
+
+      - name: Upload engine (Ubuntu half)
+        uses: actions/upload-artifact@v6
+        with:
+          name: engine-ubuntu
+          path: build/engine-ubuntu/
+          if-no-files-found: error
+
+  engine-macos:
+    name: "Phase 1 · Engine (macOS)"
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.event.inputs.skip_engine_rebuild != true
+    runs-on: macos-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install build tools
+        run: brew install cmake python3 pkg-config openssl protobuf boost || true
+
+      - name: Cache Zentra tree
+        uses: actions/cache@v5
+        with:
+          path: |
+            third_party/zentra/contrib/depends
+            third_party/zentra/build
+          key: zentra-${{ env.ZENTRA_REF }}-macos-${{ hashFiles('scripts/**', 'native/zentra_wallet_ffi/**') }}
+          restore-keys: |
+            zentra-${{ env.ZENTRA_REF }}-macos-
+
+      - name: Build engine (macOS)
+        run: |
+          chmod +x scripts/*.sh scripts/lib/*.sh
+          ./scripts/ci-build-native-engine-macos.sh build/engine-macos
+
+      - name: Upload engine (macOS half)
+        uses: actions/upload-artifact@v6
+        with:
+          name: engine-macos
+          path: build/engine-macos/
+          if-no-files-found: error
+
+  package-engine:
+    name: "Phase 1 · Package native-engine-bundle"
+    needs: [engine-ubuntu, engine-macos]
+    if: >-
+      (github.event_name != 'workflow_dispatch' || github.event.inputs.skip_engine_rebuild != true) &&
+      needs.engine-ubuntu.result == 'success' &&
+      needs.engine-macos.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v6
+        with:
+          name: engine-ubuntu
+          path: engine-ubuntu
+      - uses: actions/download-artifact@v6
+        with:
+          name: engine-macos
+          path: engine-macos
+
+      - name: Merge engine bundle
+        run: |
+          chmod +x scripts/ci-package-native-engine.sh scripts/ci-verify-native-engine.sh
+          ./scripts/ci-package-native-engine.sh engine-ubuntu engine-macos build/native-engine-bundle
+
+      - name: Upload native-engine-bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: native-engine-bundle
+          path: build/native-engine-bundle/
+          if-no-files-found: error
+          retention-days: 90
+
+  use-committed-engine:
+    name: "Phase 1 · Use committed engine (skip rebuild)"
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.skip_engine_rebuild == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Assemble bundle from repo
+        run: |
+          chmod +x scripts/ci-verify-native-engine.sh
+          B=build/native-engine-bundle
+          mkdir -p "$B/linux" "$B/windows" "$B/macos/lib" \
+            "$B/android/arm64-v8a" "$B/android/armeabi-v7a"
+          _need() {
+            if [[ ! -f "$1" ]]; then
+              echo "::error::skip_engine_rebuild requires committed file: $1"
+              echo "Build engine from Zentra first (default pipeline) or commit all platform libs."
+              exit 1
+            fi
+            cp -f "$1" "$2"
+          }
+          _need packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so "$B/linux/libzentra_wallet_ffi.so"
+          _need packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll "$B/windows/libzentra_wallet_ffi.dll"
+          _need packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib "$B/macos/lib/libzentra_wallet_ffi.dylib"
+          _need packages/zentra_wallet_core/android/src/main/jniLibs/arm64-v8a/libzentra_wallet_ffi.so \
+            "$B/android/arm64-v8a/libzentra_wallet_ffi.so"
+          _need packages/zentra_wallet_core/android/src/main/jniLibs/armeabi-v7a/libzentra_wallet_ffi.so \
+            "$B/android/armeabi-v7a/libzentra_wallet_ffi.so"
+          echo "zentra_tag=committed-in-repo" > "$B/VERSION.txt"
+          ./scripts/ci-verify-native-engine.sh "$B"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-engine-bundle
+          path: build/native-engine-bundle/
+          if-no-files-found: error
+
+  # ─── Phase 2: Flutter apps (all need native-engine-bundle) ─────────────────
   build-linux:
-    name: Linux (x64)
+    name: "Phase 2 · Linux app"
+    needs: [package-engine, use-committed-engine]
+    if: ${{ always() && (needs.package-engine.result == 'success' || needs.use-committed-engine.result == 'success') }}
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-
+      - uses: actions/download-artifact@v6
+        with:
+          name: native-engine-bundle
+          path: native-engine-bundle
+      - run: chmod +x scripts/ci-apply-native-libs.sh && ./scripts/ci-apply-native-libs.sh native-engine-bundle
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-
-      - name: Install Linux build dependencies
-        run: sudo ./scripts/ci-install-linux-deps.sh flutter
-
-      - name: Enable Linux desktop
-        run: flutter config --enable-linux-desktop
-
-      - name: Resolve dependencies
-        run: flutter pub get
-
-      - name: Verify native wallet library
-        run: |
-          test -f packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so || {
-            echo "::error::libzentra_wallet_ffi.so missing in repo. Run ./wallet.sh build locally and commit the file."
-            exit 1
-          }
-
-      - name: Build Linux release
-        run: flutter build linux --release
-
-      - name: Package Linux bundle
+      - run: sudo ./scripts/ci-install-linux-deps.sh flutter
+      - run: flutter config --enable-linux-desktop && flutter pub get
+      - run: flutter build linux --release
+      - name: Package Linux
         run: |
           cd build/linux/x64/release/bundle
           tar -czf "${{ github.workspace }}/zentra-wallet-linux-x64.tar.gz" .
-
-      - name: Upload Linux artifact
-        uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v6
         with:
           name: zentra-wallet-linux-x64
           path: zentra-wallet-linux-x64.tar.gz
           if-no-files-found: error
 
   build-windows:
-    name: Windows (x64)
+    name: "Phase 2 · Windows app"
+    needs: [package-engine, use-committed-engine]
+    if: ${{ always() && (needs.package-engine.result == 'success' || needs.use-committed-engine.result == 'success') }}
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
-
+      - uses: actions/download-artifact@v6
+        with:
+          name: native-engine-bundle
+          path: native-engine-bundle
+      - run: bash ./scripts/ci-apply-native-libs.sh native-engine-bundle
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-
-      - name: Enable Windows desktop
-        run: flutter config --enable-windows-desktop
-
-      - name: Resolve dependencies
-        run: flutter pub get
-
-      - name: Build Windows release
-        run: flutter build windows --release
-
-      - name: Package Windows app
+      - run: flutter config --enable-windows-desktop && flutter pub get
+      - run: flutter build windows --release
+      - name: Package Windows
         shell: pwsh
         run: |
           Compress-Archive -Path "build\windows\x64\runner\Release\*" `
             -DestinationPath "zentra-wallet-windows-x64.zip" -Force
-
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v6
         with:
           name: zentra-wallet-windows-x64
           path: zentra-wallet-windows-x64.zip
           if-no-files-found: error
 
   build-android:
-    name: Android (APK)
+    name: "Phase 2 · Android APK"
+    needs: [package-engine, use-committed-engine]
+    if: ${{ always() && (needs.package-engine.result == 'success' || needs.use-committed-engine.result == 'success') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
-
+      - uses: actions/download-artifact@v6
+        with:
+          name: native-engine-bundle
+          path: native-engine-bundle
+      - run: chmod +x scripts/ci-apply-native-libs.sh && ./scripts/ci-apply-native-libs.sh native-engine-bundle
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
-
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android SDK licenses
-        run: yes | flutter doctor --android-licenses || true
-
-      - name: Resolve dependencies
-        run: flutter pub get
-
-      - name: Build release APK
-        run: flutter build apk --release
-
-      - name: Upload Android artifact
-        uses: actions/upload-artifact@v6
+      - uses: android-actions/setup-android@v3
+      - run: yes | flutter doctor --android-licenses || true
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - uses: actions/upload-artifact@v6
         with:
           name: zentra-wallet-android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
   build-macos:
-    name: macOS
+    name: "Phase 2 · macOS app"
+    needs: [package-engine, use-committed-engine]
+    if: ${{ always() && (needs.package-engine.result == 'success' || needs.use-committed-engine.result == 'success') }}
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
-
+      - uses: actions/download-artifact@v6
+        with:
+          name: native-engine-bundle
+          path: native-engine-bundle
+      - run: chmod +x scripts/ci-apply-native-libs.sh && ./scripts/ci-apply-native-libs.sh native-engine-bundle
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-
-      - name: Enable macOS desktop
-        run: flutter config --enable-macos-desktop
-
-      - name: Resolve dependencies
-        run: flutter pub get
-
-      - name: Build macOS release
-        run: flutter build macos --release
-
-      - name: Package macOS app
+      - run: flutter config --enable-macos-desktop && flutter pub get
+      - run: flutter build macos --release
+      - name: Package macOS
         run: |
           APP="build/macos/Build/Products/Release/zentra_wallet.app"
-          test -d "$APP"
+          test -d "$APP" || { echo "::error::macOS app not found at $APP"; exit 1; }
           ditto -c -k --sequesterRsrc --keepParent "$APP" zentra-wallet-macos.zip
-
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v6
         with:
           name: zentra-wallet-macos
           path: zentra-wallet-macos.zip
           if-no-files-found: error
 
+  # ─── Phase 3: GitHub Release ───────────────────────────────────────────────
   draft-release:
-    name: Draft release (review before publish)
+    name: "Phase 3 · Draft release"
     needs: [build-linux, build-windows, build-android, build-macos]
     if: >-
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
@@ -186,37 +314,37 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
-
       - uses: actions/download-artifact@v6
         with:
           path: release-files
-
-      - name: Stage release assets
-        run: chmod +x scripts/ci-stage-release-assets.sh && ./scripts/ci-stage-release-assets.sh release-files
-
-      - name: Create draft GitHub Release
-        uses: softprops/action-gh-release@v2
+      - run: chmod +x scripts/ci-stage-release-assets.sh && ./scripts/ci-stage-release-assets.sh release-files
+      - uses: softprops/action-gh-release@v2
         with:
           tag_name: draft-${{ github.run_number }}
           name: Draft build #${{ github.run_number }}
           draft: true
           prerelease: true
           make_latest: false
-          generate_release_notes: true
+          generate_release_notes: false
           body: |
-            **Automated draft** — CI finished on `${{ github.ref_name }}` @ `${{ github.sha }}`.
+            **Zentra Wallet** — engine built from [Zentra v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0).
 
-            1. Download and test the assets below.
-            2. When ready: **Edit release** → **Publish release** (makes it public).
-            3. For a stable version name: `git tag v1.0.0 && git push origin v1.0.0`
+            | Asset | Full wallet |
+            |-------|-------------|
+            | Linux x64 | ✓ |
+            | Windows x64 | ✓ |
+            | Android APK | ✓ (arm64 + armeabi-v7a) |
+            | macOS | ✓ |
 
-            Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            [Install guide](https://github.com/${{ github.repository }}/blob/main/docs/download-builds.md)
+
+            Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           files: staged/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   github-release:
-    name: Publish release (version tag)
+    name: "Phase 3 · Published release"
     needs: [build-linux, build-windows, build-android, build-macos]
     if: >-
       startsWith(github.ref, 'refs/tags/v') &&
@@ -229,22 +357,21 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
-
       - uses: actions/download-artifact@v6
         with:
           path: release-files
-
-      - name: Stage release assets
-        run: chmod +x scripts/ci-stage-release-assets.sh && ./scripts/ci-stage-release-assets.sh release-files
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - run: chmod +x scripts/ci-stage-release-assets.sh && ./scripts/ci-stage-release-assets.sh release-files
+      - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-          generate_release_notes: true
+          generate_release_notes: false
+          body: |
+            Production build — native engine from [Zentra v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0).
+
+            See [docs/download-builds.md](https://github.com/${{ github.repository }}/blob/main/docs/download-builds.md).
           files: staged/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

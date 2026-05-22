@@ -19,6 +19,7 @@ _flutter_deps() {
 _native_deps() {
   apt-get install -y --no-install-recommends \
     build-essential cmake pkg-config git python3 curl \
+    libtinfo5 \
     libboost-all-dev libssl-dev libsodium-dev \
     libzmq3-dev libnorm-dev libpgm-dev libunbound-dev \
     libunwind-dev libreadline-dev libldns-dev libexpat1-dev \
