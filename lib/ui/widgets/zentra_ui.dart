@@ -34,6 +34,158 @@ class ZentraLogo extends StatelessWidget {
   }
 }
 
+/// Tappable card for onboarding choices (create / restore / open).
+class ZentraChoiceCard extends StatelessWidget {
+  const ZentraChoiceCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.selected,
+    required this.onTap,
+    this.compact = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+  /// Single-line row: icon + short label only.
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final border = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
+      side: BorderSide(
+        color: selected ? ZentraTheme.accent : ZentraTheme.border,
+        width: selected ? 1.5 : 1,
+      ),
+    );
+
+    if (compact) {
+      return Material(
+        color: selected ? ZentraTheme.accent.withValues(alpha: 0.12) : ZentraTheme.card,
+        shape: border,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: selected ? ZentraTheme.accent : ZentraTheme.textMuted,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color: selected ? ZentraTheme.textPrimary : ZentraTheme.textMuted,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Material(
+      color: selected ? ZentraTheme.accent.withValues(alpha: 0.12) : ZentraTheme.card,
+      shape: border,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? ZentraTheme.accent.withValues(alpha: 0.2)
+                      : ZentraTheme.surface,
+                  borderRadius: BorderRadius.circular(ZentraTheme.radiusSm),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: selected ? ZentraTheme.accent : ZentraTheme.textMuted,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: const TextStyle(fontSize: 12, color: ZentraTheme.textMuted, height: 1.3),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Icon(
+                selected ? Icons.check_circle : Icons.circle_outlined,
+                size: 20,
+                color: selected ? ZentraTheme.accent : ZentraTheme.border,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Groups onboarding form fields in a single card.
+class ZentraFormCard extends StatelessWidget {
+  const ZentraFormCard({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: ZentraTheme.flatCard(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Divider(height: 1),
+            ),
+            children[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class ZentraScaffold extends StatelessWidget {
   const ZentraScaffold({
     super.key,

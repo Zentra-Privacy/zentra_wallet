@@ -68,20 +68,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _finishCreate() async {
     final name = _filename.text.trim();
     if (name.isEmpty || name.contains('/') || name.contains('\\')) {
-      _snack('Wallet filename must be a simple name (no path separators)');
+      _snack('Pick a simple name — no slashes or folder paths');
       return;
     }
     if (_password.text.length < 8) {
-      _snack('Use at least 8 characters for your wallet password', error: true);
+      _snack('Password needs at least 8 characters', error: true);
       return;
     }
     if (_restoreMode && !SeedUtils.isValidWordCount(_seed.text)) {
-      _snack('Seed must be 12, 13, 24, or 25 words');
+      _snack('Enter your full seed — 12, 13, 24, or 25 words');
       return;
     }
     final height = _resolveRestoreHeight();
     if (_customRestoreHeight && !_openMode && height == null) {
-      _snack('Enter a valid block height');
+      _snack('Enter a valid block number');
       return;
     }
     final p = context.read<WalletProvider>();
@@ -134,7 +134,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else {
-      _snack(p.errorMessage ?? 'Wallet setup failed');
+      _snack(p.errorMessage ?? 'Something went wrong — please try again');
     }
   }
 
@@ -146,7 +146,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() {
       _restoreMode = false;
       _openMode = false;
-      _step = 1; // wallet step (mainnet only)
+      _step = 1;
     });
   }
 
@@ -154,8 +154,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() {
       _restoreMode = true;
       _openMode = false;
-      _step = 1; // wallet step (mainnet only)
+      _step = 1;
     });
+  }
+
+  String get _walletModeTitle {
+    if (_openMode) return 'Open your wallet';
+    if (_restoreMode) return 'Restore your wallet';
+    return 'Create your wallet';
+  }
+
+  String get _walletModeSubtitle {
+    if (_openMode) {
+      return 'Unlock a wallet already saved on this device.';
+    }
+    if (_restoreMode) {
+      return 'Use your seed phrase to recover funds on this device.';
+    }
+    return 'A new wallet will be created and encrypted on this device.';
+  }
+
+  String get _primaryButtonLabel {
+    if (_openMode) return 'Open wallet';
+    if (_restoreMode) return 'Restore wallet';
+    return 'Create wallet';
   }
 
   @override
@@ -167,10 +189,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => setState(() => _step = 0),
               ),
-              title: const Text('Your wallet'),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Your wallet', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                  Text(
+                    'Step 2 of 2',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: ZentraTheme.textMuted.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.dns_outlined),
+                  tooltip: 'Node settings',
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const NodeSetupScreen()),
                   ),
@@ -180,7 +216,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           : null,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: switch (_step) {
             0 => _welcomeStep(),
             _ => _walletStep(),
@@ -192,37 +228,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _welcomeStep() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Spacer(flex: 2),
-        const ZentraLogo(size: 96),
-        const SizedBox(height: 28),
+        const Center(child: ZentraLogo(size: 88)),
+        const SizedBox(height: 24),
         const Text(
           'Zentra Wallet',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'Private. Secure. Unstoppable.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: ZentraTheme.textMuted, fontSize: 15),
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: -0.3),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Your keys stay on this device.\nOnly you control your ZTR.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: ZentraTheme.textMuted, fontSize: 15, height: 1.45),
+        ),
+        const SizedBox(height: 28),
+        _WelcomeFeatureRow(
+          items: const [
+            _WelcomeFeature(Icons.lock_outline, 'Encrypted'),
+            _WelcomeFeature(Icons.phone_android_outlined, 'On device'),
+            _WelcomeFeature(Icons.visibility_off_outlined, 'Private'),
+          ],
         ),
         const Spacer(flex: 3),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: _goCreate,
-            child: const Text('Create New Wallet'),
-          ),
+        FilledButton.icon(
+          onPressed: _goCreate,
+          icon: const Icon(Icons.add_circle_outline, size: 20),
+          label: const Text('Create new wallet'),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: _goRestore,
-            child: const Text('Restore Wallet'),
-          ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _goRestore,
+          icon: const Icon(Icons.history, size: 20),
+          label: const Text('I already have a wallet'),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 28),
       ],
     );
   }
@@ -231,89 +273,160 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
-          _restoreMode ? 'Restore wallet' : 'Create wallet',
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          _walletModeTitle,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.2),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Mainnet · sync uses public seed nodes',
-          style: TextStyle(color: ZentraTheme.textMuted, fontSize: 13),
+        Text(
+          _walletModeSubtitle,
+          style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 14, height: 1.4),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
+        Row(
           children: [
-            FilterChip(
-              label: const Text('New'),
-              selected: !_restoreMode && !_openMode,
-              onSelected: (_) => setState(() {
-                _restoreMode = false;
-                _openMode = false;
-              }),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: ZentraTheme.success.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: ZentraTheme.success.withValues(alpha: 0.35)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.public, size: 14, color: ZentraTheme.success),
+                  SizedBox(width: 6),
+                  Text(
+                    'Mainnet',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ZentraTheme.success),
+                  ),
+                ],
+              ),
             ),
-            FilterChip(
-              label: const Text('Restore'),
-              selected: _restoreMode,
-              onSelected: (_) => setState(() {
-                _restoreMode = true;
-                _openMode = false;
-              }),
-            ),
-            FilterChip(
-              label: const Text('Open existing'),
-              selected: _openMode,
-              onSelected: (_) => setState(() {
-                _restoreMode = false;
-                _openMode = true;
-              }),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Syncs via public nodes',
+                style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: ZentraChoiceCard(
+                compact: true,
+                icon: Icons.add_circle_outline,
+                title: 'New',
+                selected: !_restoreMode && !_openMode,
+                onTap: () => setState(() {
+                  _restoreMode = false;
+                  _openMode = false;
+                }),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ZentraChoiceCard(
+                compact: true,
+                icon: Icons.history,
+                title: 'Restore',
+                selected: _restoreMode,
+                onTap: () => setState(() {
+                  _restoreMode = true;
+                  _openMode = false;
+                }),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ZentraChoiceCard(
+                compact: true,
+                icon: Icons.folder_open_outlined,
+                title: 'Open',
+                selected: _openMode,
+                onTap: () => setState(() {
+                  _restoreMode = false;
+                  _openMode = true;
+                }),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
         Expanded(
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextField(
-                  controller: _filename,
-                  decoration: const InputDecoration(labelText: 'Wallet name (on this device)'),
+                const Text(
+                  'Wallet details',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _password,
-                  obscureText: _hidePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Wallet password',
-                    helperText: 'Encrypts your wallet file on this device',
-                    suffixIcon: IconButton(
-                      icon: Icon(_hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                      onPressed: () => setState(() => _hidePassword = !_hidePassword),
+                const SizedBox(height: 8),
+                ZentraFormCard(
+                  children: [
+                    TextField(
+                      controller: _filename,
+                      textCapitalization: TextCapitalization.none,
+                      decoration: const InputDecoration(
+                        labelText: 'Wallet name',
+                        hintText: 'e.g. my_zentra',
+                        prefixIcon: Icon(Icons.label_outline, size: 20),
+                        helperText: 'How this wallet appears on your device',
+                      ),
                     ),
-                  ),
+                    TextField(
+                      controller: _password,
+                      obscureText: _hidePassword,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        hintText: 'At least 8 characters',
+                        prefixIcon: const Icon(Icons.key_outlined, size: 20),
+                        helperText: 'Encrypts your wallet file — do not lose it',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _hidePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () => setState(() => _hidePassword = !_hidePassword),
+                        ),
+                      ),
+                    ),
+                    if (_restoreMode && !_openMode)
+                      TextField(
+                        controller: _seed,
+                        maxLines: 4,
+                        decoration: const InputDecoration(
+                          labelText: 'Seed phrase',
+                          hintText: 'Paste your 12 or 25 words here',
+                          alignLabelWithHint: true,
+                          prefixIcon: Padding(
+                            padding: EdgeInsets.only(bottom: 48),
+                            child: Icon(Icons.format_quote_outlined, size: 20),
+                          ),
+                          helperText: 'Never share this with anyone',
+                        ),
+                      ),
+                  ],
                 ),
-                if (_restoreMode && !_openMode) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _seed,
-                    maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: '25-word seed phrase',
-                      alignLabelWithHint: true,
-                    ),
-                  ),
-                ],
                 if (!_openMode) ...[
                   const SizedBox(height: 16),
-                  RestoreHeightField(
-                    enabled: _customRestoreHeight,
-                    onEnabledChanged: (v) => setState(() => _customRestoreHeight = v),
-                    controller: _restoreHeight,
-                    showRestoreHint: _restoreMode,
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: ZentraTheme.flatCard(color: ZentraTheme.surface),
+                    child: RestoreHeightField(
+                      enabled: _customRestoreHeight,
+                      onEnabledChanged: (v) => setState(() => _customRestoreHeight = v),
+                      controller: _restoreHeight,
+                      showRestoreHint: _restoreMode,
+                    ),
                   ),
                 ],
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -321,20 +434,66 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         if (_loading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
-            child: Center(child: CircularProgressIndicator(color: ZentraTheme.accent)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.accent),
+                ),
+                SizedBox(width: 12),
+                Text('Setting up your wallet…', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 13)),
+              ],
+            ),
           )
         else
           FilledButton(
             onPressed: _finishCreate,
-            child: Text(
-              _openMode
-                  ? 'Open wallet'
-                  : _restoreMode
-                      ? 'Restore wallet'
-                      : 'Create wallet',
+            child: Text(_primaryButtonLabel),
+          ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+}
+
+class _WelcomeFeature {
+  const _WelcomeFeature(this.icon, this.label);
+
+  final IconData icon;
+  final String label;
+}
+
+class _WelcomeFeatureRow extends StatelessWidget {
+  const _WelcomeFeatureRow({required this.items});
+
+  final List<_WelcomeFeature> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+              decoration: ZentraTheme.flatCard(color: ZentraTheme.surface, radius: ZentraTheme.radiusSm),
+              child: Column(
+                children: [
+                  Icon(items[i].icon, size: 18, color: ZentraTheme.accent),
+                  const SizedBox(height: 6),
+                  Text(
+                    items[i].label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: ZentraTheme.textMuted),
+                  ),
+                ],
+              ),
             ),
           ),
-        const SizedBox(height: 24),
+        ],
       ],
     );
   }
