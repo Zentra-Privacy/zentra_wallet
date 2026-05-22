@@ -25,10 +25,13 @@ set(CMAKE_CXX_STANDARD 17)
 
 macro(zentra_lib outvar relpath)
   set(_lib "${ZENTRA_BUILD}/${relpath}")
-  if(NOT EXISTS "${_lib}")
+  if(EXISTS "${_lib}")
+    list(APPEND ${outvar} "${_lib}")
+  elseif(FFI_IOS)
+    message(WARNING "Optional Zentra library missing (skipped on iOS): ${_lib}")
+  else()
     message(FATAL_ERROR "Missing Zentra library: ${_lib}")
   endif()
-  list(APPEND ${outvar} "${_lib}")
 endmacro()
 
 set(ZENTRA_STATIC_LIBS "")
@@ -58,8 +61,21 @@ zentra_lib(ZENTRA_STATIC_LIBS external/easylogging++/libeasylogging.a)
 zentra_lib(ZENTRA_STATIC_LIBS src/mnemonics/libmnemonics.a)
 zentra_lib(ZENTRA_STATIC_LIBS src/libversion.a)
 
+option(FFI_IOS "Build static libzentra_wallet_ffi for iOS (linked into app)" OFF)
+
 # Cross builds use Zentra contrib/depends toolchain (sets DEPENDS=ON).
-if(DEPENDS OR ANDROID)
+if(FFI_IOS)
+  if(DEFINED IOS_DEPS_PREFIX)
+    list(PREPEND CMAKE_PREFIX_PATH "${IOS_DEPS_PREFIX}")
+  endif()
+  set(Boost_NO_BOOST_CMAKE ON)
+  set(Boost_USE_STATIC_LIBS ON)
+  find_package(Boost REQUIRED COMPONENTS
+    chrono filesystem thread serialization locale regex program_options date_time)
+  find_package(OpenSSL REQUIRED)
+  find_package(Protobuf REQUIRED)
+  find_package(Threads REQUIRED)
+elseif(DEPENDS OR ANDROID)
   find_package(Threads REQUIRED)
   if(ANDROID)
     find_library(LOG_LIB log)
@@ -78,7 +94,11 @@ else()
   find_library(NORM_LIB norm)
 endif()
 
-add_library(zentra_wallet_ffi SHARED src/zentra_wallet_ffi.cpp)
+if(FFI_IOS)
+  add_library(zentra_wallet_ffi STATIC src/zentra_wallet_ffi.cpp)
+else()
+  add_library(zentra_wallet_ffi SHARED src/zentra_wallet_ffi.cpp)
+endif()
 
 target_include_directories(zentra_wallet_ffi PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -87,9 +107,26 @@ target_include_directories(zentra_wallet_ffi PRIVATE
   ${ZENTRA_BUILD}/generated_include
 )
 
-target_compile_options(zentra_wallet_ffi PRIVATE -fPIC)
+if(NOT FFI_IOS)
+  target_compile_options(zentra_wallet_ffi PRIVATE -fPIC)
+endif()
 
-if(DEPENDS OR ANDROID)
+if(FFI_IOS)
+  find_library(SODIUM_LIB sodium PATHS ${IOS_DEPS_PREFIX}/lib NO_DEFAULT_PATH)
+  target_link_libraries(zentra_wallet_ffi PRIVATE
+    "-Wl,-all_load"
+    ${ZENTRA_STATIC_LIBS}
+    Boost::chrono Boost::filesystem Boost::thread Boost::serialization
+    Boost::locale Boost::regex Boost::program_options Boost::date_time
+    OpenSSL::SSL OpenSSL::Crypto
+    protobuf::libprotobuf
+    ${SODIUM_LIB}
+    ${CMAKE_DL_LIBS}
+    Threads::Threads
+    "-framework Foundation" "-framework UIKit" "-framework Security"
+    "-framework SystemConfiguration" "-framework CFNetwork"
+  )
+elseif(DEPENDS OR ANDROID)
   target_link_libraries(zentra_wallet_ffi PRIVATE
     -Wl,--start-group
     ${ZENTRA_STATIC_LIBS}
@@ -106,9 +143,14 @@ if(DEPENDS OR ANDROID)
   if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     target_link_libraries(zentra_wallet_ffi PRIVATE ws2_32 bcrypt iphlpapi)
   endif()
-  if(APPLE)
+  if(APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
     target_link_libraries(zentra_wallet_ffi PRIVATE
       "-framework Foundation" "-framework IOKit" "-framework AppKit")
+  endif()
+  if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    target_link_libraries(zentra_wallet_ffi PRIVATE
+      "-framework Foundation" "-framework UIKit" "-framework Security"
+      "-framework SystemConfiguration" "-framework CFNetwork")
   endif()
 else()
   target_link_libraries(zentra_wallet_ffi PRIVATE

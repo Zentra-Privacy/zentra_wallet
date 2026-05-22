@@ -1,0 +1,11 @@
+# iOS toolchain for libzentra_wallet_ffi (set IOS_SDK=iphonesimulator for Simulator).
+set(CMAKE_SYSTEM_NAME iOS)
+set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "iOS architectures")
+if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0 CACHE STRING "iOS deployment target")
+endif()
+if(IOS_SDK STREQUAL "iphonesimulator")
+  set(CMAKE_OSX_SYSROOT iphonesimulator CACHE STRING "iOS Simulator SDK" FORCE)
+else()
+  set(CMAKE_OSX_SYSROOT iphoneos CACHE STRING "iOS Device SDK" FORCE)
+endif()

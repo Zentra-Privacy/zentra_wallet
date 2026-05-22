@@ -1,181 +1,116 @@
-# Building from source
+# Building from source (overview)
 
-How to compile the native wallet engine and run the Flutter app on your machine.
+Manual build guides for **every platform** — no GitHub Actions required. Each OS has its own step-by-step doc from prerequisites through a runnable app.
+
+**Recommended Zentra version:** [v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0)
 
 ---
 
-## Build pipeline overview
+## Platform guides
 
+| OS | Guide | Native command | Flutter build |
+|----|--------|----------------|---------------|
+| **Linux** | [build-linux.md](build-linux.md) | `./wallet.sh build` | `flutter build linux --release` |
+| **Windows** | [build-windows.md](build-windows.md) | `./wallet.sh build-windows` (on Linux) | `flutter build windows --release` (on Windows) |
+| **Android** | [build-android.md](build-android.md) | `./wallet.sh build-android` | `flutter build apk --release` |
+| **macOS** | [build-macos.md](build-macos.md) | `./wallet.sh build-macos` | `flutter build macos --release` |
+| **iOS** | [build-ios.md](build-ios.md) | `./wallet.sh build-ios` | `flutter build ios` (+ signing) |
+
+---
+
+## Quick start by host machine
+
+### You are on Linux (Ubuntu)
+
+```bash
+git clone … zentra_wallet && cd zentra_wallet
+git clone -b v0.1.0 --recurse-submodules … third_party/zentra
+sudo ./scripts/ci-install-linux-deps.sh all
+./wallet.sh build              # Linux app
+./wallet.sh build-android      # optional: APK native libs
+./wallet.sh build-windows      # optional: Windows DLL
+flutter pub get && flutter build linux --release
 ```
-Zentra source (wallet_api, static libs)
+
+Details: [build-linux.md](build-linux.md)
+
+### You are on Windows
+
+1. Build **DLL** on Linux (or download from CI) — [build-windows.md](build-windows.md)
+2. On Windows: `flutter build windows --release`
+
+### You are on macOS
+
+```bash
+./wallet.sh build-macos        # macOS desktop
+./wallet.sh build-ios          # iPhone/iPad (long)
+flutter build macos --release
+flutter build ios --release    # needs signing for device
+```
+
+Details: [build-macos.md](build-macos.md), [build-ios.md](build-ios.md)
+
+---
+
+## Pipeline overview
+
+```text
+Zentra source (wallet_api + static libs)
         ↓
-native/zentra_wallet_ffi  →  libzentra_wallet_ffi.so
+native/zentra_wallet_ffi
         ↓
-packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
+packages/zentra_wallet_core/<platform>/libzentra_wallet_ffi.*
         ↓
-flutter run -d linux
+flutter build <platform>
 ```
 
-The entry script **`./wallet.sh`** (wrapper for `scripts/wallet.sh`) orchestrates this.
-
----
-
-## Step 1 — Prepare Zentra
-
-Clone and build the Zentra project so `wallet_api` exists:
+Entry script: **`./wallet.sh`** (see `scripts/wallet.sh`).
 
 ```bash
-cd /path/to/zentra
-scripts/build.sh release   # if available
-# or cmake configure + build in build/release
+./wallet.sh help
+./wallet.sh status
 ```
 
-The wallet FFI build expects:
+| Command | Platform |
+|---------|----------|
+| `build` | Linux `.so` |
+| `build-android` | Android `jniLibs/*.so` |
+| `build-windows` | Windows `.dll` (MinGW on Linux) |
+| `build-macos` | macOS `.dylib` |
+| `build-ios` | iOS `.xcframework` |
+| `build-all-native` | Linux + Android + Windows (+ macOS/iOS on Mac) |
 
-`$ZENTRA_BUILD/lib/libwallet_api.a`
+---
 
-**Note:** Zentra’s default `scripts/build.sh release` may **not** build `wallet_api` (it can be `EXCLUDE_FROM_ALL`). The wallet script runs:
+## Zentra source location
+
+Scripts search in order:
+
+1. `ZENTRA_ROOT` environment variable
+2. `../zentra` (sibling directory)
+3. `third_party/zentra` inside this repo
+
+Must contain: `src/wallet/api/wallet2_api.h`
 
 ```bash
-cmake --build "$ZENTRA_BUILD" --target wallet_api
-```
-
-when the archive is missing.
-
----
-
-## Step 2 — Build the FFI library
-
-From the wallet repo:
-
-```bash
-export ZENTRA_ROOT=/path/to/zentra   # if not auto-detected
-./wallet.sh build
-```
-
-What `scripts/lib/native_build.sh` does:
-
-1. Resolves `ZENTRA_ROOT` and `ZENTRA_BUILD` (default `build/release`)
-2. Configures/builds Zentra if caches or libs are missing
-3. Builds target **`wallet_api`**
-4. CMake configure `native/zentra_wallet_ffi` with env `ZENTRA_ROOT` and `ZENTRA_BUILD_DIR`
-5. Links the shared library against Zentra static archives + Boost, OpenSSL, Protobuf, etc.
-6. Copies `.so` to `packages/zentra_wallet_core/linux/`
-
----
-
-## Step 3 — Run the Flutter app
-
-```bash
-./wallet.sh run
-# equivalent to flutter run -d linux (via scripts/lib/flutter_run.sh)
-```
-
-List devices:
-
-```bash
-./wallet.sh devices
+git clone -b v0.1.0 --recurse-submodules \
+  https://github.com/Zentra-Privacy/zentra.git third_party/zentra
 ```
 
 ---
 
-## Manual CMake (advanced)
+## Prefer pre-built binaries?
 
-If you need to debug the FFI layer alone:
+Use CI artifacts or releases instead of compiling:
 
-```bash
-export ZENTRA_ROOT=/path/to/zentra
-export ZENTRA_BUILD_DIR=/path/to/zentra/build/release
-
-cmake -S native/zentra_wallet_ffi -B build/native_ffi -DCMAKE_BUILD_TYPE=Release
-cmake --build build/native_ffi --parallel "$(nproc)"
-
-cp build/native_ffi/libzentra_wallet_ffi.so packages/zentra_wallet_core/linux/
-```
-
-Required static libs are listed in `native/zentra_wallet_ffi/CMakeLists.txt` (wallet, cryptonote_core, ringct, randomx, …).
-
----
-
-## System dependencies (Linux)
-
-Typical packages on Ubuntu/Debian (names may vary):
-
-- `build-essential`, `cmake`
-- `libboost-all-dev` (chrono, filesystem, thread, serialization, locale, regex, program_options, date_time)
-- `libssl-dev`
-- `libprotobuf-dev`, `protobuf-compiler`
-- `libunbound-dev`, `libzmq3-dev`
-- `libsodium-dev`, `libhidapi-libusb0`, `libusb-1.0-0-dev`
-- Optional: `libpgm-dev`, `libnorm-dev`
-
-Match what the [Zentra](https://github.com/Zentra-Privacy/zentra) README requires for building the full node.
-
----
-
-## Android notes
-
-- `packages/zentra_wallet_core/android/build.gradle` + `CMakeLists.txt` build the small **`zentra_core`** helper, not the full FFI.
-- For a production Android APK you must extend the build to compile and package `libzentra_wallet_ffi.so` for each ABI (arm64-v8a, etc.) and cross-compile Zentra static libs — same dependency closure as Linux.
-- Dart loads the library with `DynamicLibrary.open('libzentra_wallet_ffi.so')` on Android.
-
----
-
-## iOS / macOS / Windows
-
-Flutter platform folders exist. **macOS/iOS** build the light `zentra_core` plugin via CocoaPods (`packages/zentra_wallet_core/macos|ios/`). The **full wallet engine** (`libzentra_wallet_ffi`) is only bundled on **Linux** today.
-
----
-
-## Flutter dependencies
-
-```bash
-flutter pub get
-```
-
-Local package:
-
-- `packages/zentra_wallet_core` — FFI bindings + light native helpers
-
-No `http` package — intentional.
-
----
-
-## `wallet.sh` command reference
-
-| Command | Action |
-|---------|--------|
-| *(no args)* | Interactive menu |
-| `status` | Zentra path, `.so` presence, Flutter version |
-| `build` | Build `libzentra_wallet_ffi.so` |
-| `run` | Run Linux app |
-| `full` | `build` then `run` |
-| `devices` | `flutter devices` |
-| `clean-data` | Remove local test wallet data |
-| `help` | Short help text |
-
----
-
-## CI / reproducibility tips
-
-GitHub Actions workflows in `.github/workflows/`:
-
-| Workflow | Purpose |
-|----------|---------|
-| `ci.yml` | Analyze, test, Linux debug build — every **PR** and push to `main` / `master` |
-| `build-artifacts.yml` | Two-phase release: engine from Zentra **v0.1.0**, then Linux/Windows/Android/macOS apps |
-
-Install the same Ubuntu packages locally: `sudo ./scripts/ci-install-linux-deps.sh all`
-
-- Pin Zentra commit when releasing wallet builds
-- Build `.so` on the same distro/glibc as end users
-- Do not commit a stale `.so` built on a different machine without rebuilding
-- Use `./wallet.sh status` before tagging releases
+- [download-builds.md](download-builds.md)
+- [ci-pipeline.md](ci-pipeline.md) — how automated builds work
 
 ---
 
 ## See also
 
+- [Getting started](getting-started.md)
 - [Native FFI reference](native-ffi.md)
-- [Project structure](project-structure.md)
 - [Troubleshooting](troubleshooting.md)
+- [Project structure](project-structure.md)

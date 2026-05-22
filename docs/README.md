@@ -13,30 +13,41 @@ Welcome to the Zentra Wallet docs. These guides explain what the app is, how it 
 | [Overview](overview.md) | Everyone — what this wallet is and is not |
 | [Architecture](architecture.md) | Developers — layers, data flow, components |
 | [Self-custody model](self-custody-model.md) | Privacy-minded users — keys, RPC, Cake Wallet comparison |
-| [Getting started](getting-started.md) | New users and developers — first run |
-| [Download builds (CI)](download-builds.md) | Everyone — install Linux / Windows / APK / macOS from GitHub Actions |
-| [CI/CD pipeline](ci-pipeline.md) | Maintainers — Zentra **v0.1.0** engine build, then all platform apps |
-| [Building from source](building.md) | Developers — native lib, Zentra dependency, platforms |
-| [Building Android FFI](building-android.md) | Developers — full wallet on APK (jniLibs) |
-| [Networks and nodes](networks-and-nodes.md) | Users and ops — mainnet, testnet, `zentrad`, seed nodes |
-| [User guide](user-guide.md) | End users — create wallet, send, receive, settings |
-| [Security](security.md) | Everyone — passwords, seeds, trusted daemon |
-| [Project structure](project-structure.md) | Contributors — folders and responsibilities |
-| [Native FFI reference](native-ffi.md) | Native developers — C API and Dart bindings |
+| [Getting started](getting-started.md) | New users and developers — first run on Linux |
+| [Download builds (CI)](download-builds.md) | Everyone — install from GitHub Actions / Releases |
+| [CI/CD pipeline](ci-pipeline.md) | Maintainers — automated two-phase release |
+
+### Manual build (per OS, no CI)
+
+| OS | Full guide |
+|----|------------|
+| [Linux](build-linux.md) | Native `.so` + desktop app |
+| [Windows](build-windows.md) | MinGW DLL + Windows app |
+| [Android](build-android.md) | jniLibs + APK |
+| [macOS](build-macos.md) | dylib + `.app` |
+| [iOS](build-ios.md) | XCFramework + iPhone/iPad app |
+| [Building overview](building.md) | Index + `wallet.sh` commands |
+
+| Other | |
+|-------|---|
+| [Networks and nodes](networks-and-nodes.md) | Mainnet, testnet, `zentrad`, seed nodes |
+| [User guide](user-guide.md) | Create wallet, send, receive, settings |
+| [Security](security.md) | Passwords, seeds, trusted daemon |
+| [Project structure](project-structure.md) | Folders and responsibilities |
+| [Native FFI reference](native-ffi.md) | C API and Dart bindings |
 | [Troubleshooting](troubleshooting.md) | When something breaks |
-| [FAQ](faq.md) | Short answers to common questions |
+| [FAQ](faq.md) | Short answers |
 
 ---
 
 ## One-minute summary
 
-```
+```text
 You  →  Flutter app  →  wallet2 (inside app)  →  zentrad (remote daemon)
 ```
 
 - **On your device:** wallet keys, seed phrase, password, signing, wallet files.
 - **On the network:** blockchain sync and transaction broadcast via `zentrad`.
-- **Not used:** `zentra-wallet-rpc`, hosted wallet APIs, or Flutter HTTP calls to a wallet server.
 
 For build and run from the repo root:
 
@@ -45,4 +56,4 @@ For build and run from the repo root:
 ./wallet.sh full     # build native lib + run Linux app
 ```
 
-See [Getting started](getting-started.md) and [Building from source](building.md) for details.
+See [Getting started](getting-started.md) and [build-linux.md](build-linux.md) for details.

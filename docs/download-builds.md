@@ -1,6 +1,6 @@
 # Download built apps from GitHub
 
-CI builds **Linux**, **Windows**, **Android (APK)**, and **macOS** apps automatically.
+CI builds **Linux**, **Windows**, **Android (APK)**, **macOS**, and **iOS** apps automatically.
 
 Workflow: **[Release pipeline](../.github/workflows/build-artifacts.yml)**
 
@@ -21,7 +21,7 @@ Workflow: **[Release pipeline](../.github/workflows/build-artifacts.yml)**
 Every **fully green** **Release pipeline** run on **`main`** creates a **draft** release (not public until you publish). If any platform job fails, no draft is created — use **Artifacts** on that run for whatever succeeded.
 
 1. Repo → **Releases** → find **Draft** (e.g. `Draft build #42`, tag `draft-42`).
-2. Download assets and test Linux / Windows / APK / macOS.
+2. Download assets and test Linux / Windows / APK / macOS / iOS.
 3. Change release notes if you want → **Edit**.
 4. Happy? Click **Publish release** → users see it as a normal release.
 5. Not happy? Fix code, push to `main` again → a **new** draft (`draft-43`) is created.
@@ -62,6 +62,7 @@ Use this for any completed workflow run (including pushes to `main`).
 | `zentra-wallet-windows-x64` | Windows | `zentra-wallet-windows-x64.zip` |
 | `zentra-wallet-android-apk` | Android | `app-release.apk` |
 | `zentra-wallet-macos` | macOS | `zentra-wallet-macos.zip` |
+| `zentra-wallet-ios` | iOS | `zentra-wallet-ios.zip` (unsigned `.app`; sideload or re-sign) |
 
 Artifacts are kept for **90 days** (GitHub default), then removed.
 
@@ -69,7 +70,7 @@ Artifacts are kept for **90 days** (GitHub default), then removed.
 
 1. **Actions** → **Release pipeline** → **Run workflow** (right side).
 2. Branch: `main` → **Run workflow**.
-3. Wait ~10–30 minutes (four platform jobs in parallel).
+3. Wait (engine build on Mac can take hours the first time; app jobs ~30–60 min).
 4. Download from **Artifacts** as above.
 
 ---
@@ -141,7 +142,7 @@ sudo apt install libgtk-3-0 libsecret-1-0
 | **Windows** | ✓ | ✓ (CI builds `libzentra_wallet_ffi.dll`) |
 | **Android** | ✓ | ✓ arm64 in CI; more ABIs via `./wallet.sh build-android` |
 | **macOS** | ✓ | ✓ (CI builds on `macos-latest`) |
-| **iOS** | — | ✗ not in CI yet |
+| **iOS** | `zentra-wallet-ios.zip` | ✓ unsigned `.app` (re-sign for device) |
 
 **Release pipeline** ([ci-pipeline.md](ci-pipeline.md)): Phase 1 builds the wallet engine from [Zentra v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0), Phase 2 builds all apps, Phase 3 creates the draft release. First run can take **several hours**; cache helps later runs.
 
@@ -154,7 +155,7 @@ sudo apt install libgtk-3-0 libsecret-1-0
 git add packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
 ```
 
-**Android** — see [building-android.md](building-android.md):
+**Android** — see [build-android.md](build-android.md):
 
 ```bash
 ./wallet.sh build-android

@@ -1,6 +1,6 @@
 # Production release pipeline (two phases):
 #   1) Build native wallet engine from Zentra v0.1.0 → native-engine-bundle
-#   2) Build Flutter apps (Linux / Windows / Android / macOS) → draft or tag release
+#   2) Build Flutter apps (Linux / Windows / Android / macOS / iOS) → draft or tag release
 #
 # Zentra core: https://github.com/Zentra-Privacy/zentra.git @ v0.1.0
 name: Release pipeline
@@ -69,17 +69,25 @@ jobs:
           if-no-files-found: error
 
   engine-macos:
-    name: "Phase 1 · Engine (macOS)"
+    name: "Phase 1 · Engine (macOS + iOS)"
     if: >-
       github.event_name != 'workflow_dispatch' ||
       github.event.inputs.skip_engine_rebuild != true
     runs-on: macos-latest
-    timeout-minutes: 360
+    timeout-minutes: 480
     steps:
       - uses: actions/checkout@v5
 
       - name: Install build tools
-        run: brew install cmake python3 pkg-config openssl protobuf boost || true
+        run: brew install cmake python3 pkg-config openssl protobuf boost curl || true
+
+      - name: Cache iOS deps (OpenSSL / ICU / Boost)
+        uses: actions/cache@v5
+        with:
+          path: build/ios-deps
+          key: ios-deps-${{ runner.os }}-${{ hashFiles('scripts/lib/native_build_ios*.sh') }}
+          restore-keys: |
+            ios-deps-${{ runner.os }}-
 
       - name: Cache Zentra tree
         uses: actions/cache@v5
@@ -163,6 +171,12 @@ jobs:
           _need packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so "$B/linux/libzentra_wallet_ffi.so"
           _need packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll "$B/windows/libzentra_wallet_ffi.dll"
           _need packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib "$B/macos/lib/libzentra_wallet_ffi.dylib"
+          if [[ ! -d packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework ]]; then
+            echo "::error::skip_engine_rebuild requires packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework"
+            exit 1
+          fi
+          mkdir -p "$B/ios/lib"
+          cp -a packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework "$B/ios/lib/"
           _need packages/zentra_wallet_core/android/src/main/jniLibs/arm64-v8a/libzentra_wallet_ffi.so \
             "$B/android/arm64-v8a/libzentra_wallet_ffi.so"
           _need packages/zentra_wallet_core/android/src/main/jniLibs/armeabi-v7a/libzentra_wallet_ffi.so \
@@ -298,17 +312,59 @@ jobs:
           path: zentra-wallet-macos.zip
           if-no-files-found: error
 
+  build-ios:
+    name: "Phase 2 · iOS app"
+    needs: [package-engine, use-committed-engine]
+    if: ${{ always() && (needs.package-engine.result == 'success' || needs.use-committed-engine.result == 'success') }}
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v6
+        with:
+          name: native-engine-bundle
+          path: native-engine-bundle
+      - run: chmod +x scripts/ci-apply-native-libs.sh && ./scripts/ci-apply-native-libs.sh native-engine-bundle
+      - name: Verify iOS XCFramework
+        run: |
+          test -d packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework || {
+            echo "::error::zentra_wallet_ffi.xcframework missing after apply"
+            exit 1
+          }
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install --repo-update
+      - run: flutter build ios --release --no-codesign
+      - name: Package iOS app
+        run: |
+          APP="build/ios/iphoneos/Runner.app"
+          test -d "$APP" || APP="build/ios/Release-iphoneos/Runner.app"
+          test -d "$APP" || { echo "::error::iOS Runner.app not found"; exit 1; }
+          ditto -c -k --sequesterRsrc --keepParent "$APP" zentra-wallet-ios.zip
+      - uses: actions/upload-artifact@v6
+        with:
+          name: zentra-wallet-ios
+          path: zentra-wallet-ios.zip
+          if-no-files-found: error
+
   # ─── Phase 3: GitHub Release ───────────────────────────────────────────────
   draft-release:
     name: "Phase 3 · Draft release"
-    needs: [build-linux, build-windows, build-android, build-macos]
+    needs: [build-linux, build-windows, build-android, build-macos, build-ios]
     if: >-
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       !startsWith(github.ref, 'refs/tags/') &&
       needs.build-linux.result == 'success' &&
       needs.build-windows.result == 'success' &&
       needs.build-android.result == 'success' &&
-      needs.build-macos.result == 'success'
+      needs.build-macos.result == 'success' &&
+      needs.build-ios.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -335,6 +391,7 @@ jobs:
             | Windows x64 | ✓ |
             | Android APK | ✓ (arm64 + armeabi-v7a) |
             | macOS | ✓ |
+            | iOS (.app zip) | ✓ |
 
             [Install guide](https://github.com/${{ github.repository }}/blob/main/docs/download-builds.md)
 
@@ -345,13 +402,14 @@ jobs:
 
   github-release:
     name: "Phase 3 · Published release"
-    needs: [build-linux, build-windows, build-android, build-macos]
+    needs: [build-linux, build-windows, build-android, build-macos, build-ios]
     if: >-
       startsWith(github.ref, 'refs/tags/v') &&
       needs.build-linux.result == 'success' &&
       needs.build-windows.result == 'success' &&
       needs.build-android.result == 'success' &&
-      needs.build-macos.result == 'success'
+      needs.build-macos.result == 'success' &&
+      needs.build-ios.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
