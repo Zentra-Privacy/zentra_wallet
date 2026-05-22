@@ -173,7 +173,9 @@ Quick steps:
 
 1. GitHub → **Actions** → **Build apps (all platforms)** → latest green run.
 2. Scroll down → **Artifacts** → download (e.g. `zentra-wallet-linux-x64`, `zentra-wallet-android-apk`).
-3. For version releases: push tag `v1.0.0` → **Releases** → download assets.
+3. For version releases: push tag `v1.0.0` → **Releases** → download assets (Android file: `zentra-wallet-android.apk`).
+
+GitHub **Artifacts** are wrapped in an extra `.zip` — unzip once after download (see [download guide](docs/download-builds.md)).
 
 | Artifact | Platform |
 |----------|----------|
