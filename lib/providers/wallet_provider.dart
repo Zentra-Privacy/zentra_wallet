@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
+import '../core/native_wallet_messages.dart';
 import '../core/network/zentra_network.dart';
 import '../core/network/zentra_public_nodes.dart';
 import '../core/seed_utils.dart';
@@ -106,12 +107,21 @@ class WalletProvider extends ChangeNotifier {
     walletScanHeight = _wallet!.fetchRestoreHeight();
   }
 
+  /// Called when [connect] is aborted externally (e.g. splash screen timeout).
+  void markConnectFailed(String message) {
+    connectionState = WalletConnectionState.error;
+    errorMessage = message;
+    _wallet?.dispose();
+    _wallet = null;
+    notifyListeners();
+  }
+
   Future<bool> connect({String? passwordOverride}) async {
     _refreshNativeFlag();
     if (!nativeAvailable) {
       connectionState = WalletConnectionState.error;
       errorMessage =
-          'Embedded wallet not built. Run: ./wallet.sh build-docker';
+          NativeWalletMessages.detail;
       notifyListeners();
       return false;
     }
@@ -143,12 +153,21 @@ class WalletProvider extends ChangeNotifier {
       await _wallet!.refresh();
       await _applyWalletSnapshot();
       connectionState = WalletConnectionState.connected;
+      errorMessage = null;
       return true;
     } catch (e) {
       connectionState = WalletConnectionState.error;
       errorMessage = _userMessage(e);
+      _wallet?.dispose();
+      _wallet = null;
       return false;
     } finally {
+      if (connectionState == WalletConnectionState.connecting) {
+        connectionState = WalletConnectionState.error;
+        errorMessage ??= 'Connection interrupted';
+        _wallet?.dispose();
+        _wallet = null;
+      }
       notifyListeners();
     }
   }
@@ -202,7 +221,7 @@ class WalletProvider extends ChangeNotifier {
     _refreshNativeFlag();
     if (!nativeAvailable) {
       errorMessage =
-          'Embedded wallet not built. Run: ./wallet.sh build-docker';
+          NativeWalletMessages.detail;
       notifyListeners();
       return false;
     }
@@ -240,7 +259,7 @@ class WalletProvider extends ChangeNotifier {
     _refreshNativeFlag();
     if (!nativeAvailable) {
       errorMessage =
-          'Embedded wallet not built. Run: ./wallet.sh build-docker';
+          NativeWalletMessages.detail;
       notifyListeners();
       return false;
     }
@@ -283,12 +302,21 @@ class WalletProvider extends ChangeNotifier {
       await _wallet!.refresh();
       await _applyWalletSnapshot();
       connectionState = WalletConnectionState.connected;
+      errorMessage = null;
       return true;
     } catch (e) {
       connectionState = WalletConnectionState.error;
       errorMessage = _userMessage(e);
+      _wallet?.dispose();
+      _wallet = null;
       return false;
     } finally {
+      if (connectionState == WalletConnectionState.connecting) {
+        connectionState = WalletConnectionState.error;
+        errorMessage ??= 'Sync interrupted';
+        _wallet?.dispose();
+        _wallet = null;
+      }
       notifyListeners();
     }
   }

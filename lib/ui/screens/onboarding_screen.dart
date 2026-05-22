@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
+import '../../core/native_wallet_messages.dart';
 import '../../core/network/zentra_network.dart';
 import '../../models/wallet_backup_info.dart';
 import '../../core/restore_height_utils.dart';
@@ -85,7 +86,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
     final p = context.read<WalletProvider>();
     if (!ZentraNativeWallet.isAvailable) {
-      _snack('Native wallet not built. Run: ./wallet.sh build-docker');
+      _snack(NativeWalletMessages.detail, error: true);
       return;
     }
     setState(() => _loading = true);

@@ -5,6 +5,7 @@ import '../../core/network/rpc_address.dart';
 import '../../core/network/zentra_network.dart';
 import '../../core/network/zentra_public_nodes.dart';
 import '../../models/wallet_models.dart';
+import '../../core/native_wallet_messages.dart';
 import '../../providers/wallet_provider.dart';
 
 /// Configure remote zentrad (daemon) — wallet keys stay on device.
@@ -84,8 +85,8 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
             const Card(
               child: ListTile(
                 leading: Icon(Icons.warning, color: Colors.orangeAccent),
-                title: Text('Native wallet not built'),
-                subtitle: Text('Run: ./wallet.sh build-docker'),
+                title: Text(NativeWalletMessages.title),
+                subtitle: Text(NativeWalletMessages.subtitle),
               ),
             ),
           ],

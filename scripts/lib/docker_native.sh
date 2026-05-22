@@ -173,4 +173,5 @@ docker_native_build() {
   echo
   echo "==> Done. Native library:"
   ls -la "$ROOT/packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so"
+  echo "==> Run: ./wallet.sh run"
 }

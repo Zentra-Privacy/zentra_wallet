@@ -26,8 +26,6 @@ source "$LIB/clean_data.sh"
 
 SO_PATH="$ROOT/packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so"
 DOCKER_IMAGE="${NATIVE_IMAGE:-zentra-wallet-native-build:ubuntu22}"
-BUILD_HINT="./wallet.sh build-docker"
-
 if [[ -t 1 ]]; then
   C_RESET='\033[0m'; C_BOLD='\033[1m'; C_DIM='\033[2m'
   C_GREEN='\033[32m'; C_YELLOW='\033[33m'; C_CYAN='\033[36m'; C_RED='\033[31m'
@@ -61,7 +59,13 @@ cmd_status() {
   [[ -n "$z" ]] && _ok "Zentra: $z" || _warn "Zentra: not found"
   [[ -f "$SO_PATH" ]] && _ok "Native lib: $(ls -lh "$SO_PATH" | awk '{print $5, $9}')" || _warn "Native lib: missing → ./wallet.sh build-docker"
   if command -v docker >/dev/null 2>&1; then
-    docker info >/dev/null 2>&1 && _ok "Docker: OK" || sudo docker info >/dev/null 2>&1 && _warn "Docker: needs sudo (newgrp docker)" || _err "Docker: daemon down"
+    if docker info >/dev/null 2>&1; then
+      _ok "Docker: OK"
+    elif sudo docker info >/dev/null 2>&1; then
+      _warn "Docker: needs sudo (run: newgrp docker)"
+    else
+      _err "Docker: daemon down"
+    fi
   else
     _warn "Docker: not installed → ./wallet.sh install-docker"
   fi

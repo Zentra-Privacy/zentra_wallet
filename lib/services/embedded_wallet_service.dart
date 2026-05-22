@@ -2,6 +2,7 @@ import 'dart:ffi' as ffi;
 
 import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
+import '../core/native_wallet_messages.dart';
 import '../core/network/zentra_network.dart';
 import '../core/wallet_exception.dart';
 import '../models/wallet_models.dart';
@@ -15,7 +16,7 @@ class EmbeddedWalletService {
   }) {
     if (!ZentraNativeWallet.isAvailable) {
       throw NativeWalletUnavailable(
-        'Native wallet library missing. Run: ./wallet.sh build-docker',
+        NativeWalletMessages.detail,
       );
     }
     _native = ZentraNativeWallet.instance;

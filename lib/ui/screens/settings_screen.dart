@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/zentra_network.dart';
+import '../../core/native_wallet_messages.dart';
 import '../../providers/wallet_provider.dart';
 import '../../theme/zentra_theme.dart';
 import '../widgets/restore_height_settings_panel.dart';
@@ -147,8 +148,8 @@ class SettingsScreen extends StatelessWidget {
         if (!wallet.nativeAvailable)
           const ZentraSettingsTile(
             icon: Icons.build_outlined,
-            title: 'Native wallet missing',
-            subtitle: './wallet.sh build-docker',
+            title: NativeWalletMessages.title,
+            subtitle: NativeWalletMessages.subtitle,
           ),
         ZentraSettingsTile(
           icon: Icons.refresh,
