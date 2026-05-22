@@ -20,14 +20,6 @@ _apply "$BUNDLE/linux/libzentra_wallet_ffi.so" \
   "$ROOT/packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so"
 _apply "$BUNDLE/windows/libzentra_wallet_ffi.dll" \
   "$ROOT/packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll"
-_apply "$BUNDLE/macos/lib/libzentra_wallet_ffi.dylib" \
-  "$ROOT/packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib"
-
-rm -rf "$ROOT/packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework"
-mkdir -p "$ROOT/packages/zentra_wallet_core/ios/lib"
-cp -a "$BUNDLE/ios/lib/zentra_wallet_ffi.xcframework" \
-  "$ROOT/packages/zentra_wallet_core/ios/lib/"
-echo "==> $ROOT/packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework"
 
 for abi_dir in "$BUNDLE/android"/*; do
   [[ -d "$abi_dir" ]] || continue
@@ -35,5 +27,18 @@ for abi_dir in "$BUNDLE/android"/*; do
   _apply "$abi_dir/libzentra_wallet_ffi.so" \
     "$ROOT/packages/zentra_wallet_core/android/src/main/jniLibs/$abi/libzentra_wallet_ffi.so"
 done
+
+if [[ -f "$BUNDLE/macos/lib/libzentra_wallet_ffi.dylib" ]]; then
+  _apply "$BUNDLE/macos/lib/libzentra_wallet_ffi.dylib" \
+    "$ROOT/packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib"
+fi
+
+if [[ -d "$BUNDLE/ios/lib/zentra_wallet_ffi.xcframework" ]]; then
+  rm -rf "$ROOT/packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework"
+  mkdir -p "$ROOT/packages/zentra_wallet_core/ios/lib"
+  cp -a "$BUNDLE/ios/lib/zentra_wallet_ffi.xcframework" \
+    "$ROOT/packages/zentra_wallet_core/ios/lib/"
+  echo "==> $ROOT/packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework"
+fi
 
 echo "==> Native engine applied (Zentra $(grep zentra_tag "$BUNDLE/VERSION.txt" | cut -d= -f2))"
