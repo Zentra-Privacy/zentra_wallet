@@ -10,8 +10,8 @@ Workflow: **[Build apps (all platforms)](../.github/workflows/build-artifacts.ym
 
 | Trigger | What happens |
 |---------|----------------|
-| Push to `main` (or **Run workflow**) | Rebuilds `.so` from Zentra → all platforms → **draft release** |
-| Tag `v*` (e.g. `v1.0.0`) | Same rebuild + builds → **published** GitHub Release (no draft) |
+| Push to `main` (or **Run workflow**) | All platforms → **draft release** |
+| Tag `v*` (e.g. `v1.0.0`) | All platforms → **published** GitHub Release (no draft) |
 
 ---
 
@@ -143,18 +143,15 @@ sudo apt install libgtk-3-0 libsecret-1-0
 
 On Windows / Android / macOS you may see **“Wallet engine unavailable”** until native `libzentra_wallet_ffi` is built for that platform.
 
-### Native library on every CI run
+### Native library (Linux)
 
-Every **Build apps** run:
+CI uses `packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so` from the repo. To update it locally:
 
-1. Clones [Zentra](https://github.com/Zentra-Privacy/zentra) and runs `./wallet.sh build`
-2. Uses that fresh `libzentra_wallet_ffi.so` for the Linux app bundle
-
-The `.so` in the git repo is a fallback for local dev; CI always rebuilds from source (CMake cache speeds up repeat runs).
-
-The rebuilt `.so` is **not** auto-committed to git — it appears in **Artifacts** and **Releases** for that run only.
-
-**Build native (Linux)** (weekly / manual) is optional if you only want the `.so` file without building all platforms.
+```bash
+./wallet.sh build
+git add packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
+git commit -m "Update native wallet library"
+```
 
 ---
 
