@@ -1,7 +1,7 @@
 # Build installable apps for Linux, Windows, Android, and macOS.
-# - push main: builds + draft release (uses committed libzentra_wallet_ffi.so)
-# - tag v*: rebuilds native .so, then builds + published GitHub Release
-# - workflow_dispatch (main): builds + draft release
+# - Every run: rebuild libzentra_wallet_ffi.so from Zentra source, then build all platforms
+# - push main / workflow_dispatch: draft release
+# - tag v*: published GitHub Release (no draft)
 name: Build apps (all platforms)
 
 on:
@@ -27,10 +27,9 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # Version tags: fresh libzentra_wallet_ffi.so before Linux app bundle (slow).
+  # Always rebuild .so from Zentra source (slow; cached after first run).
   rebuild-linux-native:
-    name: Rebuild native .so (release tag)
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Rebuild native .so (Zentra source)
     runs-on: ubuntu-22.04
     timeout-minutes: 180
     steps:
@@ -71,7 +70,7 @@ jobs:
   build-linux:
     name: Linux (x64)
     needs: [rebuild-linux-native]
-    if: ${{ !cancelled() && (needs.rebuild-linux-native.result == 'skipped' || needs.rebuild-linux-native.result == 'success') }}
+    if: ${{ !cancelled() && needs.rebuild-linux-native.result == 'success' }}
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
@@ -91,8 +90,7 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
-      - name: Install freshly built native library (release tag)
-        if: needs.rebuild-linux-native.result == 'success'
+      - name: Install freshly built native library
         uses: actions/download-artifact@v6
         with:
           name: libzentra_wallet_ffi-linux
@@ -224,8 +222,8 @@ jobs:
     name: Draft release (review before publish)
     needs: [build-linux, build-windows, build-android, build-macos]
     if: >-
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      !startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write

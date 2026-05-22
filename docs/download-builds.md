@@ -10,9 +10,8 @@ Workflow: **[Build apps (all platforms)](../.github/workflows/build-artifacts.ym
 
 | Trigger | What happens |
 |---------|----------------|
-| Push to `main` | All four platforms build + **draft release** (`draft-123`) using committed `.so` |
-| Tag `v*` (e.g. `v1.0.0`) | Rebuilds native `.so` → builds → **published** GitHub Release |
-| **Run workflow** on `main` | Builds + **draft release** (same as push) |
+| Push to `main` (or **Run workflow**) | Rebuilds `.so` from Zentra → all platforms → **draft release** |
+| Tag `v*` (e.g. `v1.0.0`) | Same rebuild + builds → **published** GitHub Release (no draft) |
 
 ---
 
@@ -144,15 +143,18 @@ sudo apt install libgtk-3-0 libsecret-1-0
 
 On Windows / Android / macOS you may see **“Wallet engine unavailable”** until native `libzentra_wallet_ffi` is built for that platform.
 
-### Tag `v*` and the native library
+### Native library on every CI run
 
-Pushing `v1.0.0` runs **Build apps (all platforms)** which:
+Every **Build apps** run:
 
-1. Rebuilds `libzentra_wallet_ffi.so` from Zentra (`rebuild-linux-native` job)
-2. Builds Linux / Windows / Android / macOS apps
-3. Publishes a **GitHub Release** with all assets
+1. Clones [Zentra](https://github.com/Zentra-Privacy/zentra) and runs `./wallet.sh build`
+2. Uses that fresh `libzentra_wallet_ffi.so` for the Linux app bundle
 
-Use **Build native (Linux)** separately only for a manual `.so` artifact (weekly schedule or **Run workflow**), not for version releases.
+The `.so` in the git repo is a fallback for local dev; CI always rebuilds from source (CMake cache speeds up repeat runs).
+
+The rebuilt `.so` is **not** auto-committed to git — it appears in **Artifacts** and **Releases** for that run only.
+
+**Build native (Linux)** (weekly / manual) is optional if you only want the `.so` file without building all platforms.
 
 ---
 
