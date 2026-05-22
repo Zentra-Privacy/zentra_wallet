@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/network/zentra_network.dart';
 import '../../core/native_wallet_messages.dart';
 import '../../providers/wallet_provider.dart';
 import '../../theme/zentra_theme.dart';
@@ -110,19 +111,35 @@ class SettingsScreen extends StatelessWidget {
         ZentraSettingsTile(
           icon: Icons.hub_outlined,
           title: 'Network',
-          subtitle: 'Mainnet',
-        ),
-        ZentraSettingsTile(
-          icon: Icons.science_outlined,
-          title: 'Testnet',
-          subtitle: 'Coming soon',
-          onTap: () => zentraSnack(context, 'Testnet — coming soon'),
-        ),
-        ZentraSettingsTile(
-          icon: Icons.layers_outlined,
-          title: 'Stagenet',
-          subtitle: 'Coming soon',
-          onTap: () => zentraSnack(context, 'Stagenet — coming soon'),
+          subtitle: wallet.networkConfig?.label ?? 'Mainnet',
+          trailing: DropdownButtonHideUnderline(
+            child: DropdownButton<ZentraNetType>(
+              value: ZentraNetType.mainnet,
+              dropdownColor: ZentraTheme.card,
+              items: ZentraNetType.values
+                  .map(
+                    (n) => DropdownMenuItem(
+                      value: n,
+                      child: Text(
+                        n == ZentraNetType.mainnet
+                            ? ZentraNetworkConfig.fromType(n).label
+                            : '${ZentraNetworkConfig.fromType(n).label} (soon)',
+                        style: TextStyle(
+                          color: n == ZentraNetType.mainnet
+                              ? Colors.white
+                              : ZentraTheme.textMuted,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) {
+                if (v == null || v == ZentraNetType.mainnet) return;
+                final label = ZentraNetworkConfig.fromType(v).label;
+                zentraSnack(context, '$label — coming soon');
+              },
+            ),
+          ),
         ),
         if (!wallet.nativeAvailable)
           const ZentraSettingsTile(
