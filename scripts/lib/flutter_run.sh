@@ -39,7 +39,7 @@ EOF
 
   local SO="$ROOT/packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so"
   if [[ ("$DEVICE" == "linux" || -z "$DEVICE") && ! -f "$SO" ]]; then
-    echo "==> Native .so missing; run: ./wallet.sh build-docker"
+    echo "==> Native .so missing; run: ./wallet.sh build"
   fi
 
   if [[ -z "$DEVICE" ]]; then
