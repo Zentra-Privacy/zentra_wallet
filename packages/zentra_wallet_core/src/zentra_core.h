@@ -40,7 +40,7 @@ ZENTRA_API uint16_t zentra_daemon_rpc_port(int network);
 /// Address prefix character for standard address (Z/T/S).
 ZENTRA_API char zentra_address_prefix_char(int network);
 
-/// Coin ticker: always "ZTR".
+/// Coin ticker: always "ZTRA".
 ZENTRA_API const char* zentra_coin_ticker(void);
 
 #ifdef __cplusplus

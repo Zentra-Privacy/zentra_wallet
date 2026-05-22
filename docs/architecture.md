@@ -85,7 +85,7 @@ Built output is installed to:
 3. Background refresh starts inside wallet2
 4. Password saved to secure storage; wallet files written under `…/zentra_wallets/`
 
-### Send ZTR
+### Send ZTRA
 
 1. UI validates address (wallet2) and amount
 2. `estimateFee()` → `zentra_wm_estimate_fee`

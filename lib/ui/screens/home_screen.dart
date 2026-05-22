@@ -110,13 +110,13 @@ class _DashboardTab extends StatelessWidget {
             ZentraSyncBanner(message: wallet.errorMessage ?? 'Something went wrong', isError: true),
           ZentraHeroBalanceCard(
             amountZtr: balance != null
-                ? '${wallet.formatAmount(balance.balanceAtomic)} ZTR'
-                : '— ZTR',
+                ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA'
+                : '— ZTRA',
             unlockedZtr: balance != null
-                ? '${wallet.formatAmount(balance.unlockedAtomic)} ZTR'
+                ? '${wallet.formatAmount(balance.unlockedAtomic)} ZTRA'
                 : null,
             lockedZtr: wallet.lockedBalanceAtomic > 0
-                ? '${wallet.formatAmount(wallet.lockedBalanceAtomic)} ZTR'
+                ? '${wallet.formatAmount(wallet.lockedBalanceAtomic)} ZTRA'
                 : null,
             secondaryLabel: wallet.networkConfig?.label,
           ),
@@ -138,7 +138,7 @@ class _DashboardTab extends StatelessWidget {
             ZentraEmptyState(
               icon: Icons.receipt_long_outlined,
               title: 'No transactions yet',
-              subtitle: 'Receive ZTR to this wallet to see activity here.',
+              subtitle: 'Receive ZTRA to this wallet to see activity here.',
               actionLabel: 'Receive',
               onAction: () => _openReceive(context),
             )
@@ -169,7 +169,7 @@ class _DashboardTab extends StatelessWidget {
     return ZentraTxRow(
       title: incoming ? 'Received' : 'Sent',
       subtitle: '$id · ${UiFormat.relativeTime(t.timestamp)}',
-      amount: '${incoming ? '+' : '-'}${format(t.amountAtomic)} ZTR',
+      amount: '${incoming ? '+' : '-'}${format(t.amountAtomic)} ZTRA',
       isIncoming: incoming,
       pending: t.pending,
       showDivider: showDivider,
@@ -195,7 +195,7 @@ class _DashboardTab extends StatelessWidget {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
-            ZentraCopyField(label: 'Amount', value: '${format(t.amountAtomic)} ZTR', maxLines: 1),
+            ZentraCopyField(label: 'Amount', value: '${format(t.amountAtomic)} ZTRA', maxLines: 1),
             const SizedBox(height: 12),
             ZentraCopyField(label: 'Transaction ID', value: t.txid),
             const SizedBox(height: 12),
@@ -228,13 +228,13 @@ class _AssetsTab extends StatelessWidget {
           const ZentraDashboardHeader(title: 'Assets'),
         ZentraHeroBalanceCard(
           amountZtr: balance != null
-              ? '${wallet.formatAmount(balance.balanceAtomic)} ZTR'
-              : '— ZTR',
+              ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA'
+              : '— ZTRA',
           unlockedZtr: balance != null
-              ? '${wallet.formatAmount(balance.unlockedAtomic)} ZTR'
+              ? '${wallet.formatAmount(balance.unlockedAtomic)} ZTRA'
               : null,
           lockedZtr: wallet.lockedBalanceAtomic > 0
-              ? '${wallet.formatAmount(wallet.lockedBalanceAtomic)} ZTR'
+              ? '${wallet.formatAmount(wallet.lockedBalanceAtomic)} ZTRA'
               : null,
         ),
           const SizedBox(height: 8),
@@ -258,9 +258,9 @@ class _AssetsTab extends StatelessWidget {
                   child: const Text('Z', style: TextStyle(fontWeight: FontWeight.w700, color: ZentraTheme.accent)),
                 ),
                 title: const Text('Zentra', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Native coin · ZTR', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
+                subtitle: const Text('Native coin · ZTRA', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
                 trailing: Text(
-                  balance != null ? '${wallet.formatAmount(balance.balanceAtomic)} ZTR' : '0',
+                  balance != null ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA' : '0',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),

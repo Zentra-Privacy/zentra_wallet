@@ -240,7 +240,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Your keys stay on this device.\nOnly you control your ZTR.',
+          'Your keys stay on this device.\nOnly you control your ZTRA.',
           textAlign: TextAlign.center,
           style: TextStyle(color: ZentraTheme.textMuted, fontSize: 15, height: 1.45),
         ),

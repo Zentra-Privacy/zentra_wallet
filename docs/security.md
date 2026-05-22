@@ -86,7 +86,7 @@ Anyone with the seed can recreate your wallet on any compatible client.
 
 - Malware on your computer reading screen or memory
 - Someone watching you type the password
-- Sending ZTR to a wrong address (always verify address and network)
+- Sending ZTRA to a wrong address (always verify address and network)
 - Physical theft of unlocked device
 
 ---

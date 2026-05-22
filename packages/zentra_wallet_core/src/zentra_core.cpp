@@ -127,7 +127,7 @@ ZENTRA_API char zentra_address_prefix_char(int network) {
 }
 
 ZENTRA_API const char* zentra_coin_ticker(void) {
-  return "ZTR";
+  return "ZTRA";
 }
 
 }  // extern "C"

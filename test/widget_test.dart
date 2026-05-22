@@ -23,7 +23,7 @@ void main() {
     final core = ZentraCore.instance;
     expect(core.displayToAtomic('1.5'), 1500000000);
     expect(core.atomicToDisplay(1500000000), '1.5');
-    expect(core.coinTicker, 'ZTR');
+    expect(core.coinTicker, 'ZTRA');
   });
 
   test('transfer from embedded wallet2 JSON', () {

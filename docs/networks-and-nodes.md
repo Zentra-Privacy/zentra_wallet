@@ -93,7 +93,7 @@ The wallet does **not** require wallet-RPC (`8082`) on that server — only daem
 **Restore height** (also called refresh-from-block-height) tells wallet2 where to start scanning the chain. Lower wrong height = missing funds in UI; too low on new wallet = slow first sync.
 
 - New wallet: height `0` scans from genesis (slow on mainnet)
-- Restored wallet: set height near your first ZTR receive (faster)
+- Restored wallet: set height near your first ZTRA receive (faster)
 - Settings → **Restore height** panel updates open wallet and default for new restores
 
 Use the optional field during onboarding restore, or adjust later in Settings.
