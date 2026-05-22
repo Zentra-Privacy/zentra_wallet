@@ -161,10 +161,28 @@ Build the `.so` on the same OS/glibc you ship on:
 
 | Workflow | When | What it does |
 |----------|------|----------------|
-| [**CI**](.github/workflows/ci.yml) | Every push / PR to `main` | `flutter analyze`, `flutter test`, `flutter build linux` |
-| [**Build native**](.github/workflows/build-native-linux.yml) | Tags `v*`, weekly, or **Run workflow** | Clones Zentra, runs `./wallet.sh build`, uploads `libzentra_wallet_ffi.so` |
+| [**CI**](.github/workflows/ci.yml) | Every push / PR to `main` | Analyze, test, Linux debug build |
+| [**Build apps**](.github/workflows/build-artifacts.yml) | `main`, tags `v*`, or **Run workflow** | **Linux, Windows, Android APK, macOS** — downloadable artifacts |
+| [**Build native**](.github/workflows/build-native-linux.yml) | Tags `v*`, weekly, or **Run workflow** | Rebuild `libzentra_wallet_ffi.so` from Zentra source |
 
-**Manual native rebuild** (GitHub → Actions → *Build native (Linux)* → Run workflow). Download the artifact and copy it to `packages/zentra_wallet_core/linux/` if needed.
+### Download built apps (Linux / Windows / APK / macOS)
+
+**Full guide:** **[docs/download-builds.md](docs/download-builds.md)**
+
+Quick steps:
+
+1. GitHub → **Actions** → **Build apps (all platforms)** → latest green run.
+2. Scroll down → **Artifacts** → download (e.g. `zentra-wallet-linux-x64`, `zentra-wallet-android-apk`).
+3. For version releases: push tag `v1.0.0` → **Releases** → download assets.
+
+| Artifact | Platform |
+|----------|----------|
+| `zentra-wallet-linux-x64` | Linux `.tar.gz` — **full wallet** |
+| `zentra-wallet-windows-x64` | Windows `.zip` |
+| `zentra-wallet-android-apk` | Android `.apk` |
+| `zentra-wallet-macos` | macOS `.zip` |
+
+> **Note:** Only the **Linux** build includes the full native wallet engine today. Windows / Android / macOS packages install the UI but show “Wallet engine unavailable” until FFI is built for those platforms.
 
 Local parity with CI:
 

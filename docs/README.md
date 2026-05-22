@@ -14,6 +14,7 @@ Welcome to the Zentra Wallet docs. These guides explain what the app is, how it 
 | [Architecture](architecture.md) | Developers — layers, data flow, components |
 | [Self-custody model](self-custody-model.md) | Privacy-minded users — keys, RPC, Cake Wallet comparison |
 | [Getting started](getting-started.md) | New users and developers — first run |
+| [Download builds (CI)](download-builds.md) | Everyone — install Linux / Windows / APK / macOS from GitHub Actions |
 | [Building from source](building.md) | Developers — native lib, Zentra dependency, platforms |
 | [Networks and nodes](networks-and-nodes.md) | Users and ops — mainnet, testnet, `zentrad`, seed nodes |
 | [User guide](user-guide.md) | End users — create wallet, send, receive, settings |
