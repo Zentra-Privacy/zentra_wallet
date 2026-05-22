@@ -10,9 +10,32 @@ Workflow: **[Build apps (all platforms)](../.github/workflows/build-artifacts.ym
 
 | Trigger | What happens |
 |---------|----------------|
-| Push to `main` | All four platforms build |
-| Tag `v*` (e.g. `v1.0.0`) | Builds + files attached to a **GitHub Release** |
-| **Run workflow** (manual) | Same builds on demand |
+| Push to `main` | All four platforms build + **draft release** auto-created (`draft-123`) |
+| Tag `v*` (e.g. `v1.0.0`) | Builds + **published** GitHub Release (public) |
+| **Run workflow** (manual) | Same builds on demand (no draft unless you pushed to `main`) |
+
+---
+
+## Draft release (auto on `main` — review then publish)
+
+Every successful push to **`main`** creates a **draft** release (not public until you publish).
+
+1. Repo → **Releases** → find **Draft** (e.g. `Draft build #42`, tag `draft-42`).
+2. Download assets and test Linux / Windows / APK / macOS.
+3. Change release notes if you want → **Edit**.
+4. Happy? Click **Publish release** → users see it as a normal release.
+5. Not happy? Fix code, push to `main` again → a **new** draft (`draft-43`) is created.
+
+Draft releases use tags like `draft-42` (run number). They are **not** the same as version tags (`v1.0.0`).
+
+### Official version (when ready)
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+That creates a **published** release (not draft) with the `v1.0.0` tag.
 
 ---
 

@@ -162,7 +162,7 @@ Build the `.so` on the same OS/glibc you ship on:
 | Workflow | When | What it does |
 |----------|------|----------------|
 | [**CI**](.github/workflows/ci.yml) | Every push / PR to `main` | Analyze, test, Linux debug build |
-| [**Build apps**](.github/workflows/build-artifacts.yml) | `main`, tags `v*`, or **Run workflow** | **Linux, Windows, Android APK, macOS** — downloadable artifacts |
+| [**Build apps**](.github/workflows/build-artifacts.yml) | `main`, tags `v*`, or **Run workflow** | **Linux, Windows, Android APK, macOS** — on `main` push also creates a **draft release** to review before publish |
 | [**Build native**](.github/workflows/build-native-linux.yml) | Tags `v*`, weekly, or **Run workflow** | Rebuild `libzentra_wallet_ffi.so` from Zentra source |
 
 ### Download built apps (Linux / Windows / APK / macOS)
@@ -173,7 +173,8 @@ Quick steps:
 
 1. GitHub → **Actions** → **Build apps (all platforms)** → latest green run.
 2. Scroll down → **Artifacts** → download (e.g. `zentra-wallet-linux-x64`, `zentra-wallet-android-apk`).
-3. For version releases: push tag `v1.0.0` → **Releases** → download assets (Android file: `zentra-wallet-android.apk`).
+3. After push to `main`: **Releases** → **Draft** (`draft-42`) → test → **Publish release** when ready.
+4. For official version: `git tag v1.0.0 && git push origin v1.0.0` → **Releases** → `v1.0.0`.
 
 GitHub **Artifacts** are wrapped in an extra `.zip` — unzip once after download (see [download guide](docs/download-builds.md)).
 
