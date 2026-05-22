@@ -731,7 +731,9 @@ class ZentraBottomNav extends StatelessWidget {
                         Icon(
                           currentIndex == i ? items[i].$2 : items[i].$1,
                           size: 22,
-                          color: currentIndex == i ? ZentraTheme.accent : ZentraTheme.textMuted,
+                          color: currentIndex == i
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.45),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -739,7 +741,9 @@ class ZentraBottomNav extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: currentIndex == i ? FontWeight.w600 : FontWeight.w400,
-                            color: currentIndex == i ? ZentraTheme.accent : ZentraTheme.textMuted,
+                            color: currentIndex == i
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.45),
                           ),
                         ),
                       ],
