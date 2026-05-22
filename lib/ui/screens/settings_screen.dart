@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/network/zentra_network.dart';
 import '../../core/native_wallet_messages.dart';
 import '../../providers/wallet_provider.dart';
 import '../../theme/zentra_theme.dart';
+import '../network_ui.dart';
 import '../widgets/restore_height_settings_panel.dart';
 import '../widgets/zentra_ui.dart';
 import 'onboarding_screen.dart';
@@ -102,7 +102,7 @@ class SettingsScreen extends StatelessWidget {
         ZentraSettingsTile(
           icon: Icons.dns_outlined,
           title: 'Node',
-          subtitle: wallet.nodeSettings?.daemonAddress ?? '—',
+          subtitle: NetworkUi.nodeSubtitle(wallet.nodeSettings),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const NodeSetupScreen()),
           ),
@@ -110,40 +110,19 @@ class SettingsScreen extends StatelessWidget {
         ZentraSettingsTile(
           icon: Icons.hub_outlined,
           title: 'Network',
-          subtitle: wallet.networkConfig?.label ?? '—',
-          trailing: DropdownButtonHideUnderline(
-            child: DropdownButton<ZentraNetType>(
-              value: wallet.networkType,
-              dropdownColor: ZentraTheme.card,
-              items: ZentraNetType.values
-                  .map(
-                    (n) => DropdownMenuItem(
-                      value: n,
-                      child: Text(ZentraNetworkConfig.fromType(n).label),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) async {
-                if (v == null) return;
-                await wallet.updateNetwork(v);
-                if (!context.mounted) return;
-                if (wallet.networkType != v) {
-                  zentraSnack(
-                    context,
-                    wallet.errorMessage ?? 'Network not changed',
-                    isError: true,
-                  );
-                  return;
-                }
-                zentraSnack(
-                  context,
-                  wallet.connectionState == WalletConnectionState.connected
-                      ? 'Network changed — reconnecting'
-                      : 'Network changed',
-                );
-              },
-            ),
-          ),
+          subtitle: 'Mainnet',
+        ),
+        ZentraSettingsTile(
+          icon: Icons.science_outlined,
+          title: 'Testnet',
+          subtitle: 'Coming soon',
+          onTap: () => zentraSnack(context, 'Testnet — coming soon'),
+        ),
+        ZentraSettingsTile(
+          icon: Icons.layers_outlined,
+          title: 'Stagenet',
+          subtitle: 'Coming soon',
+          onTap: () => zentraSnack(context, 'Stagenet — coming soon'),
         ),
         if (!wallet.nativeAvailable)
           const ZentraSettingsTile(

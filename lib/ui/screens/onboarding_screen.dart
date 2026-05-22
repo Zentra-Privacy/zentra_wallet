@@ -146,7 +146,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() {
       _restoreMode = false;
       _openMode = false;
-      _step = 1;
+      _step = 1; // wallet step (mainnet only)
     });
   }
 
@@ -154,7 +154,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() {
       _restoreMode = true;
       _openMode = false;
-      _step = 1;
+      _step = 1; // wallet step (mainnet only)
     });
   }
 
@@ -165,9 +165,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ? AppBar(
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => setState(() => _step = _step == 2 ? 1 : 0),
+                onPressed: () => setState(() => _step = 0),
               ),
-              title: Text(_step == 1 ? 'Network' : 'Your wallet'),
+              title: const Text('Your wallet'),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.dns_outlined),
@@ -183,7 +183,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: switch (_step) {
             0 => _welcomeStep(),
-            1 => _networkStep(),
             _ => _walletStep(),
           },
         ),
@@ -228,7 +227,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _networkStep() {
+  Widget _walletStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -237,73 +236,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _restoreMode ? 'Restore wallet' : 'Create wallet',
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         const Text(
-          'Choose network. Sync uses remote zentrad (seed nodes on mainnet).',
-          style: TextStyle(color: ZentraTheme.textMuted),
+          'Mainnet · sync uses public seed nodes',
+          style: TextStyle(color: ZentraTheme.textMuted, fontSize: 13),
         ),
-        const SizedBox(height: 20),
-        ...ZentraNetType.values.map((n) {
-          final cfg = ZentraNetworkConfig.fromType(n);
-          final selected = _network == n;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Material(
-              color: selected ? ZentraTheme.surface : ZentraTheme.card,
-              borderRadius: BorderRadius.circular(14),
-              child: InkWell(
-                onTap: () => setState(() => _network = n),
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: selected ? ZentraTheme.accent : ZentraTheme.border,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        selected ? Icons.radio_button_checked : Icons.radio_button_off,
-                        color: selected ? ZentraTheme.accent : ZentraTheme.textMuted,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(cfg.label, style: const TextStyle(fontWeight: FontWeight.w600)),
-                            Text(
-                              'Prefix ${cfg.addressPrefix} · :${cfg.daemonRpcPort}',
-                              style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-        const Spacer(),
-        FilledButton(
-          onPressed: () => setState(() => _step = 2),
-          child: const Text('Continue'),
-        ),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-
-  Widget _walletStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           children: [
