@@ -106,6 +106,9 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Accept Android SDK licenses
         run: yes | flutter doctor --android-licenses || true
 
@@ -123,7 +126,7 @@ jobs:
           if-no-files-found: error
 
   build-macos:
-    name: macOS (universal)
+    name: macOS
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
@@ -170,7 +173,12 @@ jobs:
 
       - name: Stage release assets
         run: |
+          set -euo pipefail
           mkdir -p staged
+          test -f release-files/zentra-wallet-linux-x64/zentra-wallet-linux-x64.tar.gz
+          test -f release-files/zentra-wallet-windows-x64/zentra-wallet-windows-x64.zip
+          test -f release-files/zentra-wallet-android-apk/app-release.apk
+          test -f release-files/zentra-wallet-macos/zentra-wallet-macos.zip
           cp release-files/zentra-wallet-linux-x64/zentra-wallet-linux-x64.tar.gz staged/
           cp release-files/zentra-wallet-windows-x64/zentra-wallet-windows-x64.zip staged/
           cp release-files/zentra-wallet-android-apk/app-release.apk staged/zentra-wallet-android.apk

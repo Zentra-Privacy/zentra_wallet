@@ -31,10 +31,10 @@ Use this for any completed workflow run (including pushes to `main`).
 
 5. Scroll to the bottom → section **Artifacts**.
 
-6. Download the file you need:
+6. Click an artifact name — GitHub downloads a **`.zip`** wrapper. Unzip it, then use the file inside:
 
-| Artifact name | Platform | File inside |
-|---------------|----------|-------------|
+| Artifact name (click to download) | Platform | File inside the wrapper zip |
+|-----------------------------------|----------|-----------------------------|
 | `zentra-wallet-linux-x64` | Linux | `zentra-wallet-linux-x64.tar.gz` |
 | `zentra-wallet-windows-x64` | Windows | `zentra-wallet-windows-x64.zip` |
 | `zentra-wallet-android-apk` | Android | `app-release.apk` |
@@ -60,7 +60,7 @@ When you push a tag like `v1.0.0`, the same files are attached to a **Release** 
 3. Under **Assets**, download:
    - `zentra-wallet-linux-x64.tar.gz`
    - `zentra-wallet-windows-x64.zip`
-   - `app-release.apk`
+   - `zentra-wallet-android.apk`
    - `zentra-wallet-macos.zip`
 
 Create a release tag locally:
@@ -96,9 +96,11 @@ sudo apt install libgtk-3-0 libsecret-1-0
 
 ### Android
 
-1. Copy `app-release.apk` to the phone.
-2. Enable “Install unknown apps” for your file manager.
-3. Open the APK and install.
+1. From **Artifacts**, unzip `zentra-wallet-android-apk.zip` → use `app-release.apk`.  
+   From **Releases**, use `zentra-wallet-android.apk` directly.
+2. Copy the APK to the phone.
+3. Enable “Install unknown apps” for your file manager.
+4. Open the APK and install.
 
 ### macOS
 
@@ -118,6 +120,17 @@ sudo apt install libgtk-3-0 libsecret-1-0
 | macOS | ✓ | ✗ UI only until macOS FFI is added |
 
 On Windows / Android / macOS you may see **“Wallet engine unavailable”** until native `libzentra_wallet_ffi` is built for that platform.
+
+### Tag `v*` and the native library
+
+Pushing `v1.0.0` starts **two** workflows:
+
+| Workflow | Output |
+|----------|--------|
+| **Build apps (all platforms)** | Installable apps (Linux uses `.so` **already in the repo**) |
+| **Build native (Linux)** | Fresh `libzentra_wallet_ffi.so` (artifact only — not auto-merged into the release APK/apps) |
+
+For a release with an updated Linux engine: run **Build native** first, copy the `.so` into the repo (or commit it), then tag and run **Build apps**.
 
 ---
 
