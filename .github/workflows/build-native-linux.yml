@@ -1,6 +1,10 @@
 # Rebuild libzentra_wallet_ffi.so from Zentra source (slow; ~30–90+ min).
-# Runs on release tags, manual dispatch, and weekly schedule.
+# For version tags (v*), native rebuild runs inside "Build apps" workflow instead.
+# Use this workflow for manual rebuilds and weekly cache refresh.
 name: Build native (Linux)
+
+permissions:
+  contents: read
 
 on:
   workflow_dispatch:
@@ -9,9 +13,6 @@ on:
         description: Zentra git ref (branch, tag, or SHA)
         required: false
         default: zentra-main
-  push:
-    tags:
-      - "v*"
   schedule:
     - cron: "0 4 * * 0"
 

@@ -1,6 +1,9 @@
 # Fast checks on every push and PR: Dart analyze, tests, Linux app build.
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main, master]
