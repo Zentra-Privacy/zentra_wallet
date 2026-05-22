@@ -26,17 +26,23 @@ source "$LIB/clean_data.sh"
 
 SO_PATH="$ROOT/packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so"
 DOCKER_IMAGE="${NATIVE_IMAGE:-zentra-wallet-native-build:ubuntu22}"
-if [[ -t 1 ]]; then
-  C_RESET='\033[0m'; C_BOLD='\033[1m'; C_DIM='\033[2m'
-  C_GREEN='\033[32m'; C_YELLOW='\033[33m'; C_CYAN='\033[36m'; C_RED='\033[31m'
+
+# Colors only on real terminals (avoid raw escape junk in logs / IDE panels)
+_USE_COLOR=0
+if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
+  _USE_COLOR=1
+fi
+if [[ "$_USE_COLOR" -eq 1 ]]; then
+  C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'; C_DIM=$'\033[2m'
+  C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'; C_CYAN=$'\033[36m'; C_RED=$'\033[31m'
 else
   C_RESET= C_BOLD= C_DIM= C_GREEN= C_YELLOW= C_CYAN= C_RED=
 fi
 
-_hr() { printf '%s\n' "${C_DIM}────────────────────────────────────────${C_RESET}"; }
-_ok() { printf '  %s✓%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
-_warn() { printf '  %s!%s %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
-_err() { printf '  %sx%s %s\n' "$C_RED" "$C_RESET" "$*"; }
+_hr() { printf '%b\n' "${C_DIM}========================================${C_RESET}"; }
+_ok() { printf '  %b✓%b %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+_warn() { printf '  %b!%b %s\n' "$C_YELLOW" "$C_RESET" "$*"; }
+_err() { printf '  %bx%b %s\n' "$C_RED" "$C_RESET" "$*"; }
 
 _resolve_zentra() {
   if [[ -n "${ZENTRA_ROOT:-}" && -d "${ZENTRA_ROOT}/src/wallet/api" ]]; then
@@ -53,11 +59,11 @@ _resolve_zentra() {
 
 cmd_status() {
   _hr
-  printf '%s%s Zentra Wallet — status%s\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
+  printf '%b%b  Zentra Wallet — status%b\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
   _hr
   local z; z="$(_resolve_zentra)"
   [[ -n "$z" ]] && _ok "Zentra: $z" || _warn "Zentra: not found"
-  [[ -f "$SO_PATH" ]] && _ok "Native lib: $(ls -lh "$SO_PATH" | awk '{print $5, $9}')" || _warn "Native lib: missing → ./wallet.sh build-docker"
+  [[ -f "$SO_PATH" ]] && _ok "Native lib: $(ls -lh "$SO_PATH" | awk '{print $5, $9}')" || _warn "Native lib: missing"
   if command -v docker >/dev/null 2>&1; then
     if docker info >/dev/null 2>&1; then
       _ok "Docker: OK"
@@ -67,17 +73,21 @@ cmd_status() {
       _err "Docker: daemon down"
     fi
   else
-    _warn "Docker: not installed → ./wallet.sh install-docker"
+    _warn "Docker: not installed"
   fi
   command -v flutter >/dev/null 2>&1 && _ok "Flutter: $(flutter --version 2>/dev/null | head -1)" || _warn "Flutter: not in PATH"
   _hr
 }
 
-cmd_install_docker() { _hr; install_docker_engine; }
+cmd_install_docker() { install_docker_engine; }
 
 cmd_build_docker() {
   local z="${1:-$(_resolve_zentra)}"
-  docker_native_build "${z:-}"
+  if [[ -z "$z" ]]; then
+    _err "Zentra source not found. Set ZENTRA_ROOT or clone into third_party/zentra"
+    return 1
+  fi
+  docker_native_build "$z"
 }
 
 cmd_build_host() {
@@ -101,21 +111,20 @@ cmd_clean_docker_cache() {
 }
 
 cmd_clean_docker() {
-  _hr
-  printf '%sDocker cleanup%s\n' "$C_BOLD" "$C_RESET"
+  printf '%bDocker cleanup%b\n' "$C_BOLD" "$C_RESET"
   cat <<'EOF'
 
-  [a] Containers only (wallet image + stopped prune)
-  [b] Containers + remove Docker image (rebuild on next build-docker)
-  [c] Everything: containers + image + build/docker/ cache
+  a) Containers only (wallet image + stopped prune)
+  b) Containers + remove Docker image
+  c) Everything: containers + image + build/docker/ cache
 
 EOF
-  read -r -p "  Choose [a/b/c] or Enter to cancel: " choice
+  read -r -p "Choose [a/b/c] or Enter to cancel: " choice
   case "$choice" in
     a|A) docker_cleanup_wallet ;;
     b|B) docker_cleanup_wallet --image ;;
     c|C) docker_cleanup_wallet --image --cache ;;
-    *) echo "  Cancelled." ;;
+    *) echo "Cancelled." ;;
   esac
 }
 
@@ -126,58 +135,99 @@ cmd_full_flow() { cmd_build_docker; echo; cmd_run_app; }
 _ask_zentra_path() {
   local c; c="$(_resolve_zentra)"
   if [[ -n "$c" ]]; then
-    printf '\n  Zentra: %s\n' "$c"
-    read -r -p "  Enter=new path, Enter=keep: " p
-    [[ -z "$p" ]] && { echo "$c"; return; }
-    [[ -d "$p/src/wallet/api" ]] && { echo "$(cd "$p" && pwd)"; return; }
+    printf '\nUsing Zentra: %s\n' "$c"
+    echo "$c"
+    return
+  fi
+  read -r -p "Path to zentra source: " p
+  if [[ -d "$p/src/wallet/api" ]]; then
+    echo "$(cd "$p" && pwd)"
+  else
+    _err "Invalid path (need src/wallet/api)"
     return 1
   fi
-  read -r -p "  Zentra path: " p
-  [[ -d "$p/src/wallet/api" ]] && echo "$(cd "$p" && pwd)"
 }
 
 _show_menu() {
-  clear 2>/dev/null || true
+  # Never clear — keeps build logs visible in the terminal
+  echo ""
   _hr
-  printf '%s%s  Zentra Wallet%s\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
-  [[ -f "$SO_PATH" ]] && printf '  %sNative lib: ready%s\n' "$C_GREEN" "$C_RESET" || printf '  %sNative lib: not built%s\n' "$C_YELLOW" "$C_RESET"
+  printf '%b%b  Zentra Wallet%b\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
+  if [[ -f "$SO_PATH" ]]; then
+    printf '  %bNative lib: ready%b\n' "$C_GREEN" "$C_RESET"
+  else
+    printf '  %bNative lib: not built%b\n' "$C_YELLOW" "$C_RESET"
+  fi
   _hr
   cat <<'MENU'
-  [1]  Install Docker
-  [2]  Build native library (Docker / Ubuntu 22)  ← recommended
-  [3]  Build native library (this PC, no Docker)
-  [4]  Run app (Linux)
-  [5]  Build + Run
-  [6]  Flutter devices
-  [7]  Rebuild Docker image
-  [8]  Clean Docker cache (build/docker/)
-  [9]  Status
-  [10] Clean wallet test data (local)
-  [11] Remove Docker containers / image (wallet)
-  [0]  Exit
+  1   Install Docker
+  2   Build native library (Docker / Ubuntu 22)  *
+  3   Build native library (this PC)
+  4   Run app (Linux)
+  5   Build + Run
+  6   Flutter devices
+  7   Rebuild Docker image
+  8   Clean Docker cache (build/docker/)
+  9   Status
+  10  Clean wallet test data
+  11  Remove Docker containers / image
+  0   Exit
 MENU
   _hr
+}
+
+# Run a command with live stdout/stderr (no screen clear afterward).
+_run_menu_action() {
+  local title="$1"
+  shift
+  echo ""
+  _hr
+  printf '%b%b  %s%b\n' "$C_BOLD" "$C_CYAN" "$title" "$C_RESET"
+  _hr
+  echo ""
+  set +e
+  "$@"
+  local rc=$?
+  set -e
+  echo ""
+  _hr
+  if [[ $rc -eq 0 ]]; then
+    _ok "Done: $title"
+  else
+    _err "Failed (exit $rc): $title"
+  fi
+  _hr
+  echo ""
+  read -r -p "Press Enter to return to menu… " _
 }
 
 _menu_loop() {
   while true; do
     _show_menu
-    read -r -p "  Choose [0-11]: " c
-    printf '\n'
+    read -r -p "Choice [0-11]: " c
     case "$c" in
-      1) cmd_install_docker; read -r -p "Enter…" _ ;;
-      2) p="$(_ask_zentra_path 2>/dev/null || true)"; cmd_build_docker "${p:-}" || true; read -r -p "Enter…" _ ;;
-      3) p="$(_ask_zentra_path 2>/dev/null || true)"; [[ -n "${p:-}" ]] && cmd_build_host "$p" || true; read -r -p "Enter…" _ ;;
-      4) cmd_run_app || true ;;
-      5) cmd_full_flow || true; read -r -p "Enter…" _ ;;
-      6) cmd_devices; read -r -p "Enter…" _ ;;
-      7) p="$(_ask_zentra_path 2>/dev/null || true)"; cmd_rebuild_image "${p:-}" || true; read -r -p "Enter…" _ ;;
-      8) cmd_clean_docker_cache; read -r -p "Enter…" _ ;;
-      9) cmd_status; read -r -p "Enter…" _ ;;
-      10) cmd_clean_data; read -r -p "Enter…" _ ;;
-      11) cmd_clean_docker; read -r -p "Enter…" _ ;;
-      0|q) exit 0 ;;
-      *) _err "Invalid"; sleep 1 ;;
+      1) _run_menu_action "Install Docker" cmd_install_docker ;;
+      2)
+        p="$(_ask_zentra_path 2>/dev/null || true)"
+        [[ -n "${p:-}" ]] && _run_menu_action "Build native (Docker)" cmd_build_docker "$p"
+        ;;
+      3)
+        p="$(_ask_zentra_path 2>/dev/null || true)"
+        [[ -n "${p:-}" ]] && _run_menu_action "Build native (host)" cmd_build_host "$p"
+        ;;
+      4) _run_menu_action "Run app (Linux)" cmd_run_app ;;
+      5) _run_menu_action "Build + Run" cmd_full_flow ;;
+      6) _run_menu_action "Flutter devices" cmd_devices ;;
+      7)
+        p="$(_ask_zentra_path 2>/dev/null || true)"
+        [[ -n "${p:-}" ]] && _run_menu_action "Rebuild Docker image" cmd_rebuild_image "$p"
+        ;;
+      8) _run_menu_action "Clean Docker cache" cmd_clean_docker_cache ;;
+      9) _run_menu_action "Status" cmd_status ;;
+      10) _run_menu_action "Clean wallet data" cmd_clean_data ;;
+      11) _run_menu_action "Docker cleanup" cmd_clean_docker ;;
+      0|q|Q) echo "Bye."; exit 0 ;;
+      *) _err "Invalid choice: $c"; sleep 1 ;;
     esac
   done
 }
@@ -199,17 +249,12 @@ case "${1:-}" in
     cat <<EOF
 Zentra Wallet — ./wallet.sh
 
-  ./wallet.sh                 Menu
-  ./wallet.sh status
-  ./wallet.sh install-docker
-  ./wallet.sh build-docker    Native .so (Ubuntu 22 Docker)
-  ./wallet.sh build-host      Native .so (host)
-  ./wallet.sh run             Linux app
+  ./wallet.sh                 Interactive menu (live build output)
+  ./wallet.sh build-docker    Build .so in Docker (streams to terminal)
+  ./wallet.sh run             Run Linux app
   ./wallet.sh full            build-docker + run
-  ./wallet.sh clean-data           Reset local wallet files
-  ./wallet.sh clean-docker         Remove build/docker/ folder only
-  ./wallet.sh docker-clean         Remove containers (+ menu: image, cache)
-  ./wallet.sh docker-clean --image --cache --yes   Full Docker reset
+
+Tip: For fastest rebuild when .so exists, use menu [2] — skips image if already built.
 EOF
     ;;
   *) _err "Unknown: $1"; echo "  ./wallet.sh help"; exit 1 ;;
