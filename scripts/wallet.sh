@@ -77,22 +77,30 @@ cmd_devices() { flutter_wallet_run -l; }
 
 cmd_clean_data() { clean_wallet_data "$@"; }
 
-cmd_full_flow() { cmd_build; echo; cmd_run_app; }
+cmd_full_flow() {
+  local z="${1:-$(_resolve_zentra)}"
+  [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
+  cmd_build "$z" || return 1
+  echo
+  cmd_run_app "$@"
+}
 
+# Prints path on stdout only (messages go to stderr for safe $(...) capture).
 _ask_zentra_path() {
   local c; c="$(_resolve_zentra)"
   if [[ -n "$c" ]]; then
-    printf '\nUsing Zentra: %s\n' "$c"
+    printf '\nUsing Zentra: %s\n' "$c" >&2
     echo "$c"
-    return
+    return 0
   fi
-  read -r -p "Path to zentra source: " p
+  printf 'Path to zentra source: ' >&2
+  read -r p
   if [[ -d "$p/src/wallet/api" ]]; then
     echo "$(cd "$p" && pwd)"
-  else
-    _err "Invalid path (need src/wallet/api)"
-    return 1
+    return 0
   fi
+  printf '  %b!%b Invalid path (need src/wallet/api)\n' "$C_YELLOW" "$C_RESET" >&2
+  return 1
 }
 
 _show_menu() {
@@ -146,12 +154,16 @@ _menu_loop() {
     _show_menu
     read -r -p "Choice [0-6]: " c
     case "$c" in
-      1)
-        p="$(_ask_zentra_path 2>/dev/null || true)"
-        [[ -n "${p:-}" ]] && _run_menu_action "Build native library" cmd_build "$p"
+      1|3)
+        if p="$(_ask_zentra_path)"; then
+          if [[ "$c" == "1" ]]; then
+            _run_menu_action "Build native library" cmd_build "$p"
+          else
+            _run_menu_action "Build + Run" cmd_full_flow "$p"
+          fi
+        fi
         ;;
       2) _run_menu_action "Run app (Linux)" cmd_run_app ;;
-      3) _run_menu_action "Build + Run" cmd_full_flow ;;
       4) _run_menu_action "Flutter devices" cmd_devices ;;
       5) _run_menu_action "Status" cmd_status ;;
       6) _run_menu_action "Clean wallet data" cmd_clean_data ;;
