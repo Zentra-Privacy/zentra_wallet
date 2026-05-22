@@ -1,7 +1,7 @@
 # Build installable apps for Linux, Windows, Android, and macOS.
 # - push main: builds + draft release (uses committed libzentra_wallet_ffi.so)
 # - tag v*: rebuilds native .so, then builds + published GitHub Release
-# - workflow_dispatch: builds only (no draft)
+# - workflow_dispatch (main): builds + draft release
 name: Build apps (all platforms)
 
 on:
@@ -23,6 +23,8 @@ concurrency:
 env:
   ZENTRA_REPO: https://github.com/Zentra-Privacy/zentra.git
   ZENTRA_REF: zentra-main
+  # Silence Node 20 deprecation warnings on JS actions (upload-artifact v6+ uses Node 24)
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # Version tags: fresh libzentra_wallet_ffi.so before Linux app bundle (slow).
@@ -60,7 +62,7 @@ jobs:
           ./wallet.sh build
 
       - name: Upload native library
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: libzentra_wallet_ffi-linux
           path: packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
@@ -91,7 +93,7 @@ jobs:
 
       - name: Install freshly built native library (release tag)
         if: needs.rebuild-linux-native.result == 'success'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: libzentra_wallet_ffi-linux
           path: packages/zentra_wallet_core/linux
@@ -108,7 +110,7 @@ jobs:
           tar -czf "${{ github.workspace }}/zentra-wallet-linux-x64.tar.gz" .
 
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: zentra-wallet-linux-x64
           path: zentra-wallet-linux-x64.tar.gz
@@ -142,7 +144,7 @@ jobs:
             -DestinationPath "zentra-wallet-windows-x64.zip" -Force
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: zentra-wallet-windows-x64
           path: zentra-wallet-windows-x64.zip
@@ -178,7 +180,7 @@ jobs:
         run: flutter build apk --release
 
       - name: Upload Android artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: zentra-wallet-android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
@@ -212,7 +214,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "$APP" zentra-wallet-macos.zip
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: zentra-wallet-macos
           path: zentra-wallet-macos.zip
@@ -222,13 +224,15 @@ jobs:
     name: Draft release (review before publish)
     needs: [build-linux, build-windows, build-android, build-macos]
     if: >-
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v6
         with:
           path: release-files
 
@@ -265,12 +269,14 @@ jobs:
       needs.build-windows.result == 'success' &&
       needs.build-android.result == 'success' &&
       needs.build-macos.result == 'success' &&
-      (needs.rebuild-linux-native.result == 'success' || needs.rebuild-linux-native.result == 'skipped')
+      needs.rebuild-linux-native.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v6
         with:
           path: release-files
 

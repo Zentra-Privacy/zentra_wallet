@@ -12,7 +12,7 @@ Workflow: **[Build apps (all platforms)](../.github/workflows/build-artifacts.ym
 |---------|----------------|
 | Push to `main` | All four platforms build + **draft release** (`draft-123`) using committed `.so` |
 | Tag `v*` (e.g. `v1.0.0`) | Rebuilds native `.so` → builds → **published** GitHub Release |
-| **Run workflow** (manual) | Builds only (no draft; uses committed `.so`) |
+| **Run workflow** on `main` | Builds + **draft release** (same as push) |
 
 ---
 
