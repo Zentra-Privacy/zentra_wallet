@@ -162,7 +162,7 @@ Build the `.so` on the same OS/glibc you ship on:
 | Workflow | When | What it does |
 |----------|------|----------------|
 | [**CI**](.github/workflows/ci.yml) | Every push / PR to `main` | Analyze, test, Linux debug build |
-| [**Build apps**](.github/workflows/build-artifacts.yml) | `main`, tags `v*`, or **Run workflow** | **Linux, Windows, Android APK, macOS** — on `main` push also creates a **draft release** to review before publish |
+| [**Build apps**](.github/workflows/build-artifacts.yml) | `main`, tags `v*`, or **Run workflow** | Rebuilds `.so` from Zentra, then **Linux / Windows / APK / macOS** + draft or published release |
 | [**Build native**](.github/workflows/build-native-linux.yml) | Weekly or **Run workflow** | Manual `libzentra_wallet_ffi.so` rebuild (tags use **Build apps** instead) |
 
 ### Download built apps (Linux / Windows / APK / macOS)
