@@ -154,11 +154,17 @@ docker_native_build() {
 
   if [[ "${REBUILD_IMAGE:-0}" == "1" ]] || ! "${DOCKER[@]}" image inspect "$IMAGE" >/dev/null 2>&1; then
     echo "==> Building Docker image (Ubuntu 22.04)..."
-    "${DOCKER[@]}" build -t "$IMAGE" "$DOCKER_DIR"
+    echo "    (live log — plain progress)"
+    # Plain progress streams line-by-line in IDE terminals (no TTY spinner).
+    DOCKER_BUILDKIT=1 "${DOCKER[@]}" build --progress=plain -t "$IMAGE" "$DOCKER_DIR"
   fi
 
   echo "==> Running native build in container (uid=$RUN_UID)..."
-  "${DOCKER[@]}" run --rm \
+  local -a run_flags=(--rm)
+  if [[ -t 0 && -t 1 ]]; then
+    run_flags+=(-it)
+  fi
+  "${DOCKER[@]}" run "${run_flags[@]}" \
     --user "${RUN_UID}:${RUN_GID}" \
     -e HOME=/tmp \
     -e JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}" \
