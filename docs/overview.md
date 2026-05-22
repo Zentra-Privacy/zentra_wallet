@@ -95,6 +95,6 @@ This is **not** a multi-chain wallet (no Bitcoin, Ethereum, etc. in one app).
 ## Next steps
 
 - New user? → [User guide](user-guide.md)
-- Developer? → [Getting started](getting-started.md) → [Building from source](building.md)
+- Developer? → [Getting started](getting-started.md) → [Building overview](building.md) → [Linux](build-linux.md) / [Windows](build-windows.md) / [Android](build-android.md) / [macOS](build-macos.md) / [iOS](build-ios.md)
 - How keys and RPC work? → [Self-custody model](self-custody-model.md)
 - Problems? → [Troubleshooting](troubleshooting.md)

@@ -22,5 +22,10 @@ _req "$BUNDLE/windows/libzentra_wallet_ffi.dll"
 _req "$BUNDLE/android/arm64-v8a/libzentra_wallet_ffi.so"
 _req "$BUNDLE/android/armeabi-v7a/libzentra_wallet_ffi.so"
 _req "$BUNDLE/macos/lib/libzentra_wallet_ffi.dylib"
+if [[ ! -d "$BUNDLE/ios/lib/zentra_wallet_ffi.xcframework" ]]; then
+  echo "::error::Missing iOS XCFramework: $BUNDLE/ios/lib/zentra_wallet_ffi.xcframework"
+  exit 1
+fi
+echo "  OK zentra_wallet_ffi.xcframework"
 
 echo "==> All native engine libraries present"

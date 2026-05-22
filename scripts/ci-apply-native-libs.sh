@@ -23,6 +23,12 @@ _apply "$BUNDLE/windows/libzentra_wallet_ffi.dll" \
 _apply "$BUNDLE/macos/lib/libzentra_wallet_ffi.dylib" \
   "$ROOT/packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib"
 
+rm -rf "$ROOT/packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework"
+mkdir -p "$ROOT/packages/zentra_wallet_core/ios/lib"
+cp -a "$BUNDLE/ios/lib/zentra_wallet_ffi.xcframework" \
+  "$ROOT/packages/zentra_wallet_core/ios/lib/"
+echo "==> $ROOT/packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework"
+
 for abi_dir in "$BUNDLE/android"/*; do
   [[ -d "$abi_dir" ]] || continue
   abi="$(basename "$abi_dir")"

@@ -141,6 +141,7 @@ Details: [Troubleshooting](troubleshooting.md).
 
 ## Next steps
 
-- [Building from source](building.md) — deep dive into CMake and dependencies
+- [Build Linux (full guide)](build-linux.md) — step-by-step manual build
+- [Building overview](building.md) — all platforms (Windows, Android, macOS, iOS)
 - [User guide](user-guide.md) — everyday wallet usage
 - [Security](security.md) — passwords and backups

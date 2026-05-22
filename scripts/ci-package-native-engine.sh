@@ -10,8 +10,13 @@ OUT="${3:-$ROOT/build/native-engine-bundle}"
 rm -rf "$OUT"
 mkdir -p "$OUT"
 cp -a "$UB/." "$OUT/"
-mkdir -p "$OUT/macos/lib"
+mkdir -p "$OUT/macos/lib" "$OUT/ios/lib"
 cp -f "$MAC/macos/lib/libzentra_wallet_ffi.dylib" "$OUT/macos/lib/"
+[[ -d "$MAC/ios/lib/zentra_wallet_ffi.xcframework" ]] || {
+  echo "::error::engine-macos artifact missing ios/lib/zentra_wallet_ffi.xcframework"
+  exit 1
+}
+cp -a "$MAC/ios/lib/zentra_wallet_ffi.xcframework" "$OUT/ios/lib/"
 
 {
   cat "$UB/VERSION.txt" 2>/dev/null || true

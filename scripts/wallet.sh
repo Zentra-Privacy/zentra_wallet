@@ -23,6 +23,8 @@ source "$LIB/native_build_android.sh"
 source "$LIB/native_build_mingw.sh"
 # shellcheck source=lib/native_build_macos.sh
 source "$LIB/native_build_macos.sh"
+# shellcheck source=lib/native_build_ios.sh
+source "$LIB/native_build_ios.sh"
 # shellcheck source=lib/flutter_run.sh
 source "$LIB/flutter_run.sh"
 # shellcheck source=lib/clean_data.sh
@@ -75,6 +77,8 @@ cmd_status() {
     fi
   done
   [[ "$android_ok" -eq 0 ]] && _warn "Android FFI: missing (./wallet.sh build-android)"
+  local iosxcf="$ROOT/packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework"
+  [[ -d "$iosxcf" ]] && _ok "iOS XCFramework: present" || _warn "iOS FFI: missing (./wallet.sh build-ios on Mac)"
   command -v flutter >/dev/null 2>&1 && _ok "Flutter: $(flutter --version 2>/dev/null | head -1)" || _warn "Flutter: not in PATH"
   _hr
 }
@@ -108,9 +112,17 @@ cmd_build_all_native() {
   native_build_mingw "$z" || return 1
   if [[ "$(uname -s)" == "Darwin" ]]; then
     native_build_macos "$z" || return 1
+    native_build_ios "$z" || return 1
   else
-    _warn "Skip macOS dylib (run ./wallet.sh build-macos on a Mac)"
+    _warn "Skip macOS/iOS native (run build-macos / build-ios on a Mac)"
   fi
+}
+
+cmd_build_ios() {
+  local z=""
+  if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then z="$1"; else z="$(_resolve_zentra)"; fi
+  [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
+  native_build_ios "$z"
 }
 
 cmd_build_android() {
@@ -236,6 +248,7 @@ case "${1:-}" in
   build-android) shift; cmd_build_android "$@" ;;
   build-windows|build-mingw) shift; cmd_build_windows "${1:-}" ;;
   build-macos|build-darwin) shift; cmd_build_macos "${1:-}" ;;
+  build-ios) shift; cmd_build_ios "${1:-}" ;;
   build-all-native) shift; cmd_build_all_native "${1:-}" ;;
   run|start) shift; cmd_run_app "$@" ;;
   devices) cmd_devices ;;
@@ -250,7 +263,8 @@ Zentra Wallet — ./wallet.sh
   ./wallet.sh build-android   Android jniLibs
   ./wallet.sh build-windows   Windows libzentra_wallet_ffi.dll (MinGW)
   ./wallet.sh build-macos     macOS dylib (run on Mac)
-  ./wallet.sh build-all-native  Linux + Android + Windows (+ macOS on Mac)
+  ./wallet.sh build-ios       iOS XCFramework (run on Mac + Xcode)
+  ./wallet.sh build-all-native  Linux + Android + Windows (+ macOS/iOS on Mac)
   ./wallet.sh run          Run Linux app
   ./wallet.sh full         build + run
   ./wallet.sh status       Zentra / native lib / Flutter

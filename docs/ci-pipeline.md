@@ -15,7 +15,7 @@ Builds `libzentra_wallet_ffi` from Zentra `wallet_api` + FFI wrapper.
 | Job | Runner | Outputs |
 |-----|--------|---------|
 | `engine-ubuntu` | ubuntu-22.04 | Linux `.so`, Android `arm64-v8a` + `armeabi-v7a`, Windows `.dll` |
-| `engine-macos` | macos-latest | macOS `.dylib` |
+| `engine-macos` | macos-latest | macOS `.dylib` + iOS `zentra_wallet_ffi.xcframework` |
 | `package-engine` | ubuntu-latest | Merged artifact **`native-engine-bundle`** |
 
 Scripts:
@@ -39,6 +39,7 @@ Requires **all five** engine files in the repo (not only Linux):
 - `packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib`
 - `packages/zentra_wallet_core/android/src/main/jniLibs/arm64-v8a/libzentra_wallet_ffi.so`
 - `packages/zentra_wallet_core/android/src/main/jniLibs/armeabi-v7a/libzentra_wallet_ffi.so`
+- `packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework`
 
 If any are missing, the job fails with a clear error. Default runs rebuild everything from Zentra **v0.1.0**.
 
@@ -54,6 +55,7 @@ Each platform job downloads **`native-engine-bundle`**, runs `ci-apply-native-li
 | `build-windows` | `zentra-wallet-windows-x64.zip` |
 | `build-android` | `app-release.apk` (arm64 + armeabi-v7a) |
 | `build-macos` | `zentra-wallet-macos.zip` |
+| `build-ios` | `zentra-wallet-ios.zip` (unsigned `.app`) |
 
 ---
 
@@ -92,12 +94,13 @@ sudo ./scripts/ci-install-linux-deps.sh all
 | Windows | ✓ MinGW | ✓ | ✓ |
 | Android | ✓ arm64 + armeabi-v7a | ✓ | ✓ |
 | macOS | ✓ on Mac runner | ✓ | ✓ |
-| iOS | — | — | Planned |
+| iOS | ✓ | ✓ | XCFramework + unsigned `.app` zip |
 
 ---
 
 ## See also
 
 - [Download builds](download-builds.md)
-- [Building Android FFI](building-android.md)
+- [Build Android (manual)](build-android.md)
+- [Build iOS (manual)](build-ios.md)
 - [First release guide](first-release-guide.md)
