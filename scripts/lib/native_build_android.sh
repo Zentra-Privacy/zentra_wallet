@@ -119,7 +119,6 @@ native_build_android() {
       echo "Error: $zbuild/lib/libwallet_api.a not found"
       return 1
     }
-    echo "$zbuild"
   }
 
   _build_ffi() {
@@ -158,7 +157,8 @@ native_build_android() {
   for abi in "${ABIS[@]}"; do
     host="$(_abi_host "$abi")" || return 1
     _build_depends "$host" || return 1
-    zbuild="$(_build_zentra_wallet_api "$abi" "$host")" || return 1
+    zbuild="$ZENTRA_ROOT/build/android-${abi}/release"
+    _build_zentra_wallet_api "$abi" "$host" || return 1
     _build_ffi "$abi" "$host" "$zbuild" || return 1
   done
 
