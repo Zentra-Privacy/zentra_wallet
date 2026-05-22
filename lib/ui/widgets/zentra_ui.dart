@@ -79,7 +79,7 @@ class ZentraPageHeader extends StatelessWidget {
           Expanded(
             child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 18)),
           ),
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

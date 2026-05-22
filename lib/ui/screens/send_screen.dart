@@ -224,7 +224,8 @@ class _SendScreenState extends State<SendScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<int>(
-              value: _priority,
+              key: ValueKey(_priority),
+              initialValue: _priority,
               decoration: const InputDecoration(labelText: 'Fee priority'),
               items: const [
                 DropdownMenuItem(value: 0, child: Text('Standard')),

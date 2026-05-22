@@ -93,20 +93,34 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
           if (isMainnet) ...[
             const SizedBox(height: 16),
             const Text('Mainnet seed nodes', style: TextStyle(fontWeight: FontWeight.bold)),
-            ...ZentraPublicNode.mainnetNodes.map((node) {
-              return RadioListTile<String>(
-                value: node.id,
-                groupValue: _useCustom ? '' : (_selectedNodeId ?? ''),
-                title: Text(node.label),
-                subtitle: Text('Daemon ${node.daemonAddress}'),
-                onChanged: (_) => setState(() => _applyNode(node)),
-              );
-            }),
-            RadioListTile<String>(
-              value: 'custom',
-              groupValue: _useCustom ? 'custom' : '',
-              title: const Text('Custom daemon'),
-              onChanged: (_) => setState(() => _useCustom = true),
+            RadioGroup<String>(
+              groupValue: _useCustom ? 'custom' : (_selectedNodeId ?? ''),
+              onChanged: (v) {
+                if (v == null) return;
+                setState(() {
+                  if (v == 'custom') {
+                    _useCustom = true;
+                  } else {
+                    final node = ZentraPublicNode.byId(v);
+                    if (node != null) _applyNode(node);
+                  }
+                });
+              },
+              child: Column(
+                children: [
+                  ...ZentraPublicNode.mainnetNodes.map(
+                    (node) => RadioListTile<String>(
+                      value: node.id,
+                      title: Text(node.label),
+                      subtitle: Text('Daemon ${node.daemonAddress}'),
+                    ),
+                  ),
+                  const RadioListTile<String>(
+                    value: 'custom',
+                    title: Text('Custom daemon'),
+                  ),
+                ],
+              ),
             ),
           ],
           const SizedBox(height: 12),
