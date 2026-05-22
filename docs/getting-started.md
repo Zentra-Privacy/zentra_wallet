@@ -28,7 +28,7 @@ The folder must contain `src/wallet/api/wallet2_api.h`.
 Example:
 
 ```bash
-git clone -b zentra-main --recurse-submodules https://github.com/Zentra-Privacy/zentra.git ../zentra
+git clone -b v0.1.0 --recurse-submodules https://github.com/Zentra-Privacy/zentra.git ../zentra
 # or
 export ZENTRA_ROOT=/path/to/zentra
 ```

@@ -13,7 +13,9 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
   CXX_VISIBILITY_PRESET hidden)
 target_compile_definitions(${PLUGIN_NAME} PUBLIC DART_SHARED_LIB)
 
-set(zentra_wallet_core_bundled_libraries
-  "$<TARGET_FILE:${PLUGIN_NAME}>"
-  PARENT_SCOPE
-)
+set(_bundled_libs "$<TARGET_FILE:${PLUGIN_NAME}>")
+set(_ffi_dll "${CMAKE_CURRENT_SOURCE_DIR}/libzentra_wallet_ffi.dll")
+if(EXISTS "${_ffi_dll}")
+  list(APPEND _bundled_libs "${_ffi_dll}")
+endif()
+set(zentra_wallet_core_bundled_libraries ${_bundled_libs} PARENT_SCOPE)

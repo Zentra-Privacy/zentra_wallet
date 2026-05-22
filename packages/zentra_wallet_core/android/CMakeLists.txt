@@ -6,3 +6,8 @@ add_library(zentra_wallet_core SHARED
 )
 
 target_compile_features(zentra_wallet_core PUBLIC cxx_std_14)
+
+# Match Dart: DynamicLibrary.open('libzentra_wallet_core_plugin.so')
+set_target_properties(zentra_wallet_core PROPERTIES
+  OUTPUT_NAME "zentra_wallet_core_plugin"
+)

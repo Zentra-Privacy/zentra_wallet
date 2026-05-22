@@ -80,10 +80,10 @@ The wallet links against Zentra’s `wallet_api`. Put the Zentra repo next to th
 
 ```bash
 # Option A — sibling folder (auto-detected)
-git clone -b zentra-main --recurse-submodules https://github.com/Zentra-Privacy/zentra.git ../zentra
+git clone -b v0.1.0 --recurse-submodules https://github.com/Zentra-Privacy/zentra.git ../zentra
 
 # Option B — inside this repo
-git clone -b zentra-main --recurse-submodules https://github.com/Zentra-Privacy/zentra.git third_party/zentra
+git clone -b v0.1.0 --recurse-submodules https://github.com/Zentra-Privacy/zentra.git third_party/zentra
 
 # Option C — anywhere
 export ZENTRA_ROOT=/path/to/zentra
@@ -161,8 +161,8 @@ Build the `.so` on the same OS/glibc you ship on:
 
 | Workflow | When | What it does |
 |----------|------|----------------|
-| [**CI**](.github/workflows/ci.yml) | Every push / PR to `main` | Analyze, test, Linux debug build |
-| [**Build apps**](.github/workflows/build-artifacts.yml) | Push to `main`, tag `v*`, or **Run workflow** (not PRs) | **Linux / Windows / APK / macOS** + draft or published release (uses committed `libzentra_wallet_ffi.so`) |
+| [**CI**](.github/workflows/ci.yml) | Every push / PR to `main` | Analyze, test, Linux debug (committed engine) |
+| [**Release pipeline**](.github/workflows/build-artifacts.yml) | Push to `main`, tag `v*`, manual | **Phase 1:** engine from [Zentra v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0) → **Phase 2:** all apps → draft/published release |
 
 ### Download built apps (Linux / Windows / APK / macOS)
 
@@ -170,7 +170,7 @@ Build the `.so` on the same OS/glibc you ship on:
 
 Quick steps:
 
-1. GitHub → **Actions** → **Build apps (all platforms)** → latest green run.
+1. GitHub → **Actions** → **Release pipeline** → latest green run.
 2. Scroll down → **Artifacts** → download (e.g. `zentra-wallet-linux-x64`, `zentra-wallet-android-apk`).
 3. After push to `main`: **Releases** → **Draft** (`draft-42`) → test → **Publish release** when ready.
 4. For official version: `git tag v1.0.0 && git push origin v1.0.0` → **Releases** → `v1.0.0`.
@@ -184,7 +184,7 @@ GitHub **Artifacts** are wrapped in an extra `.zip` — unzip once after downloa
 | `zentra-wallet-android-apk` | Android `.apk` |
 | `zentra-wallet-macos` | macOS `.zip` |
 
-> **Note:** Only the **Linux** build includes the full native wallet engine today. Windows / Android / macOS packages install the UI but show “Wallet engine unavailable” until FFI is built for those platforms.
+> **Note:** Release CI builds the wallet engine from **Zentra v0.1.0**, then packages **Linux / Windows / Android / macOS**. See [docs/ci-pipeline.md](docs/ci-pipeline.md). Local: `ZENTRA_REF=v0.1.0 ./wallet.sh build-all-native`.
 
 Local parity with CI:
 

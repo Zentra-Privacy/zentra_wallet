@@ -87,3 +87,9 @@ zentra-wallet-*.zip
 
 # Committed on purpose for Linux CI & quick builds (do not ignore):
 # packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
+
+# Native wallet FFI per platform (CI builds these; commit optional for faster CI)
+packages/zentra_wallet_core/android/src/main/jniLibs/**/libzentra_wallet_ffi.so
+packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll
+packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib
+packages/zentra_wallet_core/ios/lib/libzentra_wallet_ffi.a

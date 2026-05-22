@@ -163,10 +163,10 @@ Removes `~/.local/share/com.example.zentra_wallet/` (Linux). **Deletes local wal
 | Symptom | Fix |
 |---------|-----|
 | **CI** fails: `libzentra_wallet_ffi.so missing` | Run `./wallet.sh build`, commit `packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so`, push |
-| **Build apps** failed on Linux only | Same `.so` fix; Linux is the only job that requires the committed library |
+| **Release pipeline** failed on Linux only | Same `.so` fix; PR CI only needs the committed Linux library |
 | No **draft release** after push to `main` | Open the workflow run — if any platform job is red, draft is skipped; fix or download partial **Artifacts** |
-| Tag `v1.0.0` but no **Release** assets | Tag build failed — fix CI, then re-run **Build apps** on the tag or push the tag again |
-| PR has no Windows/APK/macOS artifacts | Expected — **Build apps** does not run on pull requests; merge to `main` or use **Run workflow** |
+| Tag `v1.0.0` but no **Release** assets | Tag build failed — fix CI, then re-run **Release pipeline** on the tag or push the tag again |
+| PR has no Windows/APK/macOS artifacts | Expected — **Release pipeline** does not run on pull requests; merge to `main` or use **Run workflow** |
 
 ---
 

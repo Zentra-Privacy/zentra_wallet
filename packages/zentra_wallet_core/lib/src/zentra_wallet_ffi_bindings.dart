@@ -59,6 +59,35 @@ class ZentraNativeWallet {
     if (Platform.isAndroid) {
       return ffi.DynamicLibrary.open('libzentra_wallet_ffi.so');
     }
+    if (Platform.isWindows) {
+      final exe = Platform.resolvedExecutable;
+      final dir = exe.contains(r'\')
+          ? exe.substring(0, exe.lastIndexOf(r'\'))
+          : exe;
+      for (final path in <String>[
+        '$dir\\libzentra_wallet_ffi.dll',
+        '$dir\\zentra_wallet_ffi.dll',
+        'libzentra_wallet_ffi.dll',
+      ]) {
+        try {
+          if (path.contains(r'\') && !File(path).existsSync()) continue;
+          return ffi.DynamicLibrary.open(path);
+        } catch (_) {}
+      }
+    }
+    if (Platform.isMacOS) {
+      for (final path in <String>[
+        'libzentra_wallet_ffi.dylib',
+        '@executable_path/../Frameworks/libzentra_wallet_ffi.dylib',
+      ]) {
+        try {
+          return ffi.DynamicLibrary.open(path);
+        } catch (_) {}
+      }
+    }
+    if (Platform.isIOS) {
+      return ffi.DynamicLibrary.process();
+    }
     throw NativeWalletUnavailable('Platform ${Platform.operatingSystem}');
   }
 

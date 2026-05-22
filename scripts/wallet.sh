@@ -15,6 +15,14 @@ export WALLET_ROOT="$ROOT"
 LIB="$ROOT/scripts/lib"
 # shellcheck source=lib/native_build.sh
 source "$LIB/native_build.sh"
+# shellcheck source=lib/native_build_common.sh
+source "$LIB/native_build_common.sh"
+# shellcheck source=lib/native_build_android.sh
+source "$LIB/native_build_android.sh"
+# shellcheck source=lib/native_build_mingw.sh
+source "$LIB/native_build_mingw.sh"
+# shellcheck source=lib/native_build_macos.sh
+source "$LIB/native_build_macos.sh"
 # shellcheck source=lib/flutter_run.sh
 source "$LIB/flutter_run.sh"
 # shellcheck source=lib/clean_data.sh
@@ -57,7 +65,16 @@ cmd_status() {
   _hr
   local z; z="$(_resolve_zentra)"
   [[ -n "$z" ]] && _ok "Zentra: $z" || _warn "Zentra: not found"
-  [[ -f "$SO_PATH" ]] && _ok "Native lib: $(ls -lh "$SO_PATH" | awk '{print $5, $9}')" || _warn "Native lib: missing (run: ./wallet.sh build)"
+  [[ -f "$SO_PATH" ]] && _ok "Linux FFI: $(ls -lh "$SO_PATH" | awk '{print $5, $9}')" || _warn "Linux FFI: missing (./wallet.sh build)"
+  local jni="$ROOT/packages/zentra_wallet_core/android/src/main/jniLibs"
+  local android_ok=0
+  for abi in arm64-v8a armeabi-v7a x86_64; do
+    if [[ -f "$jni/$abi/libzentra_wallet_ffi.so" ]]; then
+      _ok "Android $abi: $(ls -lh "$jni/$abi/libzentra_wallet_ffi.so" | awk '{print $5}')"
+      android_ok=1
+    fi
+  done
+  [[ "$android_ok" -eq 0 ]] && _warn "Android FFI: missing (./wallet.sh build-android)"
   command -v flutter >/dev/null 2>&1 && _ok "Flutter: $(flutter --version 2>/dev/null | head -1)" || _warn "Flutter: not in PATH"
   _hr
 }
@@ -66,6 +83,46 @@ cmd_build() {
   local z="${1:-$(_resolve_zentra)}"
   [[ -z "$z" ]] && { _err "Zentra source not found. Set ZENTRA_ROOT or clone into third_party/zentra"; return 1; }
   native_build_host "$z"
+}
+
+cmd_build_windows() {
+  local z=""
+  if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then z="$1"; else z="$(_resolve_zentra)"; fi
+  [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
+  native_build_mingw "$z"
+}
+
+cmd_build_macos() {
+  local z=""
+  if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then z="$1"; else z="$(_resolve_zentra)"; fi
+  [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
+  native_build_macos "$z"
+}
+
+cmd_build_all_native() {
+  local z=""
+  if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then z="$1"; else z="$(_resolve_zentra)"; fi
+  [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
+  cmd_build "$z" || return 1
+  native_build_android "$z" || return 1
+  native_build_mingw "$z" || return 1
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    native_build_macos "$z" || return 1
+  else
+    _warn "Skip macOS dylib (run ./wallet.sh build-macos on a Mac)"
+  fi
+}
+
+cmd_build_android() {
+  local z=""
+  if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then
+    z="$1"
+    shift
+  else
+    z="$(_resolve_zentra)"
+  fi
+  [[ -z "$z" ]] && { _err "Zentra source not found. Set ZENTRA_ROOT or clone into third_party/zentra"; return 1; }
+  native_build_android "$z" "$@"
 }
 
 cmd_run_app() {
@@ -176,6 +233,10 @@ case "${1:-}" in
   ""|menu) _menu_loop ;;
   status) cmd_status ;;
   build|build-host) shift; cmd_build "${1:-}" ;;
+  build-android) shift; cmd_build_android "$@" ;;
+  build-windows|build-mingw) shift; cmd_build_windows "${1:-}" ;;
+  build-macos|build-darwin) shift; cmd_build_macos "${1:-}" ;;
+  build-all-native) shift; cmd_build_all_native "${1:-}" ;;
   run|start) shift; cmd_run_app "$@" ;;
   devices) cmd_devices ;;
   clean-data) shift; cmd_clean_data "$@" ;;
@@ -185,7 +246,11 @@ case "${1:-}" in
 Zentra Wallet — ./wallet.sh
 
   ./wallet.sh              Interactive menu
-  ./wallet.sh build        Build libzentra_wallet_ffi.so (native, this machine)
+  ./wallet.sh build        Build libzentra_wallet_ffi.so (Linux)
+  ./wallet.sh build-android   Android jniLibs
+  ./wallet.sh build-windows   Windows libzentra_wallet_ffi.dll (MinGW)
+  ./wallet.sh build-macos     macOS dylib (run on Mac)
+  ./wallet.sh build-all-native  Linux + Android + Windows (+ macOS on Mac)
   ./wallet.sh run          Run Linux app
   ./wallet.sh full         build + run
   ./wallet.sh status       Zentra / native lib / Flutter
