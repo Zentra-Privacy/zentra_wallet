@@ -80,10 +80,10 @@ The wallet links against Zentra’s `wallet_api`. Put the Zentra repo next to th
 
 ```bash
 # Option A — sibling folder (auto-detected)
-git clone -b zentra-main https://github.com/Zentra-Privacy/zentra.git ../zentra
+git clone -b zentra-main --recurse-submodules https://github.com/Zentra-Privacy/zentra.git ../zentra
 
 # Option B — inside this repo
-git clone -b zentra-main https://github.com/Zentra-Privacy/zentra.git third_party/zentra
+git clone -b zentra-main --recurse-submodules https://github.com/Zentra-Privacy/zentra.git third_party/zentra
 
 # Option C — anywhere
 export ZENTRA_ROOT=/path/to/zentra

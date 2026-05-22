@@ -25,11 +25,10 @@ jobs:
           cache: true
 
       - name: Install Linux desktop build deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev
+        run: sudo ./scripts/ci-install-linux-deps.sh flutter
+
+      - name: Enable Linux desktop
+        run: flutter config --enable-linux-desktop
 
       - name: Resolve dependencies
         run: flutter pub get
@@ -54,11 +53,13 @@ jobs:
           cache: true
 
       - name: Install Linux desktop build deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev
+        run: sudo ./scripts/ci-install-linux-deps.sh flutter
+
+      - name: Enable Linux desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Resolve dependencies
+        run: flutter pub get
 
       - name: Verify native wallet library
         run: |
