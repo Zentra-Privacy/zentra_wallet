@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install native build dependencies
         run: sudo ./scripts/ci-install-linux-deps.sh native
@@ -37,7 +37,7 @@ jobs:
           test -f third_party/zentra/src/wallet/api/wallet2_api.h
 
       - name: Cache Zentra CMake build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: third_party/zentra/build/release
           key: zentra-build-${{ runner.os }}-${{ env.ZENTRA_REF }}-${{ hashFiles('native/zentra_wallet_ffi/**', 'scripts/lib/native_build.sh') }}
@@ -59,7 +59,7 @@ jobs:
           file packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
 
       - name: Upload native library
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: libzentra_wallet_ffi-linux
           path: packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
