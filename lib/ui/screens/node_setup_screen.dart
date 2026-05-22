@@ -85,7 +85,7 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
               child: ListTile(
                 leading: Icon(Icons.warning, color: Colors.orangeAccent),
                 title: Text('Native wallet not built'),
-                subtitle: Text('Run: ./scripts/build_native_wallet.sh'),
+                subtitle: Text('Run: ./wallet.sh build-docker'),
               ),
             ),
           ],

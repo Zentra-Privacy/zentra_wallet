@@ -85,7 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
     final p = context.read<WalletProvider>();
     if (!ZentraNativeWallet.isAvailable) {
-      _snack('Native wallet not built. Run: ./scripts/build_native_wallet.sh');
+      _snack('Native wallet not built. Run: ./wallet.sh build-docker');
       return;
     }
     setState(() => _loading = true);

@@ -33,6 +33,10 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Docker / vendored Zentra clone for native builds
+/third_party/zentra/
+/build/docker/
+
 # Symbolication related
 app.*.symbols
 

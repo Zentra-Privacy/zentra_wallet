@@ -148,7 +148,7 @@ class SettingsScreen extends StatelessWidget {
           const ZentraSettingsTile(
             icon: Icons.build_outlined,
             title: 'Native wallet missing',
-            subtitle: './scripts/build_native_wallet.sh',
+            subtitle: './wallet.sh build-docker',
           ),
         ZentraSettingsTile(
           icon: Icons.refresh,

@@ -111,7 +111,7 @@ class WalletProvider extends ChangeNotifier {
     if (!nativeAvailable) {
       connectionState = WalletConnectionState.error;
       errorMessage =
-          'Embedded wallet not built. Run: ./scripts/build_native_wallet.sh';
+          'Embedded wallet not built. Run: ./wallet.sh build-docker';
       notifyListeners();
       return false;
     }
@@ -202,7 +202,7 @@ class WalletProvider extends ChangeNotifier {
     _refreshNativeFlag();
     if (!nativeAvailable) {
       errorMessage =
-          'Embedded wallet not built. Run: ./scripts/build_native_wallet.sh';
+          'Embedded wallet not built. Run: ./wallet.sh build-docker';
       notifyListeners();
       return false;
     }
@@ -240,7 +240,7 @@ class WalletProvider extends ChangeNotifier {
     _refreshNativeFlag();
     if (!nativeAvailable) {
       errorMessage =
-          'Embedded wallet not built. Run: ./scripts/build_native_wallet.sh';
+          'Embedded wallet not built. Run: ./wallet.sh build-docker';
       notifyListeners();
       return false;
     }
