@@ -103,4 +103,4 @@ This deletes local app data — **not** for production wallets with real funds u
 
 ## Where is the Zentra blockchain project?
 
-https://github.com/Foisalislambd/zentra
+https://github.com/Zentra-Privacy/zentra

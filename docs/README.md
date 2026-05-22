@@ -2,7 +2,7 @@
 
 Welcome to the Zentra Wallet docs. These guides explain what the app is, how it works, how to build and run it, and how to use it safely.
 
-**Zentra Wallet** is a self-custody mobile and desktop wallet for [Zentra](https://github.com/Foisalislambd/zentra). It works like **Cake Wallet** or the **Monero GUI**: your keys and signing happen on your device; only the blockchain daemon (`zentrad`) is remote.
+**Zentra Wallet** is a self-custody mobile and desktop wallet for [Zentra](https://github.com/Zentra-Privacy/zentra). It works like **Cake Wallet** or the **Monero GUI**: your keys and signing happen on your device; only the blockchain daemon (`zentrad`) is remote.
 
 ---
 

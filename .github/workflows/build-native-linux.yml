@@ -1,0 +1,67 @@
+# Rebuild libzentra_wallet_ffi.so from Zentra source (slow; ~30–90+ min).
+# Runs on release tags, manual dispatch, and weekly schedule.
+name: Build native (Linux)
+
+on:
+  workflow_dispatch:
+    inputs:
+      zentra_ref:
+        description: Zentra git ref (branch, tag, or SHA)
+        required: false
+        default: zentra-main
+  push:
+    tags:
+      - "v*"
+  schedule:
+    - cron: "0 4 * * 0"
+
+env:
+  ZENTRA_REPO: https://github.com/Zentra-Privacy/zentra.git
+  ZENTRA_REF: ${{ github.event.inputs.zentra_ref || 'zentra-main' }}
+
+jobs:
+  build-native:
+    name: Build libzentra_wallet_ffi.so
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake git python3 \
+            libboost-all-dev libssl-dev \
+            libprotobuf-dev protobuf-compiler \
+            libunbound-dev libzmq3-dev \
+            libsodium-dev libhidapi-libusb0 libusb-1.0-0-dev \
+            libpgm-dev libnorm-dev
+
+      - name: Clone Zentra
+        run: |
+          git clone "$ZENTRA_REPO" third_party/zentra
+          git -C third_party/zentra checkout "$ZENTRA_REF"
+
+      - name: Cache Zentra CMake build
+        uses: actions/cache@v4
+        id: zentra-cache
+        with:
+          path: third_party/zentra/build/release
+          key: zentra-build-${{ runner.os }}-${{ env.ZENTRA_REF }}-${{ hashFiles('native/zentra_wallet_ffi/**', 'scripts/lib/native_build.sh') }}
+          restore-keys: |
+            zentra-build-${{ runner.os }}-${{ env.ZENTRA_REF }}-
+            zentra-build-${{ runner.os }}-
+
+      - name: Build native FFI library
+        env:
+          ZENTRA_ROOT: ${{ github.workspace }}/third_party/zentra
+          JOBS: "2"
+        run: ./wallet.sh build
+
+      - name: Upload native library
+        uses: actions/upload-artifact@v4
+        with:
+          name: libzentra_wallet_ffi-linux
+          path: packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
+          if-no-files-found: error

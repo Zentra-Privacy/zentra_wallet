@@ -1,6 +1,8 @@
 # Zentra Wallet
 
-Self-custody mobile/desktop wallet for [Zentra](https://github.com/Foisalislambd/zentra) — same model as **Cake Wallet** / Monero GUI: **wallet2 runs inside the app**, only the public **daemon** (`zentrad`) is remote.
+[![CI](https://github.com/Zentra-Privacy/zentra_wallet/actions/workflows/ci.yml/badge.svg)](https://github.com/Zentra-Privacy/zentra_wallet/actions/workflows/ci.yml)
+
+Self-custody mobile/desktop wallet for [Zentra](https://github.com/Zentra-Privacy/zentra) — same model as **Cake Wallet** / Monero GUI: **wallet2 runs inside the app**, only the public **daemon** (`zentrad`) is remote.
 
 ## What you do NOT need
 
@@ -35,46 +37,144 @@ Self-custody mobile/desktop wallet for [Zentra](https://github.com/Foisalislambd
 
 Wallet files: app data dir `…/zentra_wallets/`.
 
-## Build & run
+---
 
-### Easy menu (recommended)
+## How to build and run (Linux)
+
+Follow these steps on **Ubuntu 22.04** (or similar Debian/Ubuntu). That is the supported dev platform.
+
+### 1. Prerequisites
+
+| Tool | Install |
+|------|---------|
+| **Flutter** 3.12+ | [flutter.dev/docs/get-started/install/linux](https://docs.flutter.dev/get-started/install/linux) — enable Linux desktop: `flutter config --enable-linux-desktop` |
+| **Build tools** | See step 2 below |
+| **Zentra source** | Clone in step 3 — required to **rebuild** the native wallet library |
+
+Check Flutter:
+
+```bash
+flutter doctor
+flutter --version   # should be 3.12+
+```
+
+### 2. Install system packages
+
+From the wallet repo root:
+
+```bash
+git clone https://github.com/Zentra-Privacy/zentra_wallet.git
+cd zentra_wallet
+sudo ./scripts/ci-install-linux-deps.sh all
+```
+
+This installs packages for **Flutter Linux** and **native FFI** (Boost, OpenSSL, Protobuf, etc.). For Flutter-only (`.so` already in repo):
+
+```bash
+sudo ./scripts/ci-install-linux-deps.sh flutter
+```
+
+### 3. Clone Zentra (for native build)
+
+The wallet links against Zentra’s `wallet_api`. Put the Zentra repo next to this one **or** set `ZENTRA_ROOT`:
+
+```bash
+# Option A — sibling folder (auto-detected)
+git clone -b zentra-main https://github.com/Zentra-Privacy/zentra.git ../zentra
+
+# Option B — inside this repo
+git clone -b zentra-main https://github.com/Zentra-Privacy/zentra.git third_party/zentra
+
+# Option C — anywhere
+export ZENTRA_ROOT=/path/to/zentra
+```
+
+The folder must contain `src/wallet/api/wallet2_api.h`.
+
+### 4. Build the native wallet engine
+
+```bash
+cd zentra_wallet
+./wallet.sh status    # Zentra path, .so, Flutter
+./wallet.sh build     # → packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
+```
+
+First build can take a long time (Zentra `wallet_api` + FFI). Later runs are incremental.
+
+### 5. Run the app
+
+```bash
+./wallet.sh run
+```
+
+Or build + run in one step:
+
+```bash
+./wallet.sh full
+```
+
+The Linux desktop window should open. On **mainnet** you can sync via built-in seed nodes without running your own `zentrad`.
+
+### 6. Interactive menu (optional)
 
 ```bash
 ./wallet.sh
 ```
 
-Interactive menu: build native library, run Linux app, status, clean test data.
+Menu: build native lib, run app, status, clean test data.
 
-Non-interactive shortcuts:
+### Quick reference
 
-```bash
-./wallet.sh status
-./wallet.sh build
-./wallet.sh run
-./wallet.sh full          # build + run
-```
+| Goal | Command |
+|------|---------|
+| Check setup | `./wallet.sh status` |
+| Build native `.so` only | `./wallet.sh build` |
+| Run app | `./wallet.sh run` |
+| Build + run | `./wallet.sh full` |
+| List Flutter devices | `./wallet.sh devices` |
+| Reset local test wallets | `./wallet.sh clean-data` |
+| Help | `./wallet.sh help` |
 
-### All commands (`./wallet.sh help`)
+### Run without rebuilding native (CI / quick UI)
 
-| Command | Purpose |
-|---------|---------|
-| `build` | Native `libzentra_wallet_ffi.so` on this machine |
-| `run` | Flutter Linux app |
-| `clean-data` | Reset local test wallet files |
-| `status` | Zentra path, native lib, Flutter |
-
-Output: `packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so`  
-Implementation: `scripts/wallet.sh` + `scripts/lib/`
-
-### Ubuntu 22 VM (recommended for release-like builds)
-
-Build and run on the VM so the `.so` links against the same glibc/Boost as production:
+The repo may already include `packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so`. Then:
 
 ```bash
-# On Ubuntu 22 VM: install build deps (cmake, boost, protobuf, …) + Flutter
+flutter pub get
+flutter run -d linux
+```
+
+If you see **“Wallet engine unavailable”**, run `./wallet.sh build`.
+
+### Ubuntu 22 VM (release-like builds)
+
+Build the `.so` on the same OS/glibc you ship on:
+
+```bash
 ./wallet.sh build
 ./wallet.sh run
 ```
+
+---
+
+## CI/CD (GitHub Actions)
+
+| Workflow | When | What it does |
+|----------|------|----------------|
+| [**CI**](.github/workflows/ci.yml) | Every push / PR to `main` | `flutter analyze`, `flutter test`, `flutter build linux` |
+| [**Build native**](.github/workflows/build-native-linux.yml) | Tags `v*`, weekly, or **Run workflow** | Clones Zentra, runs `./wallet.sh build`, uploads `libzentra_wallet_ffi.so` |
+
+**Manual native rebuild** (GitHub → Actions → *Build native (Linux)* → Run workflow). Download the artifact and copy it to `packages/zentra_wallet_core/linux/` if needed.
+
+Local parity with CI:
+
+```bash
+flutter analyze
+flutter test
+flutter build linux --debug
+```
+
+---
 
 ## Networks
 
@@ -84,15 +184,20 @@ Build and run on the VM so the `.so` links against the same glibc/Boost as produ
 | Testnet | T | 29081 (local `zentrad`) |
 | Stagenet | S | 39081 |
 
+---
+
 ## Documentation
 
 Full guides (architecture, security, build, user guide, FAQ):
 
-**[docs/README.md](docs/README.md)**
+**[docs/README.md](docs/README.md)** · [Getting started](docs/getting-started.md) · [Building](docs/building.md)
+
+---
 
 ## Project layout
 
 - `lib/` — Flutter app (no wallet-RPC client)
 - `native/zentra_wallet_ffi/` — C API over `wallet2`
-- `docs/` — human-friendly guides in English
+- `docs/` — guides in English
 - `wallet.sh` — build and run (single entry point)
+- `.github/workflows/` — CI/CD
