@@ -10,14 +10,15 @@ Workflow: **[Build apps (all platforms)](../.github/workflows/build-artifacts.ym
 
 | Trigger | What happens |
 |---------|----------------|
-| Push to `main` (or **Run workflow**) | All platforms → **draft release** |
+| **Pull request** to `main` | [**CI**](../.github/workflows/ci.yml) only (analyze, test, Linux debug) — no release builds |
+| Push to `main` (or **Run workflow**) | All platforms → **draft release** (only if every platform job succeeds) |
 | Tag `v*` (e.g. `v1.0.0`) | All platforms → **published** GitHub Release (no draft) |
 
 ---
 
 ## Draft release (auto on `main` — review then publish)
 
-Every successful push to **`main`** creates a **draft** release (not public until you publish).
+Every **fully green** **Build apps** run on **`main`** creates a **draft** release (not public until you publish). If any platform job fails, no draft is created — use **Artifacts** on that run for whatever succeeded.
 
 1. Repo → **Releases** → find **Draft** (e.g. `Draft build #42`, tag `draft-42`).
 2. Download assets and test Linux / Windows / APK / macOS.
@@ -68,7 +69,7 @@ Artifacts are kept for **90 days** (GitHub default), then removed.
 
 1. **Actions** → **Build apps (all platforms)** → **Run workflow** (right side).
 2. Branch: `main` → **Run workflow**.
-3. Wait ~15–45 minutes (all jobs).
+3. Wait ~10–30 minutes (four platform jobs in parallel).
 4. Download from **Artifacts** as above.
 
 ---
