@@ -105,7 +105,7 @@ cd ~/zentra-wallet
 ./zentra_wallet
 ```
 
-Requires a recent glibc (same as Ubuntu 22.04+ runners). Install GUI deps if needed:
+Built on **Ubuntu 22.04** CI runners (matches `libzentra_wallet_ffi.so`). Install GUI deps if needed:
 
 ```bash
 sudo apt install libgtk-3-0 libsecret-1-0
