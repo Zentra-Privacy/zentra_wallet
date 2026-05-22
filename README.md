@@ -84,8 +84,15 @@ Build and run on the VM so the `.so` links against the same glibc/Boost as produ
 | Testnet | T | 29081 (local `zentrad`) |
 | Stagenet | S | 39081 |
 
+## Documentation
+
+Full guides (architecture, security, build, user guide, FAQ):
+
+**[docs/README.md](docs/README.md)**
+
 ## Project layout
 
 - `lib/` — Flutter app (no wallet-RPC client)
 - `native/zentra_wallet_ffi/` — C API over `wallet2`
+- `docs/` — human-friendly guides in English
 - `wallet.sh` — build and run (single entry point)
