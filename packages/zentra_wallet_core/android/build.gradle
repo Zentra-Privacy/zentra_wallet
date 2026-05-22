@@ -1,0 +1,43 @@
+// FFI plugin — builds zentra_core (light helpers) for Android.
+// Full wallet2 (libzentra_wallet_ffi.so) is not bundled on Android yet.
+group = "com.zentraprivacy.zentra_wallet_core"
+version = "1.0"
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:9.0.1")
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: "com.android.library"
+
+android {
+    namespace = "com.zentraprivacy.zentra_wallet_core"
+    compileSdk = 36
+
+    externalNativeBuild {
+        cmake {
+            path = "CMakeLists.txt"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        minSdk = 24
+    }
+}

@@ -31,6 +31,25 @@ bool is_base58_char(char c) {
          (c >= 'a' && c <= 'k') || (c >= 'm' && c <= 'z');
 }
 
+std::string trim(const char* s) {
+  std::string str(s);
+  while (!str.empty() && isspace(static_cast<unsigned char>(str.front()))) {
+    str.erase(str.begin());
+  }
+  while (!str.empty() && isspace(static_cast<unsigned char>(str.back()))) {
+    str.pop_back();
+  }
+  return str;
+}
+
+char* duplicate_c_string(const char* src) {
+  if (!src) return nullptr;
+  const size_t n = strlen(src) + 1;
+  char* out = static_cast<char*>(malloc(n));
+  if (out) memcpy(out, src, n);
+  return out;
+}
+
 }  // namespace
 
 extern "C" {
@@ -65,18 +84,7 @@ ZENTRA_API char* zentra_atomic_to_display(uint64_t atomic) {
     }
     if (*end == '.') *end = '\0';
   }
-  return strdup(buf);
-}
-
-static std::string trim(const char* s) {
-  std::string str(s);
-  while (!str.empty() && isspace(static_cast<unsigned char>(str.front()))) {
-    str.erase(str.begin());
-  }
-  while (!str.empty() && isspace(static_cast<unsigned char>(str.back()))) {
-    str.pop_back();
-  }
-  return str;
+  return duplicate_c_string(buf);
 }
 
 ZENTRA_API uint64_t zentra_display_to_atomic(const char* display) {

@@ -115,7 +115,7 @@ Match what the [Zentra](https://github.com/Zentra-Privacy/zentra) README require
 
 ## Android notes
 
-- `packages/zentra_wallet_core/android/CMakeLists.txt` currently builds only the small **`zentra_core`** helper, not the full FFI.
+- `packages/zentra_wallet_core/android/build.gradle` + `CMakeLists.txt` build the small **`zentra_core`** helper, not the full FFI.
 - For a production Android APK you must extend the build to compile and package `libzentra_wallet_ffi.so` for each ABI (arm64-v8a, etc.) and cross-compile Zentra static libs — same dependency closure as Linux.
 - Dart loads the library with `DynamicLibrary.open('libzentra_wallet_ffi.so')` on Android.
 

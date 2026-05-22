@@ -12,37 +12,78 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# IntelliJ / Android Studio
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
+# VS Code (uncomment to track launch configs)
 #.vscode/
 
-# Flutter/Dart/Pub related
+# Flutter / Dart
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
-/coverage/
+.packages
+coverage/
+*.g.dart
+*.freezed.dart
 
-# Vendored Zentra clone for native builds
-/third_party/zentra/
+# Build outputs — any directory named "build" (not build.gradle files)
+build/
 
-# Symbolication related
+# Native FFI CMake output (./wallet.sh build)
+build/native_ffi/
+
+# Android / Gradle / NDK
+**/.gradle/
+**/.cxx/
+**/local.properties
+**/GeneratedPluginRegistrant.java
+android/app/debug/
+android/app/profile/
+android/app/release/
+*.apk
+*.aab
+*.keystore
+*.jks
+key.properties
+
+# iOS / macOS (Pods & Xcode; platform .gitignore files add more)
+**/Pods/
+**/DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Windows
+*.exe
+*.dll
+*.pdb
+
+# Linux desktop bundle (local flutter build linux)
+*.tar.gz
+
+# Zentra source clone for native builds (use ../zentra or ZENTRA_ROOT)
+third_party/zentra/
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+
+# Symbolication / obfuscation
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# CI / release packaging at repo root
+zentra-wallet-*.tar.gz
+zentra-wallet-*.zip
+
+# Committed on purpose for Linux CI & quick builds (do not ignore):
+# packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
