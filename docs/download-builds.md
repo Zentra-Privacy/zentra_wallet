@@ -10,9 +10,9 @@ Workflow: **[Build apps (all platforms)](../.github/workflows/build-artifacts.ym
 
 | Trigger | What happens |
 |---------|----------------|
-| Push to `main` | All four platforms build + **draft release** auto-created (`draft-123`) |
-| Tag `v*` (e.g. `v1.0.0`) | Builds + **published** GitHub Release (public) |
-| **Run workflow** (manual) | Same builds on demand (no draft unless you pushed to `main`) |
+| Push to `main` | All four platforms build + **draft release** (`draft-123`) using committed `.so` |
+| Tag `v*` (e.g. `v1.0.0`) | Rebuilds native `.so` → builds → **published** GitHub Release |
+| **Run workflow** (manual) | Builds only (no draft; uses committed `.so`) |
 
 ---
 
@@ -146,14 +146,13 @@ On Windows / Android / macOS you may see **“Wallet engine unavailable”** unt
 
 ### Tag `v*` and the native library
 
-Pushing `v1.0.0` starts **two** workflows:
+Pushing `v1.0.0` runs **Build apps (all platforms)** which:
 
-| Workflow | Output |
-|----------|--------|
-| **Build apps (all platforms)** | Installable apps (Linux uses `.so` **already in the repo**) |
-| **Build native (Linux)** | Fresh `libzentra_wallet_ffi.so` (artifact only — not auto-merged into the release APK/apps) |
+1. Rebuilds `libzentra_wallet_ffi.so` from Zentra (`rebuild-linux-native` job)
+2. Builds Linux / Windows / Android / macOS apps
+3. Publishes a **GitHub Release** with all assets
 
-For a release with an updated Linux engine: run **Build native** first, copy the `.so` into the repo (or commit it), then tag and run **Build apps**.
+Use **Build native (Linux)** separately only for a manual `.so` artifact (weekly schedule or **Run workflow**), not for version releases.
 
 ---
 
