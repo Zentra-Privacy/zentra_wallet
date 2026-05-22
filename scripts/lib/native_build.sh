@@ -95,4 +95,5 @@ native_build_host() {
   mkdir -p "$LINUX_PLUGIN"
   cp -f "$OUT_SO" "$LINUX_PLUGIN/libzentra_wallet_ffi.so"
   echo "==> Installed $LINUX_PLUGIN/libzentra_wallet_ffi.so"
+  echo "==> Run: ./wallet.sh run"
 }

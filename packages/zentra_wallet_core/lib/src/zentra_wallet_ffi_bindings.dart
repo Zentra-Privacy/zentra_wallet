@@ -18,7 +18,7 @@ class ZentraNativeWallet {
   static ZentraNativeWallet get instance {
     if (_instance != null) return _instance!;
     throw NativeWalletUnavailable(
-      'Native wallet not loaded. Run: ./wallet.sh build-docker',
+      'Wallet engine is not available on this device.',
     );
   }
 
@@ -33,9 +33,26 @@ class ZentraNativeWallet {
 
   static ffi.DynamicLibrary _openLib() {
     if (Platform.isLinux) {
-      for (final name in ['libzentra_wallet_ffi.so', 'zentra_wallet_ffi.so']) {
+      final fromEnv = Platform.environment['ZENTRA_WALLET_FFI_PATH'];
+      if (fromEnv != null && fromEnv.isNotEmpty) {
+        return ffi.DynamicLibrary.open(fromEnv);
+      }
+      final exe = Platform.resolvedExecutable;
+      final dir = exe.contains('/')
+          ? exe.substring(0, exe.lastIndexOf('/'))
+          : exe;
+      final candidates = <String>[
+        '$dir/lib/libzentra_wallet_ffi.so',
+        '$dir/libzentra_wallet_ffi.so',
+        'libzentra_wallet_ffi.so',
+        'zentra_wallet_ffi.so',
+        // `flutter run` from repo (plugin path beside build output)
+        '$dir/../packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so',
+      ];
+      for (final path in candidates) {
         try {
-          return ffi.DynamicLibrary.open(name);
+          if (path.contains('/') && !File(path).existsSync()) continue;
+          return ffi.DynamicLibrary.open(path);
         } catch (_) {}
       }
     }

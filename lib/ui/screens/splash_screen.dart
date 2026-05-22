@@ -44,8 +44,9 @@ class _SplashScreenState extends State<SplashScreen> {
       final ok = await provider.connect().timeout(
         const Duration(seconds: 60),
         onTimeout: () {
-          provider.errorMessage =
-              'Sync timed out. Check node in Settings.';
+          provider.markConnectFailed(
+            'Sync timed out. Check node in Settings.',
+          );
           return false;
         },
       );
