@@ -1,6 +1,6 @@
 # Download built apps from GitHub
 
-CI builds **Linux**, **Windows**, **Android (APK)**, **macOS**, and **iOS** apps automatically.
+CI builds **Linux**, **Windows**, and **Android (APK)** automatically. **macOS / iOS** — build on a Mac ([build-macos.md](build-macos.md), [build-ios.md](build-ios.md)).
 
 Workflow: **[Release pipeline](../.github/workflows/build-artifacts.yml)**
 
@@ -21,7 +21,7 @@ Workflow: **[Release pipeline](../.github/workflows/build-artifacts.yml)**
 Every **fully green** **Release pipeline** run on **`main`** creates a **draft** release (not public until you publish). If any platform job fails, no draft is created — use **Artifacts** on that run for whatever succeeded.
 
 1. Repo → **Releases** → find **Draft** (e.g. `Draft build #42`, tag `draft-42`).
-2. Download assets and test Linux / Windows / APK / macOS / iOS.
+2. Download assets and test Linux / Windows / APK.
 3. Change release notes if you want → **Edit**.
 4. Happy? Click **Publish release** → users see it as a normal release.
 5. Not happy? Fix code, push to `main` again → a **new** draft (`draft-43`) is created.
@@ -61,9 +61,6 @@ Use this for any completed workflow run (including pushes to `main`).
 | `zentra-wallet-linux-x64` | Linux | `zentra-wallet-linux-x64.tar.gz` |
 | `zentra-wallet-windows-x64` | Windows | `zentra-wallet-windows-x64.zip` |
 | `zentra-wallet-android-apk` | Android | `app-release.apk` |
-| `zentra-wallet-macos` | macOS | `zentra-wallet-macos.zip` |
-| `zentra-wallet-ios` | iOS | `zentra-wallet-ios.zip` (unsigned `.app`; sideload or re-sign) |
-
 Artifacts are kept for **90 days** (GitHub default), then removed.
 
 ### Run builds manually
@@ -85,7 +82,6 @@ When you push a tag like `v1.0.0`, the same files are attached to a **Release** 
    - `zentra-wallet-linux-x64.tar.gz`
    - `zentra-wallet-windows-x64.zip`
    - `zentra-wallet-android.apk`
-   - `zentra-wallet-macos.zip`
 
 Create a release tag locally:
 
@@ -126,25 +122,23 @@ sudo apt install libgtk-3-0 libsecret-1-0
 3. Enable “Install unknown apps” for your file manager.
 4. Open the APK and install.
 
-### macOS
+### macOS / iOS
 
-1. Unzip `zentra-wallet-macos.zip`.
-2. Open `zentra_wallet.app`.
-3. If Gatekeeper blocks: **System Settings → Privacy & Security → Open Anyway**.
+Not attached by CI. Build on a Mac: [build-macos.md](build-macos.md), [build-ios.md](build-ios.md).
 
 ---
 
 ## Which build has a full wallet?
 
-| Platform | App installs | Full wallet (`wallet2`) |
-|----------|--------------|-------------------------|
+| Platform | CI release | Full wallet (`wallet2`) |
+|----------|------------|-------------------------|
 | **Linux** | ✓ | ✓ |
-| **Windows** | ✓ | ✓ (CI builds `libzentra_wallet_ffi.dll`) |
-| **Android** | ✓ | ✓ arm64 in CI; more ABIs via `./wallet.sh build-android` |
-| **macOS** | ✓ | ✓ (CI builds on `macos-latest`) |
-| **iOS** | `zentra-wallet-ios.zip` | ✓ unsigned `.app` (re-sign for device) |
+| **Windows** | ✓ | ✓ |
+| **Android** | ✓ APK | ✓ (arm64 + armeabi-v7a in CI) |
+| **macOS** | — (manual) | ✓ after `./wallet.sh build-macos` |
+| **iOS** | — (manual) | ✓ after `./wallet.sh build-ios` |
 
-**Release pipeline** ([ci-pipeline.md](ci-pipeline.md)): Phase 1 builds the wallet engine from [Zentra v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0), Phase 2 builds all apps, Phase 3 creates the draft release. First run can take **several hours**; cache helps later runs.
+**Release pipeline** ([ci-pipeline.md](ci-pipeline.md)): Ubuntu builds engine for **Linux + Windows + Android**, then Flutter apps, then draft/tag release. First run can take **hours**; cache helps later runs.
 
 ### Native libraries
 

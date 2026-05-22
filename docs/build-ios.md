@@ -114,21 +114,41 @@ flutter build ios --simulator
 flutter run -d "iPhone 16"   # pick simulator from flutter devices
 ```
 
-### Physical device (signing required)
+### Physical iPhone / iPad (signing required)
 
-1. Open Xcode workspace:
+1. Build native engine first (required — CI does not do this):
+
+   ```bash
+   ./wallet.sh build-ios
+   ls packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework
+   ```
+
+2. Install pods:
+
+   ```bash
+   flutter pub get
+   cd ios && pod install --repo-update && cd ..
+   ```
+
+3. Open Xcode and set signing:
 
    ```bash
    open ios/Runner.xcworkspace
    ```
 
-2. Select **Runner** target → **Signing & Capabilities** → your Team.
+   - **Runner** → **Signing & Capabilities** → select your **Team**
+   - Connect the device via USB; select it as run destination
 
-3. Build from CLI:
+4. Run on device:
 
    ```bash
-   flutter build ios --release
+   flutter devices
+   flutter run -d <your-iphone-id> --release
    ```
+
+   Or press **Run** in Xcode.
+
+5. First launch on device: **Settings → General → VPN & Device Management** → trust the developer cert if iOS asks.
 
 ### Unsigned release (CI-style / sideload prep)
 

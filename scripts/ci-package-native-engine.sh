@@ -1,26 +1,29 @@
 #!/usr/bin/env bash
-# Merge Ubuntu + macOS engine artifacts into one bundle for app CI jobs.
+# Merge engine artifacts into native-engine-bundle for app CI jobs.
+# Usage: ./scripts/ci-package-native-engine.sh <ubuntu-dir> [macos-dir] [output-dir]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-UB="${1:?ubuntu staging dir}"
-MAC="${2:?macos staging dir}"
+UB="${1:?ubuntu staging dir required}"
+MAC="${2:-}"
 OUT="${3:-$ROOT/build/native-engine-bundle}"
 
 rm -rf "$OUT"
 mkdir -p "$OUT"
 cp -a "$UB/." "$OUT/"
-mkdir -p "$OUT/macos/lib" "$OUT/ios/lib"
-cp -f "$MAC/macos/lib/libzentra_wallet_ffi.dylib" "$OUT/macos/lib/"
-[[ -d "$MAC/ios/lib/zentra_wallet_ffi.xcframework" ]] || {
-  echo "::error::engine-macos artifact missing ios/lib/zentra_wallet_ffi.xcframework"
-  exit 1
-}
-cp -a "$MAC/ios/lib/zentra_wallet_ffi.xcframework" "$OUT/ios/lib/"
+
+if [[ -n "$MAC" && -d "$MAC/macos/lib" ]]; then
+  mkdir -p "$OUT/macos/lib"
+  cp -f "$MAC/macos/lib/libzentra_wallet_ffi.dylib" "$OUT/macos/lib/" 2>/dev/null || true
+  if [[ -d "$MAC/ios/lib/zentra_wallet_ffi.xcframework" ]]; then
+    mkdir -p "$OUT/ios/lib"
+    cp -a "$MAC/ios/lib/zentra_wallet_ffi.xcframework" "$OUT/ios/lib/"
+  fi
+fi
 
 {
   cat "$UB/VERSION.txt" 2>/dev/null || true
-  cat "$MAC/VERSION.txt" 2>/dev/null || true
+  [[ -n "$MAC" ]] && cat "$MAC/VERSION.txt" 2>/dev/null || true
   echo "bundle_created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } | sort -u > "$OUT/VERSION.txt"
 

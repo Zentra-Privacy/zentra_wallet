@@ -164,7 +164,7 @@ Build the `.so` on the same OS/glibc you ship on:
 | [**CI**](.github/workflows/ci.yml) | Every push / PR to `main` | Analyze, test, Linux debug (committed engine) |
 | [**Release pipeline**](.github/workflows/build-artifacts.yml) | Push to `main`, tag `v*`, manual | **Phase 1:** engine from [Zentra v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0) → **Phase 2:** all apps → draft/published release |
 
-### Download built apps (Linux / Windows / APK / macOS / iOS)
+### Download built apps (Linux / Windows / APK from CI)
 
 **Full guide:** **[docs/download-builds.md](docs/download-builds.md)**
 
@@ -182,10 +182,7 @@ GitHub **Artifacts** are wrapped in an extra `.zip` — unzip once after downloa
 | `zentra-wallet-linux-x64` | Linux `.tar.gz` — **full wallet** |
 | `zentra-wallet-windows-x64` | Windows `.zip` |
 | `zentra-wallet-android-apk` | Android `.apk` |
-| `zentra-wallet-macos` | macOS `.zip` |
-| `zentra-wallet-ios` | iOS `.app` `.zip` (unsigned) |
-
-> **Note:** Release CI builds the wallet engine from **Zentra v0.1.0**, then packages **Linux / Windows / Android / macOS / iOS**. See [docs/ci-pipeline.md](docs/ci-pipeline.md). Local: `ZENTRA_REF=v0.1.0 ./wallet.sh build-all-native` (macOS/iOS on a Mac).
+> **Note:** Release CI builds **Linux / Windows / Android** from Zentra **v0.1.0** on Ubuntu. macOS/iOS: on your Mac — [docs/ci-pipeline.md](docs/ci-pipeline.md).
 
 > Manual builds (all OS): [docs/building.md](docs/building.md) — [Linux](docs/build-linux.md) · [Windows](docs/build-windows.md) · [Android](docs/build-android.md) · [macOS](docs/build-macos.md) · [iOS](docs/build-ios.md)
 

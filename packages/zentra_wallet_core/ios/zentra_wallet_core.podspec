@@ -16,10 +16,11 @@ Pod::Spec.new do |s|
   xcf = 'lib/zentra_wallet_ffi.xcframework'
   if File.directory?(xcf)
     s.vendored_frameworks = xcf
+    # -all_load: keep FFI C symbols in the app binary for Dart DynamicLibrary.process()
     s.pod_target_xcconfig = {
       'DEFINES_MODULE' => 'YES',
       'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17',
-      'OTHER_LDFLAGS' => '$(inherited) -ObjC',
+      'OTHER_LDFLAGS' => '$(inherited) -ObjC -Wl,-all_load',
     }
   else
     Pod::UI.warn "#{s.name}: #{xcf} missing — run ./wallet.sh build-ios on macOS (wallet engine unavailable)"

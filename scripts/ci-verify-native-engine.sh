@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Verify native-engine-bundle has all libraries required for app builds.
+# Verify native-engine-bundle has libraries required for CI app builds.
+# Default: Linux + Windows + Android (Release pipeline).
+# Optional: INCLUDE_MACOS=1, INCLUDE_IOS=1 for extended bundles.
 set -euo pipefail
 
 BUNDLE="${1:?native-engine-bundle directory required}"
@@ -21,11 +23,16 @@ _req "$BUNDLE/linux/libzentra_wallet_ffi.so"
 _req "$BUNDLE/windows/libzentra_wallet_ffi.dll"
 _req "$BUNDLE/android/arm64-v8a/libzentra_wallet_ffi.so"
 _req "$BUNDLE/android/armeabi-v7a/libzentra_wallet_ffi.so"
-_req "$BUNDLE/macos/lib/libzentra_wallet_ffi.dylib"
-if [[ ! -d "$BUNDLE/ios/lib/zentra_wallet_ffi.xcframework" ]]; then
-  echo "::error::Missing iOS XCFramework: $BUNDLE/ios/lib/zentra_wallet_ffi.xcframework"
-  exit 1
-fi
-echo "  OK zentra_wallet_ffi.xcframework"
 
-echo "==> All native engine libraries present"
+if [[ "${INCLUDE_MACOS:-0}" == "1" ]]; then
+  _req "$BUNDLE/macos/lib/libzentra_wallet_ffi.dylib"
+fi
+if [[ "${INCLUDE_IOS:-0}" == "1" ]]; then
+  if [[ ! -d "$BUNDLE/ios/lib/zentra_wallet_ffi.xcframework" ]]; then
+    echo "::error::Missing iOS XCFramework: $BUNDLE/ios/lib/zentra_wallet_ffi.xcframework"
+    exit 1
+  fi
+  echo "  OK zentra_wallet_ffi.xcframework"
+fi
+
+echo "==> Core native engine libraries present (Linux, Windows, Android)"
