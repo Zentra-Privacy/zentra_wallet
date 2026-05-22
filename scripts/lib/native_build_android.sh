@@ -107,6 +107,7 @@ native_build_android() {
       -DMANUAL_SUBMODULES=1
       -DSTATIC=ON
       -DANDROID=ON
+      -DUSE_DEVICE_TREZOR=OFF
       -DBUILD_64="$build64"
     )
     if [[ -n "$arm_arch" ]]; then
@@ -126,6 +127,7 @@ native_build_android() {
     local host="$2"
     local zbuild="$3"
     local toolchain="$DEPENDS_DIR/$host/share/toolchain.cmake"
+    local depends_prefix="$DEPENDS_DIR/$host"
     local ffibuild="$ROOT/build/android_ffi/$abi"
 
     echo "==> FFI library for $abi"
@@ -133,9 +135,9 @@ native_build_android() {
     cmake -S "$ROOT/native/zentra_wallet_ffi" -B "$ffibuild" \
       -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
       -DCMAKE_BUILD_TYPE=Release \
-      -DANDROID_ABI="$abi" \
       -DZENTRA_ROOT="$ZENTRA_ROOT" \
-      -DZENTRA_BUILD_DIR="$zbuild" || return 1
+      -DZENTRA_BUILD_DIR="$zbuild" \
+      -DZENTRA_DEPENDS_PREFIX="$depends_prefix" || return 1
     cmake --build "$ffibuild" --parallel "$JOBS" || return 1
 
     local out="$ffibuild/libzentra_wallet_ffi.so"

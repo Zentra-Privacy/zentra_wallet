@@ -54,6 +54,9 @@ jobs:
           chmod +x scripts/*.sh scripts/lib/*.sh
           ./scripts/ci-build-native-engine-ubuntu.sh build/engine-ubuntu
 
+      - name: Verify engine bundle (pre-upload)
+        run: ./scripts/ci-verify-native-engine.sh build/engine-ubuntu
+
       - name: Upload engine bundle
         uses: actions/upload-artifact@v6
         with:
