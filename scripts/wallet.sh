@@ -89,7 +89,6 @@ cmd_full_flow() {
 _ask_zentra_path() {
   local c; c="$(_resolve_zentra)"
   if [[ -n "$c" ]]; then
-    printf '\nUsing Zentra: %s\n' "$c" >&2
     echo "$c"
     return 0
   fi
