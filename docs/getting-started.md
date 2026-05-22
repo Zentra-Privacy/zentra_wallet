@@ -13,7 +13,7 @@ This guide gets you from zero to a running Zentra Wallet on **Linux** (the prima
 | [Flutter SDK](https://docs.flutter.dev/get-started/install) (3.12+) | UI app |
 | `cmake`, C++17 compiler | Native builds |
 | Boost, OpenSSL, Protobuf, and other Zentra build deps | Linking `libzentra_wallet_ffi.so` |
-| [Zentra source](https://github.com/Foisalislambd/zentra) | wallet_api / wallet2 |
+| [Zentra source](https://github.com/Zentra-Privacy/zentra) | wallet_api / wallet2 |
 
 ### Zentra source location
 
@@ -28,7 +28,7 @@ The folder must contain `src/wallet/api/wallet2_api.h`.
 Example:
 
 ```bash
-git clone https://github.com/Foisalislambd/zentra.git ../zentra
+git clone -b zentra-main https://github.com/Zentra-Privacy/zentra.git ../zentra
 # or
 export ZENTRA_ROOT=/path/to/zentra
 ```

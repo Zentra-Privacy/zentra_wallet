@@ -34,7 +34,7 @@ Your **seed** and **wallet password** never leave your phone or computer except 
 ## What you need to run it
 
 1. **The app** — built or installed for Linux or Android (other platforms need extra native build work).
-2. **The native wallet library** — `libzentra_wallet_ffi.so`, built from this repo plus the [Zentra](https://github.com/Foisalislambd/zentra) source tree.
+2. **The native wallet library** — `libzentra_wallet_ffi.so`, built from this repo plus the [Zentra](https://github.com/Zentra-Privacy/zentra) source tree.
 3. **A reachable `zentrad` daemon** — for mainnet, the app can use built-in public seed nodes; for testnet/stagenet you typically run your own node locally.
 
 You do **not** need:
@@ -87,7 +87,7 @@ This is **not** a multi-chain wallet (no Bitcoin, Ethereum, etc. in one app).
 
 | Project | Role |
 |---------|------|
-| [Zentra](https://github.com/Foisalislambd/zentra) | Full node (`zentrad`), CLI wallet, consensus, `wallet_api` |
+| [Zentra](https://github.com/Zentra-Privacy/zentra) | Full node (`zentrad`), CLI wallet, consensus, `wallet_api` |
 | **This repo** | Flutter UI + FFI wrapper around `wallet2` |
 
 ---

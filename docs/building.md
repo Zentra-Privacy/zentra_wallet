@@ -109,7 +109,7 @@ Typical packages on Ubuntu/Debian (names may vary):
 - `libsodium-dev`, `libhidapi-libusb0`, `libusb-1.0-0-dev`
 - Optional: `libpgm-dev`, `libnorm-dev`
 
-Match what the [Zentra](https://github.com/Foisalislambd/zentra) README requires for building the full node.
+Match what the [Zentra](https://github.com/Zentra-Privacy/zentra) README requires for building the full node.
 
 ---
 
@@ -157,6 +157,15 @@ No `http` package — intentional.
 ---
 
 ## CI / reproducibility tips
+
+GitHub Actions workflows in `.github/workflows/`:
+
+| Workflow | Purpose |
+|----------|---------|
+| `ci.yml` | Format, analyze, test, Linux app build on every PR |
+| `build-native-linux.yml` | Rebuild `libzentra_wallet_ffi.so` from Zentra (tags, schedule, manual) |
+
+Install the same Ubuntu packages locally: `sudo ./scripts/ci-install-linux-deps.sh all`
 
 - Pin Zentra commit when releasing wallet builds
 - Build `.so` on the same distro/glibc as end users

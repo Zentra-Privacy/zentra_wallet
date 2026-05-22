@@ -40,7 +40,7 @@ export ZENTRA_WALLET_FFI_PATH=/full/path/to/libzentra_wallet_ffi.so
 
 **Fix:**
 
-- Clone [Zentra](https://github.com/Foisalislambd/zentra) to `../zentra` or `third_party/zentra`
+- Clone [Zentra](https://github.com/Zentra-Privacy/zentra) to `../zentra` or `third_party/zentra`
 - Or `export ZENTRA_ROOT=/path/to/zentra`
 - Verify `src/wallet/api/wallet2_api.h` exists
 
