@@ -162,7 +162,7 @@ GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Purpose |
 |----------|---------|
-| `ci.yml` | Format, analyze, test, Linux app build on every PR |
+| `ci.yml` | Analyze, test, Linux app build on every PR |
 | `build-native-linux.yml` | Rebuild `libzentra_wallet_ffi.so` from Zentra (tags, schedule, manual) |
 
 Install the same Ubuntu packages locally: `sudo ./scripts/ci-install-linux-deps.sh all`
