@@ -33,9 +33,9 @@ native_build_macos() {
   else
     zextra+=(-DARCH="x86-64")
   fi
-  local zbuild
-  zbuild="$(native_build_zentra_wallet_api "$ZENTRA_ROOT" "$HOST" "darwin-$arch" "$JOBS" \
-    "${zextra[@]}")" || return 1
+  local zbuild="$ZENTRA_ROOT/build/darwin-$arch/release"
+  native_build_zentra_wallet_api "$ZENTRA_ROOT" "$HOST" "darwin-$arch" "$JOBS" \
+    "${zextra[@]}" || return 1
 
   native_build_ffi_cmake "$ROOT" "$ZENTRA_ROOT" "$zbuild" "$toolchain" "$OUT" "darwin-$arch" "$JOBS" || return 1
   echo "==> macOS dylib ready for flutter build macos"

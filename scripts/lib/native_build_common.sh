@@ -76,7 +76,6 @@ native_build_zentra_wallet_api() {
     echo "Error: $zbuild/lib/libwallet_api.a missing"
     return 1
   }
-  echo "$zbuild"
 }
 
 native_build_ffi_cmake() {
