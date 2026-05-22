@@ -70,7 +70,7 @@ jobs:
     name: Linux (x64)
     needs: [rebuild-linux-native]
     if: ${{ !cancelled() && (needs.rebuild-linux-native.result == 'skipped' || needs.rebuild-linux-native.result == 'success') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5

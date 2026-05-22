@@ -163,8 +163,8 @@ GitHub Actions workflows in `.github/workflows/`:
 | Workflow | Purpose |
 |----------|---------|
 | `ci.yml` | Analyze, test, Linux app build on every PR |
-| `build-artifacts.yml` | Linux, Windows, Android APK, macOS — downloadable apps |
-| `build-native-linux.yml` | Rebuild `libzentra_wallet_ffi.so` from Zentra (tags, schedule, manual) |
+| `build-artifacts.yml` | Linux (22.04), Windows, Android APK, macOS — downloadable apps |
+| `build-native-linux.yml` | Rebuild `libzentra_wallet_ffi.so` on ubuntu-22.04 (weekly, manual) |
 
 Install the same Ubuntu packages locally: `sudo ./scripts/ci-install-linux-deps.sh all`
 

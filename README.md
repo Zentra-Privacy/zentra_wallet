@@ -41,7 +41,7 @@ Wallet files: app data dir `…/zentra_wallets/`.
 
 ## How to build and run (Linux)
 
-Follow these steps on **Ubuntu 22.04** (or similar Debian/Ubuntu). That is the supported dev platform.
+Follow these steps on **Ubuntu 22.04** (or similar Debian/Ubuntu). That is the supported dev platform. GitHub CI also builds the Linux app on **ubuntu-22.04** so it matches the native `.so`.
 
 ### 1. Prerequisites
 
