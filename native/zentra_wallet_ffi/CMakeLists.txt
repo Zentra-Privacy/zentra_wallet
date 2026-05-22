@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(zentra_wallet_ffi LANGUAGES CXX)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(ZentraDepends)
+
 if(DEFINED ZENTRA_ROOT)
   set(ZENTRA_ROOT "${ZENTRA_ROOT}")
 else()
@@ -34,8 +37,6 @@ macro(zentra_lib outvar relpath)
   endif()
 endmacro()
 
-# wallet-crypto is only built when Monero finds platform crypto libs; Android and
-# some cross targets use internal crypto (libcncrypto.a) instead.
 macro(zentra_lib_optional outvar relpath)
   set(_lib "${ZENTRA_BUILD}/${relpath}")
   if(EXISTS "${_lib}")
@@ -50,7 +51,7 @@ zentra_lib(ZENTRA_STATIC_LIBS lib/libwallet_api.a)
 zentra_lib(ZENTRA_STATIC_LIBS lib/libwallet.a)
 zentra_lib(ZENTRA_STATIC_LIBS src/rpc/librpc_base.a)
 zentra_lib(ZENTRA_STATIC_LIBS src/multisig/libmultisig.a)
-zentra_lib(ZENTRA_STATIC_LIBS src/device_trezor/libdevice_trezor.a)
+zentra_lib_optional(ZENTRA_STATIC_LIBS src/device_trezor/libdevice_trezor.a)
 zentra_lib(ZENTRA_STATIC_LIBS src/cryptonote_core/libcryptonote_core.a)
 zentra_lib(ZENTRA_STATIC_LIBS src/blockchain_db/libblockchain_db.a)
 zentra_lib(ZENTRA_STATIC_LIBS src/ringct/libringct.a)
@@ -74,26 +75,23 @@ zentra_lib(ZENTRA_STATIC_LIBS src/libversion.a)
 
 option(FFI_IOS "Build static libzentra_wallet_ffi for iOS (linked into app)" OFF)
 
-# Cross builds use Zentra contrib/depends toolchain (sets DEPENDS=ON).
 if(FFI_IOS)
   if(DEFINED IOS_DEPS_PREFIX)
-    list(PREPEND CMAKE_PREFIX_PATH "${IOS_DEPS_PREFIX}")
+    set(ZENTRA_DEPENDS_PREFIX "${IOS_DEPS_PREFIX}")
   endif()
-  set(Boost_NO_BOOST_CMAKE ON)
-  set(Boost_USE_STATIC_LIBS ON)
-  find_package(Boost REQUIRED COMPONENTS
-    chrono filesystem thread serialization locale regex program_options date_time)
-  find_package(OpenSSL REQUIRED)
-  find_package(Protobuf REQUIRED)
+  zentra_depends_init()
+  zentra_depends_external_libs(FFI_DEPENDS_LIBS)
   find_package(Threads REQUIRED)
 elseif(DEPENDS OR ANDROID)
+  zentra_depends_init()
+  zentra_depends_external_libs(FFI_DEPENDS_LIBS)
   find_package(Threads REQUIRED)
   if(ANDROID)
     find_library(LOG_LIB log)
   endif()
 else()
   find_package(Boost REQUIRED COMPONENTS
-    chrono filesystem thread serialization locale regex program_options date_time)
+    system chrono filesystem thread serialization locale regex program_options date_time)
   find_package(OpenSSL REQUIRED)
   find_package(Protobuf REQUIRED)
   find_library(UNBOUND_LIB unbound)
@@ -103,6 +101,7 @@ else()
   find_library(SODIUM_LIB sodium)
   find_library(PGM_LIB pgm)
   find_library(NORM_LIB norm)
+  find_package(Threads REQUIRED)
 endif()
 
 if(FFI_IOS)
@@ -123,15 +122,10 @@ if(NOT FFI_IOS)
 endif()
 
 if(FFI_IOS)
-  find_library(SODIUM_LIB sodium PATHS ${IOS_DEPS_PREFIX}/lib NO_DEFAULT_PATH)
   target_link_libraries(zentra_wallet_ffi PRIVATE
     "-Wl,-all_load"
     ${ZENTRA_STATIC_LIBS}
-    Boost::chrono Boost::filesystem Boost::thread Boost::serialization
-    Boost::locale Boost::regex Boost::program_options Boost::date_time
-    OpenSSL::SSL OpenSSL::Crypto
-    protobuf::libprotobuf
-    ${SODIUM_LIB}
+    ${FFI_DEPENDS_LIBS}
     ${CMAKE_DL_LIBS}
     Threads::Threads
     "-framework Foundation" "-framework UIKit" "-framework Security"
@@ -142,12 +136,9 @@ elseif(DEPENDS OR ANDROID)
     -Wl,--start-group
     ${ZENTRA_STATIC_LIBS}
     -Wl,--end-group
-    boost_chrono boost_filesystem boost_thread boost_serialization
-    boost_locale boost_regex boost_program_options boost_date_time
-    ssl crypto protobuf z sodium
+    ${FFI_DEPENDS_LIBS}
     ${CMAKE_DL_LIBS}
-    Threads::Threads
-  )
+    Threads::Threads)
   if(ANDROID)
     target_link_libraries(zentra_wallet_ffi PRIVATE ${LOG_LIB})
   endif()
@@ -158,23 +149,17 @@ elseif(DEPENDS OR ANDROID)
     target_link_libraries(zentra_wallet_ffi PRIVATE
       "-framework Foundation" "-framework IOKit" "-framework AppKit")
   endif()
-  if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-    target_link_libraries(zentra_wallet_ffi PRIVATE
-      "-framework Foundation" "-framework UIKit" "-framework Security"
-      "-framework SystemConfiguration" "-framework CFNetwork")
-  endif()
 else()
   target_link_libraries(zentra_wallet_ffi PRIVATE
     -Wl,--start-group
     ${ZENTRA_STATIC_LIBS}
     -Wl,--end-group
-    Boost::chrono Boost::filesystem Boost::thread Boost::serialization
+    Boost::system Boost::chrono Boost::filesystem Boost::thread Boost::serialization
     Boost::locale Boost::regex Boost::program_options Boost::date_time
     OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf
     ${UNBOUND_LIB} ${ZMQ_LIB} ${USB_LIB} ${HIDAPI_LIB}
     ${SODIUM_LIB} ${PGM_LIB} ${NORM_LIB}
-    ${CMAKE_DL_LIBS} pthread rt
-  )
+    ${CMAKE_DL_LIBS} pthread rt Threads::Threads)
 endif()
 
 set_target_properties(zentra_wallet_ffi PROPERTIES

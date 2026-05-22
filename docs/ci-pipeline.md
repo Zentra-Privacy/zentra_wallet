@@ -30,6 +30,8 @@ First run can take **2–6+ hours** (Zentra `contrib/depends`). GitHub cache spe
 
 Every run builds the engine from **Zentra v0.1.0** (no “skip rebuild” shortcut).
 
+**FFI linking (Android / Windows cross-build):** `native/zentra_wallet_ffi/cmake/ZentraDepends.cmake` resolves static `.a` files directly from `contrib/depends/<triplet>/lib` (tagged Boost names, no `-lboost_*`). Optional Zentra libs: `libwallet-crypto.a`, `libdevice_trezor.a` (Android uses `USE_DEVICE_TREZOR=OFF`). Phase 1 verifies bundle size and ELF architecture before upload.
+
 ---
 
 ## Phase 2 — Flutter apps

@@ -52,4 +52,7 @@ cp -f "$ROOT/packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll" "$STA
   echo "built_ubuntu=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } > "$STAGE/VERSION.txt"
 
+chmod +x "$ROOT/scripts/ci-verify-native-engine.sh"
+"$ROOT/scripts/ci-verify-native-engine.sh" "$STAGE"
+
 find "$STAGE" -type f -exec ls -lh {} \;
