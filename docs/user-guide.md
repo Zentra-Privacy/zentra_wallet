@@ -16,7 +16,7 @@ A practical walkthrough of Zentra Wallet for everyday use.
 
 Steps:
 
-1. **Choose network** — Mainnet (real ZTR), Testnet, or Stagenet
+1. **Choose network** — Mainnet (real ZTRA), Testnet, or Stagenet
 2. **Node** — Mainnet: pick Seed 1 or Seed 2; Testnet/Stagenet: ensure local `zentrad` is running
 3. **Wallet action** — one of:
    - **Create new wallet** — generates a new seed inside wallet2
@@ -41,7 +41,7 @@ Bottom tabs:
 | Tab | Purpose |
 |-----|---------|
 | **Dashboard** | Balance, sync chip, address snippet, Send / Receive, recent txs |
-| **Assets** | ZTR-focused asset view |
+| **Assets** | ZTRA-focused asset view |
 | **Transactions** | Full history list |
 | **Settings** | Network, node, backup, restore height |
 
@@ -58,7 +58,7 @@ Otherwise the app asks you to wait for sync.
 
 ---
 
-## Receive ZTR
+## Receive ZTRA
 
 1. Dashboard → **Receive** (or Assets flow)
 2. Shows your primary address and QR code
@@ -68,11 +68,11 @@ There is no separate “accounts” system in v1 — one primary address per wal
 
 ---
 
-## Send ZTR
+## Send ZTRA
 
 1. Dashboard → **Send**
 2. Enter recipient address (validated for current network)
-3. Enter amount in **ZTR** display units
+3. Enter amount in **ZTRA** display units
 4. App estimates **network fee** (separate from amount)
 5. Confirm — transaction is signed locally and relayed via daemon
 
@@ -146,7 +146,7 @@ Each wallet is a separate filename under the app’s `zentra_wallets` directory.
 3. Create or restore a **testnet** wallet (addresses start with `T`)
 4. Obtain test coins from a faucet or mining (see Zentra community docs)
 
-Do not send mainnet ZTR to testnet addresses.
+Do not send mainnet ZTRA to testnet addresses.
 
 ---
 

@@ -163,7 +163,7 @@ class EmbeddedWalletService {
     return fee;
   }
 
-  /// Sends [amountDisplay] ZTR. Network fee is extra (see [estimateFee]).
+  /// Sends [amountDisplay] ZTRA. Network fee is extra (see [estimateFee]).
   Future<String> send({
     required String address,
     required String amountDisplay,

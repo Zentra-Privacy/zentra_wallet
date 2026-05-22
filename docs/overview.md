@@ -7,7 +7,7 @@ Zentra Wallet is an official-style **self-custody** application for the Zentra c
 You use the app to:
 
 - Create a new wallet or restore from a seed phrase
-- Receive and send **ZTR**
+- Receive and send **ZTRA**
 - View balance and transaction history
 - Back up your seed phrase
 - Choose which network (mainnet, testnet, stagenet) and which **daemon node** to sync against
@@ -60,7 +60,7 @@ If the native library is missing, the app shows **“Wallet engine unavailable�
 
 ## Coin and networks
 
-Zentra Wallet supports **one coin family** — Zentra (ticker **ZTR**), on three networks:
+Zentra Wallet supports **one coin family** — Zentra (ticker **ZTRA**), on three networks:
 
 | Network | Address starts with | Default daemon port |
 |---------|---------------------|---------------------|
@@ -75,7 +75,7 @@ This is **not** a multi-chain wallet (no Bitcoin, Ethereum, etc. in one app).
 ## Features in the UI
 
 - **Dashboard** — balance, sync status, quick send/receive
-- **Assets** — placeholder asset view (ZTR-focused)
+- **Assets** — placeholder asset view (ZTRA-focused)
 - **Transactions** — incoming/outgoing history from wallet2
 - **Settings** — network, node, restore height, backup, switch wallet
 - **Send / Receive** — standard flows with address validation and fee estimate

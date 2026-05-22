@@ -17,7 +17,7 @@ class ReceiveScreen extends StatelessWidget {
     return ZentraScaffold(
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: const Text('Receive ZTR'),
+        title: const Text('Receive ZTRA'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -25,7 +25,7 @@ class ReceiveScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Share this address or QR code to receive Zentra (ZTR). Only send ZTR on the correct network.',
+              'Share this address or QR code to receive Zentra (ZTRA). Only send ZTRA on the correct network.',
               style: TextStyle(color: ZentraTheme.textMuted, fontSize: 13, height: 1.45),
             ),
             const SizedBox(height: 24),

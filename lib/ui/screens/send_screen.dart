@@ -105,9 +105,9 @@ class _SendScreenState extends State<SendScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _confirmRow('Amount', '$amount ZTR'),
-            _confirmRow('Network fee', '${wallet.formatAmount(_feeAtomic)} ZTR'),
-            _confirmRow('Total deducted', '${wallet.formatAmount(totalAtomic)} ZTR',
+            _confirmRow('Amount', '$amount ZTRA'),
+            _confirmRow('Network fee', '${wallet.formatAmount(_feeAtomic)} ZTRA'),
+            _confirmRow('Total deducted', '${wallet.formatAmount(totalAtomic)} ZTRA',
                 bold: true),
             const SizedBox(height: 12),
             const Text('To:', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
@@ -171,7 +171,7 @@ class _SendScreenState extends State<SendScreen> {
     if (amountAtomic + _feeAtomic > unlocked) {
       zentraSnack(
         context,
-        'Need ${wallet.formatAmount(amountAtomic + _feeAtomic)} ZTR unlocked (amount + fee)',
+        'Need ${wallet.formatAmount(amountAtomic + _feeAtomic)} ZTRA unlocked (amount + fee)',
         isError: true,
       );
       return;
@@ -202,7 +202,7 @@ class _SendScreenState extends State<SendScreen> {
     return ZentraScaffold(
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: const Text('Send ZTR'),
+        title: const Text('Send ZTRA'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -245,9 +245,9 @@ class _SendScreenState extends State<SendScreen> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: 'Amount',
-                suffixText: 'ZTR',
+                suffixText: 'ZTRA',
                 helperText: unlocked != null
-                    ? 'Unlocked: ${wallet.formatAmount(unlocked)} ZTR'
+                    ? 'Unlocked: ${wallet.formatAmount(unlocked)} ZTRA'
                     : null,
               ),
             ),
@@ -277,7 +277,7 @@ class _SendScreenState extends State<SendScreen> {
                         )
                       else
                         Text(
-                          '${wallet.formatAmount(_feeAtomic)} ZTR',
+                          '${wallet.formatAmount(_feeAtomic)} ZTRA',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                     ],
@@ -291,7 +291,7 @@ class _SendScreenState extends State<SendScreen> {
                       children: [
                         const Text('Total from wallet', style: TextStyle(fontSize: 13)),
                         Text(
-                          '${wallet.formatAmount(totalNeeded)} ZTR',
+                          '${wallet.formatAmount(totalNeeded)} ZTRA',
                           style: const TextStyle(fontWeight: FontWeight.w600, color: ZentraTheme.accent),
                         ),
                       ],

@@ -109,7 +109,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     return ZentraTxRow(
       title: incoming ? 'Received' : 'Sent',
       subtitle: '${UiFormat.truncateMiddle(t.txid, head: 8, tail: 6)} · ${UiFormat.relativeTime(t.timestamp)}',
-      amount: '${incoming ? '+' : '-'}${format(t.amountAtomic)} ZTR',
+      amount: '${incoming ? '+' : '-'}${format(t.amountAtomic)} ZTRA',
       isIncoming: incoming,
       pending: t.pending,
       showDivider: showDivider,
@@ -135,7 +135,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
-            ZentraCopyField(label: 'Amount', value: '${format(t.amountAtomic)} ZTR', maxLines: 1),
+            ZentraCopyField(label: 'Amount', value: '${format(t.amountAtomic)} ZTRA', maxLines: 1),
             const SizedBox(height: 12),
             ZentraCopyField(label: 'Transaction ID', value: t.txid),
             const SizedBox(height: 8),

@@ -8,7 +8,7 @@ Frequently asked questions about Zentra Wallet.
 
 **Yes, for custody.** Keys and signing are on your device via embedded wallet2. You only connect to a remote **daemon** (`zentrad`), not a wallet-RPC server.
 
-**No, for coins.** Cake supports multiple assets; this app supports **Zentra (ZTR)** only.
+**No, for coins.** Cake supports multiple assets; this app supports **Zentra (ZTRA)** only.
 
 ---
 
@@ -70,7 +70,7 @@ The Flutter project includes those platforms, but the **full native wallet libra
 
 ## How do amounts work?
 
-Internally amounts are **atomic** integers. The UI shows human **ZTR** via `ZentraCore` conversion helpers.
+Internally amounts are **atomic** integers. The UI shows human **ZTRA** via `ZentraCore` conversion helpers.
 
 ---
 
