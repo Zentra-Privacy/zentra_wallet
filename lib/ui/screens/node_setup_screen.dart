@@ -7,6 +7,7 @@ import '../../core/network/zentra_public_nodes.dart';
 import '../../models/wallet_models.dart';
 import '../../core/native_wallet_messages.dart';
 import '../../providers/wallet_provider.dart';
+import '../network_ui.dart';
 
 /// Configure remote zentrad (daemon) — wallet keys stay on device.
 class NodeSetupScreen extends StatefulWidget {
@@ -111,27 +112,30 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
                   ...ZentraPublicNode.mainnetNodes.map(
                     (node) => RadioListTile<String>(
                       value: node.id,
-                      title: Text(node.label),
-                      subtitle: Text('Daemon ${node.daemonAddress}'),
+                      title: Text(NetworkUi.seedNodeLabel(node)),
+                      subtitle: const Text('Mainnet seed node'),
                     ),
                   ),
                   const RadioListTile<String>(
                     value: 'custom',
                     title: Text('Custom daemon'),
+                    subtitle: Text('Your own zentrad host'),
                   ),
                 ],
               ),
             ),
           ],
-          const SizedBox(height: 12),
-          TextField(
-            controller: _daemon,
-            decoration: const InputDecoration(
-              labelText: 'Daemon address (host:port)',
-              helperText: 'Mainnet: 185.182.185.127:19081 or 213.136.78.112:19081',
+          if (_useCustom) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _daemon,
+              decoration: const InputDecoration(
+                labelText: 'Daemon address (host:port)',
+                helperText: 'Advanced: host and RPC port of your zentrad',
+              ),
+              onChanged: (_) => setState(() => _useCustom = true),
             ),
-            onChanged: (_) => setState(() => _useCustom = true),
-          ),
+          ],
           const SizedBox(height: 24),
           FilledButton(onPressed: _save, child: const Text('Save')),
         ],
