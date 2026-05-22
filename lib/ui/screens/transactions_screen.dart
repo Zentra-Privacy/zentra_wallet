@@ -69,6 +69,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           child: SegmentedButton<int>(
             style: ButtonStyle(
               side: WidgetStateProperty.all(const BorderSide(color: ZentraTheme.border)),
+              foregroundColor: WidgetStateProperty.resolveWith((s) {
+                return s.contains(WidgetState.selected)
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.55);
+              }),
               backgroundColor: WidgetStateProperty.resolveWith((s) {
                 return s.contains(WidgetState.selected) ? ZentraTheme.surface : ZentraTheme.card;
               }),
