@@ -9,7 +9,8 @@ MODE="${1:-all}"
 _flutter_deps() {
   apt-get install -y --no-install-recommends \
     clang cmake ninja-build pkg-config \
-    libgtk-3-dev liblzma-dev libstdc++-12-dev
+    libgtk-3-dev liblzma-dev libstdc++-12-dev \
+    libsecret-1-dev
 }
 
 # Matches Zentra scripts/install-deps.sh (required to build wallet_api + zentrad).
