@@ -89,25 +89,6 @@ class _DashboardTab extends StatelessWidget {
             isRefreshing: wallet.isRefreshing,
             onRefresh: wallet.refresh,
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-            child: ZentraConnectionChip(
-              label: wallet.connectionStatusLabel,
-              isError: wallet.connectionState == WalletConnectionState.error,
-              isSyncing: wallet.isWalletBehindDaemon ||
-                  wallet.connectionState == WalletConnectionState.connecting,
-            ),
-          ),
-          if (wallet.isWalletBehindDaemon)
-            ZentraSyncBanner(
-              message: 'Syncing with the network…',
-              subtitle: wallet.syncProgressLabel,
-              progress: wallet.syncProgressFraction,
-            )
-          else if (wallet.connectionState == WalletConnectionState.connecting)
-            const ZentraSyncBanner(message: 'Connecting to node…')
-          else if (wallet.connectionState == WalletConnectionState.error)
-            ZentraSyncBanner(message: wallet.errorMessage ?? 'Something went wrong', isError: true),
           ZentraHeroBalanceCard(
             amountZtr: balance != null
                 ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA'
