@@ -162,8 +162,8 @@ GitHub Actions workflows in `.github/workflows/`:
 
 | Workflow | Purpose |
 |----------|---------|
-| `ci.yml` | Analyze, test, Linux app build on every PR |
-| `build-artifacts.yml` | Linux (22.04), Windows, Android APK, macOS — downloadable apps |
+| `ci.yml` | Analyze, test, Linux debug build — every **PR** and push to `main` / `master` |
+| `build-artifacts.yml` | Release builds + draft/published releases — push to `main` / `master`, tag `v*`, or manual dispatch (not on PR) |
 
 Install the same Ubuntu packages locally: `sudo ./scripts/ci-install-linux-deps.sh all`
 

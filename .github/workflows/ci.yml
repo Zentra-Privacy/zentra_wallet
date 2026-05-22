@@ -14,6 +14,9 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   analyze-and-test:
     name: Analyze & test
@@ -67,7 +70,7 @@ jobs:
       - name: Verify native wallet library
         run: |
           test -f packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so || {
-            echo "::error::libzentra_wallet_ffi.so missing. Run ./wallet.sh build locally or trigger the native-build workflow."
+            echo "::error::libzentra_wallet_ffi.so missing. Run ./wallet.sh build locally and commit packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so"
             exit 1
           }
 

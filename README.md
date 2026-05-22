@@ -162,7 +162,7 @@ Build the `.so` on the same OS/glibc you ship on:
 | Workflow | When | What it does |
 |----------|------|----------------|
 | [**CI**](.github/workflows/ci.yml) | Every push / PR to `main` | Analyze, test, Linux debug build |
-| [**Build apps**](.github/workflows/build-artifacts.yml) | `main`, tags `v*`, or **Run workflow** | **Linux / Windows / APK / macOS** + draft or published release (uses committed `libzentra_wallet_ffi.so`) |
+| [**Build apps**](.github/workflows/build-artifacts.yml) | Push to `main`, tag `v*`, or **Run workflow** (not PRs) | **Linux / Windows / APK / macOS** + draft or published release (uses committed `libzentra_wallet_ffi.so`) |
 
 ### Download built apps (Linux / Windows / APK / macOS)
 

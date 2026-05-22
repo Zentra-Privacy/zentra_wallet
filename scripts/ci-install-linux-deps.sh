@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Install Ubuntu packages for Zentra Wallet (Flutter Linux + native FFI build).
-# Native packages align with Zentra scripts/install-deps.sh (Zentra-Privacy/zentra).
+# Install Ubuntu packages for Zentra Wallet.
+#   flutter — CI / flutter build linux (ci.yml, build-artifacts.yml)
+#   native  — local ./wallet.sh build (Zentra source; matches Zentra install-deps.sh)
+#   all     — both (recommended for full local dev)
 # Usage: sudo ./scripts/ci-install-linux-deps.sh [flutter|native|all]
 set -euo pipefail
 
