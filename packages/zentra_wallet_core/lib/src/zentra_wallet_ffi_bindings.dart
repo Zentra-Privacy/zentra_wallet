@@ -18,7 +18,7 @@ class ZentraNativeWallet {
   static ZentraNativeWallet get instance {
     if (_instance != null) return _instance!;
     throw NativeWalletUnavailable(
-      'Native wallet not loaded. Run: ./scripts/build_native_wallet.sh',
+      'Native wallet not loaded. Run: ./wallet.sh build-docker',
     );
   }
 

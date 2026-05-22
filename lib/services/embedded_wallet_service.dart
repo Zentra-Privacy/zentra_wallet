@@ -15,7 +15,7 @@ class EmbeddedWalletService {
   }) {
     if (!ZentraNativeWallet.isAvailable) {
       throw NativeWalletUnavailable(
-        'Native wallet library missing. Run: ./scripts/build_native_wallet.sh',
+        'Native wallet library missing. Run: ./wallet.sh build-docker',
       );
     }
     _native = ZentraNativeWallet.instance;
