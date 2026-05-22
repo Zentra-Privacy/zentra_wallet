@@ -43,31 +43,38 @@ Wallet files: app data dir `…/zentra_wallets/`.
 ./wallet.sh
 ```
 
-Interactive menu: install Docker, build native lib in Ubuntu 22 container, run Linux app, status, clean cache.
+Interactive menu: build native library, run Linux app, status, clean test data.
 
 Non-interactive shortcuts:
 
 ```bash
 ./wallet.sh status
-./wallet.sh build-docker
+./wallet.sh build
 ./wallet.sh run
-./wallet.sh full          # build-docker + run
+./wallet.sh full          # build + run
 ```
 
 ### All commands (`./wallet.sh help`)
 
 | Command | Purpose |
 |---------|---------|
-| `install-docker` | Docker Engine (one-time) |
-| `build-docker` | Native `.so` in Ubuntu 22 container |
-| `build-host` | Native `.so` on host |
+| `build` | Native `libzentra_wallet_ffi.so` on this machine |
 | `run` | Flutter Linux app |
 | `clean-data` | Reset local test wallet files |
-| `docker-clean` | Remove wallet Docker containers / image / cache |
-| `clean-docker` | Remove `build/docker/` folder only |
+| `status` | Zentra path, native lib, Flutter |
 
 Output: `packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so`  
 Implementation: `scripts/wallet.sh` + `scripts/lib/`
+
+### Ubuntu 22 VM (recommended for release-like builds)
+
+Build and run on the VM so the `.so` links against the same glibc/Boost as production:
+
+```bash
+# On Ubuntu 22 VM: install build deps (cmake, boost, protobuf, …) + Flutter
+./wallet.sh build
+./wallet.sh run
+```
 
 ## Networks
 
@@ -81,4 +88,4 @@ Implementation: `scripts/wallet.sh` + `scripts/lib/`
 
 - `lib/` — Flutter app (no wallet-RPC client)
 - `native/zentra_wallet_ffi/` — C API over `wallet2`
-- `wallet.sh` — build, Docker, run (single entry point)
+- `wallet.sh` — build and run (single entry point)

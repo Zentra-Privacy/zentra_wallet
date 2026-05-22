@@ -2,7 +2,7 @@
 # Zentra Wallet — single entry point (menu + all commands).
 #
 #   ./wallet.sh              interactive menu
-#   ./wallet.sh build-docker
+#   ./wallet.sh build
 #   ./wallet.sh run
 #   ./wallet.sh help
 #
@@ -15,19 +15,13 @@ export WALLET_ROOT="$ROOT"
 LIB="$ROOT/scripts/lib"
 # shellcheck source=lib/native_build.sh
 source "$LIB/native_build.sh"
-# shellcheck source=lib/docker_native.sh
-source "$LIB/docker_native.sh"
-# shellcheck source=lib/install_docker.sh
-source "$LIB/install_docker.sh"
 # shellcheck source=lib/flutter_run.sh
 source "$LIB/flutter_run.sh"
 # shellcheck source=lib/clean_data.sh
 source "$LIB/clean_data.sh"
 
 SO_PATH="$ROOT/packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so"
-DOCKER_IMAGE="${NATIVE_IMAGE:-zentra-wallet-native-build:ubuntu22}"
 
-# Colors only on real terminals (avoid raw escape junk in logs / IDE panels)
 _USE_COLOR=0
 if [[ -t 1 && -z "${NO_COLOR:-}" && "${TERM:-}" != dumb ]]; then
   _USE_COLOR=1
@@ -63,74 +57,27 @@ cmd_status() {
   _hr
   local z; z="$(_resolve_zentra)"
   [[ -n "$z" ]] && _ok "Zentra: $z" || _warn "Zentra: not found"
-  [[ -f "$SO_PATH" ]] && _ok "Native lib: $(ls -lh "$SO_PATH" | awk '{print $5, $9}')" || _warn "Native lib: missing"
-  if command -v docker >/dev/null 2>&1; then
-    if docker info >/dev/null 2>&1; then
-      _ok "Docker: OK"
-    elif sudo docker info >/dev/null 2>&1; then
-      _warn "Docker: needs sudo (run: newgrp docker)"
-    else
-      _err "Docker: daemon down"
-    fi
-  else
-    _warn "Docker: not installed"
-  fi
+  [[ -f "$SO_PATH" ]] && _ok "Native lib: $(ls -lh "$SO_PATH" | awk '{print $5, $9}')" || _warn "Native lib: missing (run: ./wallet.sh build)"
   command -v flutter >/dev/null 2>&1 && _ok "Flutter: $(flutter --version 2>/dev/null | head -1)" || _warn "Flutter: not in PATH"
   _hr
 }
 
-cmd_install_docker() { install_docker_engine; }
-
-cmd_build_docker() {
+cmd_build() {
   local z="${1:-$(_resolve_zentra)}"
-  if [[ -z "$z" ]]; then
-    _err "Zentra source not found. Set ZENTRA_ROOT or clone into third_party/zentra"
-    return 1
-  fi
-  docker_native_build "$z"
-}
-
-cmd_build_host() {
-  local z="${1:-$(_resolve_zentra)}"
-  [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
+  [[ -z "$z" ]] && { _err "Zentra source not found. Set ZENTRA_ROOT or clone into third_party/zentra"; return 1; }
   native_build_host "$z"
 }
 
-cmd_rebuild_image() { REBUILD_IMAGE=1 cmd_build_docker "${1:-}"; }
-
 cmd_run_app() {
-  [[ ! -f "$SO_PATH" ]] && { _warn "Building native lib first…"; cmd_build_docker || return 1; }
+  [[ ! -f "$SO_PATH" ]] && { _warn "Building native lib first…"; cmd_build || return 1; }
   flutter_wallet_run -d linux "$@"
 }
 
 cmd_devices() { flutter_wallet_run -l; }
 
-cmd_clean_docker_cache() {
-  read -r -p "Remove build/docker/? Type yes: " a
-  [[ "$a" == "yes" ]] && rm -rf "$ROOT/build/docker" && _ok "Removed build/docker/" || echo "Cancelled"
-}
-
-cmd_clean_docker() {
-  printf '%bDocker cleanup%b\n' "$C_BOLD" "$C_RESET"
-  cat <<'EOF'
-
-  a) Containers only (wallet image + stopped prune)
-  b) Containers + remove Docker image
-  c) Everything: containers + image + build/docker/ cache
-
-EOF
-  read -r -p "Choose [a/b/c] or Enter to cancel: " choice
-  case "$choice" in
-    a|A) docker_cleanup_wallet ;;
-    b|B) docker_cleanup_wallet --image ;;
-    c|C) docker_cleanup_wallet --image --cache ;;
-    *) echo "Cancelled." ;;
-  esac
-}
-
 cmd_clean_data() { clean_wallet_data "$@"; }
 
-cmd_full_flow() { cmd_build_docker; echo; cmd_run_app; }
+cmd_full_flow() { cmd_build; echo; cmd_run_app; }
 
 _ask_zentra_path() {
   local c; c="$(_resolve_zentra)"
@@ -149,7 +96,6 @@ _ask_zentra_path() {
 }
 
 _show_menu() {
-  # Never clear — keeps build logs visible in the terminal
   echo ""
   _hr
   printf '%b%b  Zentra Wallet%b\n' "$C_BOLD" "$C_CYAN" "$C_RESET"
@@ -160,23 +106,17 @@ _show_menu() {
   fi
   _hr
   cat <<'MENU'
-  1   Install Docker
-  2   Build native library (Docker / Ubuntu 22)  *
-  3   Build native library (this PC)
-  4   Run app (Linux)
-  5   Build + Run
-  6   Flutter devices
-  7   Rebuild Docker image
-  8   Clean Docker cache (build/docker/)
-  9   Status
-  10  Clean wallet test data
-  11  Remove Docker containers / image
+  1   Build native library
+  2   Run app (Linux)
+  3   Build + Run
+  4   Flutter devices
+  5   Status
+  6   Clean wallet test data
   0   Exit
 MENU
   _hr
 }
 
-# Run a command with live stdout/stderr (no screen clear afterward).
 _run_menu_action() {
   local title="$1"
   shift
@@ -204,28 +144,17 @@ _run_menu_action() {
 _menu_loop() {
   while true; do
     _show_menu
-    read -r -p "Choice [0-11]: " c
+    read -r -p "Choice [0-6]: " c
     case "$c" in
-      1) _run_menu_action "Install Docker" cmd_install_docker ;;
-      2)
+      1)
         p="$(_ask_zentra_path 2>/dev/null || true)"
-        [[ -n "${p:-}" ]] && _run_menu_action "Build native (Docker)" cmd_build_docker "$p"
+        [[ -n "${p:-}" ]] && _run_menu_action "Build native library" cmd_build "$p"
         ;;
-      3)
-        p="$(_ask_zentra_path 2>/dev/null || true)"
-        [[ -n "${p:-}" ]] && _run_menu_action "Build native (host)" cmd_build_host "$p"
-        ;;
-      4) _run_menu_action "Run app (Linux)" cmd_run_app ;;
-      5) _run_menu_action "Build + Run" cmd_full_flow ;;
-      6) _run_menu_action "Flutter devices" cmd_devices ;;
-      7)
-        p="$(_ask_zentra_path 2>/dev/null || true)"
-        [[ -n "${p:-}" ]] && _run_menu_action "Rebuild Docker image" cmd_rebuild_image "$p"
-        ;;
-      8) _run_menu_action "Clean Docker cache" cmd_clean_docker_cache ;;
-      9) _run_menu_action "Status" cmd_status ;;
-      10) _run_menu_action "Clean wallet data" cmd_clean_data ;;
-      11) _run_menu_action "Docker cleanup" cmd_clean_docker ;;
+      2) _run_menu_action "Run app (Linux)" cmd_run_app ;;
+      3) _run_menu_action "Build + Run" cmd_full_flow ;;
+      4) _run_menu_action "Flutter devices" cmd_devices ;;
+      5) _run_menu_action "Status" cmd_status ;;
+      6) _run_menu_action "Clean wallet data" cmd_clean_data ;;
       0|q|Q) echo "Bye."; exit 0 ;;
       *) _err "Invalid choice: $c"; sleep 1 ;;
     esac
@@ -235,27 +164,27 @@ _menu_loop() {
 case "${1:-}" in
   ""|menu) _menu_loop ;;
   status) cmd_status ;;
-  install-docker) cmd_install_docker ;;
-  build-docker|build) shift; cmd_build_docker "${1:-}" ;;
-  build-host) shift; cmd_build_host "${1:-}" ;;
-  rebuild-image) shift; cmd_rebuild_image "${1:-}" ;;
+  build|build-host) shift; cmd_build "${1:-}" ;;
   run|start) shift; cmd_run_app "$@" ;;
   devices) cmd_devices ;;
-  clean-docker) cmd_clean_docker_cache ;;
-  clean-docker-containers|docker-clean) shift; docker_cleanup_wallet "$@" ;;
   clean-data) shift; cmd_clean_data "$@" ;;
   full|all) cmd_full_flow ;;
   help|-h|--help)
     cat <<EOF
 Zentra Wallet — ./wallet.sh
 
-  ./wallet.sh                 Interactive menu (live build output)
-  ./wallet.sh build-docker    Build .so in Docker (streams to terminal)
-  ./wallet.sh run             Run Linux app
-  ./wallet.sh full            build-docker + run
+  ./wallet.sh              Interactive menu
+  ./wallet.sh build        Build libzentra_wallet_ffi.so (native, this machine)
+  ./wallet.sh run          Run Linux app
+  ./wallet.sh full         build + run
+  ./wallet.sh status       Zentra / native lib / Flutter
 
-Tip: For fastest rebuild when .so exists, use menu [2] — skips image if already built.
+Build on Ubuntu 22 VM: clone repo there, install deps, then ./wallet.sh build && ./wallet.sh run
 EOF
     ;;
-  *) _err "Unknown: $1"; echo "  ./wallet.sh help"; exit 1 ;;
+  *)
+    _err "Unknown: $1"
+    echo "  ./wallet.sh help"
+    exit 1
+    ;;
 esac
