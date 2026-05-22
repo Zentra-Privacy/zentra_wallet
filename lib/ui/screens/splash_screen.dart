@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -52,14 +55,19 @@ class _SplashScreenState extends State<SplashScreen> {
       );
       if (!mounted) return;
       if (ok) {
-        await provider.refresh().timeout(const Duration(seconds: 20));
+        try {
+          await provider.refresh().timeout(const Duration(seconds: 20));
+        } on TimeoutException {
+          provider.errorMessage = provider.errorMessage ??
+              'Refresh timed out. Pull down on Home to retry.';
+        }
       }
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } catch (e, st) {
-      debugPrint('Splash boot error: $e\n$st');
+      if (kDebugMode) debugPrint('Splash boot error: $e\n$st');
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const OnboardingScreen()),

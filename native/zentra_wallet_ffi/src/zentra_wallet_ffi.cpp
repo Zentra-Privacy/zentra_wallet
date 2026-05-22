@@ -166,9 +166,11 @@ std::string json_escape(const std::string& s) {
 std::string full_path(const char* name) {
   if (!name || !*name) return {};
   std::string p(name);
-  if (p.find('/') != std::string::npos || p.find('\\') != std::string::npos) {
-    return p;
+  const auto slash = p.find_last_of("/\\");
+  if (slash != std::string::npos) {
+    p = p.substr(slash + 1);
   }
+  if (p.empty() || p == "." || p == "..") return {};
   if (g_wallet_dir.empty()) return p;
   return g_wallet_dir + "/" + p;
 }

@@ -20,6 +20,7 @@ class _SendScreenState extends State<SendScreen> {
   int _feeAtomic = 0;
   bool _estimatingFee = false;
   int _priority = 0;
+  int _feeEstimateGeneration = 0;
 
   @override
   void initState() {
@@ -37,34 +38,35 @@ class _SendScreenState extends State<SendScreen> {
 
   void _scheduleFeeEstimate() {
     if (mounted) setState(() {});
+    final gen = ++_feeEstimateGeneration;
     Future<void>.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) _updateFeeEstimate();
+      if (mounted && gen == _feeEstimateGeneration) _updateFeeEstimate(gen);
     });
   }
 
-  Future<void> _updateFeeEstimate() async {
+  Future<void> _updateFeeEstimate(int gen) async {
     final wallet = context.read<WalletProvider>();
     final addr = _address.text.trim();
     final amount = _amount.text.trim();
     if (!wallet.validateAddress(addr) || wallet.parseAmount(amount) <= 0) {
-      if (mounted) setState(() => _feeAtomic = 0);
+      if (mounted && gen == _feeEstimateGeneration) setState(() => _feeAtomic = 0);
       return;
     }
-    setState(() => _estimatingFee = true);
+    if (mounted) setState(() => _estimatingFee = true);
     try {
       final fee = await wallet.estimateTransferFee(
         address: addr,
         amount: amount,
         priority: _priority,
       );
-      if (mounted) {
+      if (mounted && gen == _feeEstimateGeneration) {
         setState(() {
           _feeAtomic = fee;
           _estimatingFee = false;
         });
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && gen == _feeEstimateGeneration) {
         setState(() {
           _feeAtomic = 0;
           _estimatingFee = false;
@@ -236,7 +238,7 @@ class _SendScreenState extends State<SendScreen> {
               onChanged: (v) {
                 if (v == null) return;
                 setState(() => _priority = v);
-                _updateFeeEstimate();
+                _scheduleFeeEstimate();
               },
             ),
             const SizedBox(height: 16),

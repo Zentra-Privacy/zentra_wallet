@@ -114,7 +114,7 @@ class SettingsScreen extends StatelessWidget {
           subtitle: wallet.networkConfig?.label ?? 'Mainnet',
           trailing: DropdownButtonHideUnderline(
             child: DropdownButton<ZentraNetType>(
-              value: ZentraNetType.mainnet,
+              value: wallet.networkType,
               dropdownColor: ZentraTheme.card,
               items: ZentraNetType.values
                   .map(

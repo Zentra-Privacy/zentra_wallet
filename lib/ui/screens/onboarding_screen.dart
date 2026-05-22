@@ -24,7 +24,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   int _step = 0;
-  ZentraNetType _network = ZentraNetType.mainnet;
+  final ZentraNetType _network = ZentraNetType.mainnet;
   final _filename = TextEditingController(text: 'zentra_mobile');
   final _password = TextEditingController();
   final _seed = TextEditingController();
