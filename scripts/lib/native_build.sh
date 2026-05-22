@@ -52,31 +52,36 @@ native_build_host() {
     fi
   }
 
-  local _need=0
-  if [[ ! -f "$ZENTRA_BUILD/Makefile" && ! -f "$ZENTRA_BUILD/build.ninja" ]]; then _need=1; fi
-  if [[ ! -f "$WALLET_API_LIB" ]]; then _need=1; fi
   if [[ -f "$ZENTRA_BUILD/CMakeCache.txt" ]] && ! _zentra_cmake_cache_matches; then
     echo "==> Removing stale CMake cache (configured for a different path than $ZENTRA_ROOT)"
     rm -rf "$ZENTRA_BUILD"
-    _need=1
   fi
 
-  if [[ "$_need" -eq 1 ]]; then
+  # Default Zentra build (scripts/build.sh) does not build wallet_api — it is EXCLUDE_FROM_ALL.
+  if [[ ! -f "$ZENTRA_BUILD/CMakeCache.txt" ]]; then
     if [[ "$ZENTRA_BUILD" == "$_DEFAULT_BUILD" ]] && [[ -x "$ZENTRA_ROOT/scripts/build.sh" ]]; then
       echo "==> Configuring & building Zentra (release) via scripts/build.sh..."
       (cd "$ZENTRA_ROOT" && scripts/build.sh release)
     else
       _configure_zentra_cmake
-      echo "==> Building wallet_api and dependencies..."
-      cmake --build "$ZENTRA_BUILD" --target wallet_api --parallel "$JOBS"
+      echo "==> Building Zentra default targets..."
+      cmake --build "$ZENTRA_BUILD" --parallel "$JOBS"
     fi
-  else
-    echo "==> Building wallet_api target..."
+  elif [[ ! -f "$ZENTRA_BUILD/lib/libwallet.a" ]]; then
+    echo "==> Zentra build tree incomplete — building default targets..."
+    cmake --build "$ZENTRA_BUILD" --parallel "$JOBS"
+  fi
+
+  if [[ ! -f "$WALLET_API_LIB" ]]; then
+    echo "==> Building wallet_api (required for FFI; not part of default Zentra build)..."
     cmake --build "$ZENTRA_BUILD" --target wallet_api --parallel "$JOBS"
+  else
+    echo "==> wallet_api already present"
   fi
 
   if [[ ! -f "$WALLET_API_LIB" ]]; then
     echo "Error: $WALLET_API_LIB not found after wallet_api build"
+    echo "       Try: cmake --build \"$ZENTRA_BUILD\" --target wallet_api"
     return 1
   fi
 
