@@ -45,9 +45,8 @@ jobs:
           path: |
             third_party/zentra/contrib/depends
             third_party/zentra/build
-          key: zentra-${{ env.ZENTRA_REF }}-${{ hashFiles('scripts/**', 'native/zentra_wallet_ffi/**') }}
-          restore-keys: |
-            zentra-${{ env.ZENTRA_REF }}-
+          # PATCHSET_VERSION + patch files must bump when depends recipes change.
+          key: zentra-${{ env.ZENTRA_REF }}-p${{ hashFiles('scripts/patches/zentra-depends/**', 'scripts/ci-patch-zentra-depends.sh', 'native/zentra_wallet_ffi/**', 'scripts/lib/native_build*.sh', 'scripts/ci-build-native-engine-ubuntu.sh') }}
 
       - name: Build engine (Ubuntu)
         run: |

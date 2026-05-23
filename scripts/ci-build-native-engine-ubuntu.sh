@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Phase 1 (Ubuntu): build wallet engine from Zentra v0.1.0 — Linux .so, Android ABIs, Windows .dll
+# Phase 1 (Ubuntu): build wallet engine from Zentra v0.1.0 — Linux .so, Windows .dll, Android ABIs
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -17,21 +17,19 @@ source "$ROOT/scripts/lib/native_build_android.sh"
 # shellcheck source=lib/native_build_mingw.sh
 source "$ROOT/scripts/lib/native_build_mingw.sh"
 
-chmod +x "$ROOT/scripts/ci-clone-zentra.sh"
+chmod +x "$ROOT/scripts/ci-clone-zentra.sh" \
+  "$ROOT/scripts/ci-patch-zentra-depends.sh" \
+  "$ROOT/scripts/ci-preflight-engine.sh" \
+  "$ROOT/scripts/ci-verify-native-engine.sh"
+
 "$ROOT/scripts/ci-clone-zentra.sh" "$ROOT/third_party/zentra"
+"$ROOT/scripts/ci-patch-zentra-depends.sh" "$ROOT/third_party/zentra"
 # shellcheck disable=SC1091
 source "$ROOT/build/zentra-checkout.env"
 ZENTRA="$zentra_path"
 
 native_prepare_python_shim "$ROOT"
-
-if ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1 \
-  || ! x86_64-w64-mingw32-gcc -dumpmachine >/dev/null 2>&1; then
-  echo "::error::MinGW cross compiler missing (needed for Windows .dll in this job)."
-  echo "       CI must run: sudo ./scripts/ci-install-linux-deps.sh all"
-  echo "       (installs g++-mingw-w64-x86-64 gcc-mingw-w64-x86-64 mingw-w64)"
-  exit 1
-fi
+"$ROOT/scripts/ci-preflight-engine.sh" "$ZENTRA"
 
 rm -rf "$STAGE"
 mkdir -p "$STAGE/linux" "$STAGE/windows" "$STAGE/android/arm64-v8a" "$STAGE/android/armeabi-v7a"
@@ -39,6 +37,11 @@ mkdir -p "$STAGE/linux" "$STAGE/windows" "$STAGE/android/arm64-v8a" "$STAGE/andr
 echo "==> Linux x64 (host build, Zentra $zentra_tag)"
 native_build_host "$ZENTRA"
 cp -f "$ROOT/packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so" "$STAGE/linux/"
+
+# Windows before Android: fail fast on MinGW/zeromq instead of after 2–4h of Android depends.
+echo "==> Windows x64 (MinGW) — before Android to catch cross-compile issues early"
+native_build_mingw "$ZENTRA"
+cp -f "$ROOT/packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll" "$STAGE/windows/"
 
 echo "==> Android arm64-v8a"
 native_build_android "$ZENTRA" arm64-v8a
@@ -50,17 +53,13 @@ native_build_android "$ZENTRA" armeabi-v7a
 cp -f "$ROOT/packages/zentra_wallet_core/android/src/main/jniLibs/armeabi-v7a/libzentra_wallet_ffi.so" \
   "$STAGE/android/armeabi-v7a/"
 
-echo "==> Windows x64 (MinGW)"
-native_build_mingw "$ZENTRA"
-cp -f "$ROOT/packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll" "$STAGE/windows/"
-
 {
   echo "zentra_tag=${zentra_tag}"
   echo "zentra_commit=${zentra_commit}"
+  echo "patchset=$(cat "$ROOT/scripts/patches/zentra-depends/PATCHSET_VERSION" 2>/dev/null || echo 0)"
   echo "built_ubuntu=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } > "$STAGE/VERSION.txt"
 
-chmod +x "$ROOT/scripts/ci-verify-native-engine.sh"
 "$ROOT/scripts/ci-verify-native-engine.sh" "$STAGE"
 
 find "$STAGE" -type f -exec ls -lh {} \;

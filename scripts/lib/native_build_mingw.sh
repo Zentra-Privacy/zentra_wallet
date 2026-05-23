@@ -17,6 +17,7 @@ native_build_mingw() {
   }
 
   native_prepare_python_shim "$ROOT"
+  native_ensure_zentra_depends_patched "$ZENTRA_ROOT" || return 1
   if ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
     echo "Error: x86_64-w64-mingw32-gcc not found."
     echo "  Install: sudo apt install -y g++-mingw-w64-x86-64 gcc-mingw-w64-x86-64 mingw-w64"

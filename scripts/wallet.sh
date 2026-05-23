@@ -108,8 +108,8 @@ cmd_build_all_native() {
   if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then z="$1"; else z="$(_resolve_zentra)"; fi
   [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
   cmd_build "$z" || return 1
-  native_build_android "$z" || return 1
   native_build_mingw "$z" || return 1
+  native_build_android "$z" || return 1
   if [[ "$(uname -s)" == "Darwin" ]]; then
     native_build_macos "$z" || return 1
     native_build_ios "$z" || return 1
