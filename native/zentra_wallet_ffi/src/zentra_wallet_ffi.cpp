@@ -186,7 +186,11 @@ std::string full_path(const char* name) {
   }
   if (p.empty() || p == "." || p == "..") return {};
   if (g_wallet_dir.empty()) return p;
+#ifdef _WIN32
+  return g_wallet_dir + "\\" + p;
+#else
   return g_wallet_dir + "/" + p;
+#endif
 }
 
 }  // namespace
@@ -539,7 +543,6 @@ ZENTRA_WM_API char* zentra_wm_transfers_json(ZentraWalletHandle wallet) {
     if (!hist) {
       return dup_string("[]");
     }
-    hist->refresh();
     const auto all = hist->getAll();
     std::ostringstream oss;
     oss << "[";

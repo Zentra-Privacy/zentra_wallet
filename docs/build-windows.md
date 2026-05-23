@@ -150,8 +150,18 @@ flutter run -d windows
 |---------|-----|
 | `build-windows` fails on depends | Retry on Ubuntu 22.04; ensure `libtinfo5`, `python3`, disk space |
 | Flutter: Visual Studio missing | Install VS 2022 with C++ desktop tools (`flutter doctor`) |
-| Engine unavailable on Windows | Re-copy DLL; rebuild after `flutter clean` |
+| Engine unavailable on Windows | See below |
 | Wrong architecture | DLL must be **x64** MinGW build, matching Flutter Windows x64 |
+
+### “Wallet engine unavailable” on Windows
+
+Same message as Android: `libzentra_wallet_ffi.dll` is missing or failed to load.
+
+1. **Official CI zip** — must include `libzentra_wallet_ffi.dll` next to `zentra_wallet.exe` (unzip and check).
+2. **Local build** — run `./wallet.sh build-windows` **before** `flutter build windows`.
+3. **MinGW runtimes** — the wallet DLL is built with MinGW; these may be required beside the exe:
+   `libstdc++-6.dll`, `libgcc_s_seh-1.dll`, `libwinpthread-1.dll` (CI bundles them when building the engine on Ubuntu).
+4. After updating DLLs: `flutter clean && flutter build windows --release`.
 
 ---
 

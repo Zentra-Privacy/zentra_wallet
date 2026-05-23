@@ -52,9 +52,6 @@ class EmbeddedWalletService {
       nettypeIndex,
       restoreHeight: restoreHeight,
     );
-    if (!_native.startBackgroundRefresh(_handle!)) {
-      throw WalletException('Background refresh failed to start');
-    }
   }
 
   int fetchRestoreHeight() {
@@ -70,9 +67,6 @@ class EmbeddedWalletService {
   void openWallet({required String filename, required String password}) {
     _close();
     _handle = _native.openWallet(filename, password, nettypeIndex);
-    if (!_native.startBackgroundRefresh(_handle!)) {
-      throw WalletException('Background refresh failed to start');
-    }
   }
 
   String restoreWallet({
@@ -89,10 +83,15 @@ class EmbeddedWalletService {
       nettypeIndex,
       restoreHeight: restoreHeight,
     );
+    return _native.address(_handle!);
+  }
+
+  /// Call after the first successful [refresh] to avoid racing wallet2 sync paths.
+  void startBackgroundRefresh() {
+    _requireOpen();
     if (!_native.startBackgroundRefresh(_handle!)) {
       throw WalletException('Background refresh failed to start');
     }
-    return _native.address(_handle!);
   }
 
   void _close() {
@@ -188,7 +187,7 @@ class EmbeddedWalletService {
 
   void dispose() {
     _close();
-    _native.shutdown();
+    // Keep WalletManager alive; [ZentraNativeWallet.release] runs on app exit only.
   }
 
   void _requireOpen() {

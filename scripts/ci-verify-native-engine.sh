@@ -45,6 +45,16 @@ _req "$WIN_DLL"
 _req "$ARM64_SO"
 _req "$ARM32_SO"
 
+for abi in arm64-v8a armeabi-v7a; do
+  cpp="$BUNDLE/android/$abi/libc++_shared.so"
+  if [[ -f "$cpp" ]]; then
+    echo "  OK $(basename "$cpp") ($(du -h "$cpp" | cut -f1))"
+  else
+    echo "::error::Missing $cpp (required for Android wallet engine load)"
+    exit 1
+  fi
+done
+
 _check_elf "$LINUX_SO" "x86-64"
 _check_elf "$ARM64_SO" "aarch64"
 _check_elf "$ARM32_SO" "ARM"

@@ -42,7 +42,8 @@ cp -f "$ROOT/packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so" "$STAGE/
 # Windows before Android: fail fast on MinGW/zeromq instead of after 2–4h of Android depends.
 echo "==> Windows x64 (MinGW) — before Android to catch cross-compile issues early"
 native_build_mingw "$ZENTRA"
-cp -f "$ROOT/packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll" "$STAGE/windows/"
+mkdir -p "$STAGE/windows"
+cp -a "$ROOT/packages/zentra_wallet_core/windows/." "$STAGE/windows/"
 
 echo "==> Android arm64-v8a"
 native_build_android "$ZENTRA" arm64-v8a

@@ -35,5 +35,19 @@ native_build_mingw() {
     -DBUILD_64=ON -DARCH="x86-64" -DUSE_DEVICE_TREZOR=OFF || return 1
 
   native_build_ffi_cmake "$ROOT" "$ZENTRA_ROOT" "$zbuild" "$toolchain" "$OUT" "mingw-win64" "$JOBS" || return 1
+  _bundle_mingw_runtime_dlls "$OUT"
   echo "==> Windows DLL ready for flutter build windows"
+}
+
+_bundle_mingw_runtime_dlls() {
+  local dest="$1"
+  local gxx="x86_64-w64-mingw32-g++"
+  command -v "$gxx" >/dev/null 2>&1 || return 0
+  for dll in libstdc++-6.dll libgcc_s_seh-1.dll libwinpthread-1.dll; do
+    local path
+    path="$("$gxx" -print-file-name="$dll" 2>/dev/null || true)"
+    [[ -n "$path" && -f "$path" ]] || continue
+    cp -f "$path" "$dest/$(basename "$path")"
+    echo "==> Bundled $dest/$(basename "$path")"
+  done
 }

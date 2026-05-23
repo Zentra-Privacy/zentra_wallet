@@ -24,6 +24,8 @@ Common **Phase 1 · engine-ubuntu** failures and fixes.
 | `'filesystem' file not found` (FFI, Android NDK) | NDK libc++ may lack `<filesystem>` | Same portable `mkdir` helper (no `<filesystem>`) |
 | `__stack_chk_fail` / `__memcpy_chk` (FFI link, MinGW) | Fortify/stack protector without **libssp** | Link `ssp` in FFI CMake (Windows) |
 | `CertOpenStore` / `CertOpenSystemStoreA` (FFI link) | Windows cert APIs in epee/unbound | Link `crypt32` (+ `mswsock`) |
+| “Wallet engine unavailable” (Windows app) | DLL missing from zip or MinGW runtime DLLs | `build-windows` + bundle `libstdc++`/`libgcc`/`libwinpthread` |
+| “Wallet engine unavailable” (Android APK) | `.so` missing or `libc++_shared` | `build-android` + CI APK verify |
 | `ZENTRA_BUILD_DIR` newline / wrong path | Was capturing cmake stdout in `$(...)` | Fixed: explicit `zbuild=` paths |
 | Missing `libwallet-crypto.a` | Android uses internal crypto | Optional in FFI CMake |
 | `cannot find -lboost_*` | Depends libs need full `.a` paths | `ZentraDepends.cmake` |

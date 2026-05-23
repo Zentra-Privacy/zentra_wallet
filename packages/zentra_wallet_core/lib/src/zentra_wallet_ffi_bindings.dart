@@ -42,6 +42,15 @@ class ZentraNativeWallet {
     }
   }
 
+  /// Tear down native WalletManager (app exit). Re-open via [isAvailable] after this.
+  static void release() {
+    try {
+      _instance?._lib.shutdown();
+    } catch (_) {}
+    _instance = null;
+    _loadError = null;
+  }
+
   static ffi.DynamicLibrary _openLib() {
     if (Platform.isLinux) {
       final fromEnv = Platform.environment['ZENTRA_WALLET_FFI_PATH'];
@@ -80,10 +89,21 @@ class ZentraNativeWallet {
       return ffi.DynamicLibrary.open('libzentra_wallet_ffi.so');
     }
     if (Platform.isWindows) {
+      // MinGW runtimes must sit beside the wallet DLL (bundled by build-windows / CI).
+      for (final dep in <String>[
+        'libwinpthread-1.dll',
+        'libgcc_s_seh-1.dll',
+        'libstdc++-6.dll',
+      ]) {
+        try {
+          ffi.DynamicLibrary.open(dep);
+        } catch (_) {}
+      }
       final exe = Platform.resolvedExecutable;
       final dir = exe.contains(r'\')
           ? exe.substring(0, exe.lastIndexOf(r'\'))
           : exe;
+      Object? lastErr;
       for (final path in <String>[
         '$dir\\libzentra_wallet_ffi.dll',
         '$dir\\zentra_wallet_ffi.dll',
@@ -92,8 +112,14 @@ class ZentraNativeWallet {
         try {
           if (path.contains(r'\') && !File(path).existsSync()) continue;
           return ffi.DynamicLibrary.open(path);
-        } catch (_) {}
+        } catch (e) {
+          lastErr = e;
+        }
       }
+      throw NativeWalletUnavailable(
+        lastErr?.toString() ??
+            'libzentra_wallet_ffi.dll not found next to $dir',
+      );
     }
     if (Platform.isMacOS) {
       for (final path in <String>[

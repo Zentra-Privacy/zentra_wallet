@@ -26,6 +26,11 @@ for abi in arm64-v8a armeabi-v7a; do
     exit 1
   fi
   echo "  OK lib/${abi}/libzentra_wallet_ffi.so"
+  if ! _list | grep -q "lib/${abi}/libc++_shared.so"; then
+    echo "::error::Missing lib/${abi}/libc++_shared.so in APK"
+    exit 1
+  fi
+  echo "  OK lib/${abi}/libc++_shared.so"
 done
 
 apk_mb="$(du -m "$APK" | cut -f1)"

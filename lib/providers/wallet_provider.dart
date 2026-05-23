@@ -118,6 +118,14 @@ class WalletProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// True when a newer connect/reset superseded [gen]; cleans up stale native wallet.
+  bool _connectStale(int gen) {
+    if (gen == _connectGeneration) return false;
+    _wallet?.dispose();
+    _wallet = null;
+    return true;
+  }
+
   Future<bool> connect({String? passwordOverride}) async {
     final gen = ++_connectGeneration;
     _refreshNativeFlag();
@@ -148,22 +156,24 @@ class WalletProvider extends ChangeNotifier {
 
     try {
       await _ensureWallet();
-      if (gen != _connectGeneration) return false;
+      if (_connectStale(gen)) return false;
       final password = passwordOverride ?? await _settings.loadWalletPassword() ?? '';
       _wallet!.openWallet(
         filename: walletFilename!,
         password: password,
       );
-      if (gen != _connectGeneration) return false;
+      if (_connectStale(gen)) return false;
       await _wallet!.refresh();
-      if (gen != _connectGeneration) return false;
+      if (_connectStale(gen)) return false;
+      _wallet!.startBackgroundRefresh();
+      if (_connectStale(gen)) return false;
       await _applyWalletSnapshot();
-      if (gen != _connectGeneration) return false;
+      if (_connectStale(gen)) return false;
       connectionState = WalletConnectionState.connected;
       errorMessage = null;
       return true;
     } catch (e) {
-      if (gen != _connectGeneration) return false;
+      if (_connectStale(gen)) return false;
       connectionState = WalletConnectionState.error;
       errorMessage = _userMessage(e);
       _wallet?.dispose();
@@ -310,6 +320,7 @@ class WalletProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _wallet!.refresh();
+      _wallet!.startBackgroundRefresh();
       await _applyWalletSnapshot();
       connectionState = WalletConnectionState.connected;
       errorMessage = null;
@@ -362,12 +373,12 @@ class WalletProvider extends ChangeNotifier {
 
   int sendPriority = 0;
 
-  Future<int> estimateTransferFee({
+  Future<int?> estimateTransferFee({
     required String address,
     required String amount,
     int? priority,
   }) async {
-    if (_wallet == null || !_wallet!.isOpen) return 0;
+    if (_wallet == null || !_wallet!.isOpen) return null;
     return _wallet!.estimateFee(
       address: address,
       amountDisplay: amount,
@@ -528,6 +539,7 @@ class WalletProvider extends ChangeNotifier {
   }
 
   void _resetWalletSession() {
+    _connectGeneration++;
     _wallet?.dispose();
     _wallet = null;
     balance = null;
@@ -543,7 +555,10 @@ class WalletProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _connectGeneration++;
     _wallet?.dispose();
+    _wallet = null;
+    ZentraNativeWallet.release();
     super.dispose();
   }
 }

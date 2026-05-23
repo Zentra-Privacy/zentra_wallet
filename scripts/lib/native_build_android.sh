@@ -128,42 +128,18 @@ native_build_android() {
     local host="$2"
     local zbuild="$3"
     local toolchain="$DEPENDS_DIR/$host/share/toolchain.cmake"
-    local depends_prefix="$DEPENDS_DIR/$host"
-    local ffibuild="$ROOT/build/android_ffi/$abi"
 
     echo "==> FFI library for $abi"
-    mkdir -p "$ffibuild"
-    cmake -S "$ROOT/native/zentra_wallet_ffi" -B "$ffibuild" \
-      -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DZENTRA_ROOT="$ZENTRA_ROOT" \
-      -DZENTRA_BUILD_DIR="$zbuild" \
-      -DZENTRA_DEPENDS_PREFIX="$depends_prefix" || return 1
-    cmake --build "$ffibuild" --parallel "$JOBS" || return 1
-
-    local out="$ffibuild/libzentra_wallet_ffi.so"
-    [[ -f "$out" ]] || {
-      echo "Error: $out not produced"
-      return 1
-    }
-
     mkdir -p "$JNILIBS/$abi"
-    cp -f "$out" "$JNILIBS/$abi/libzentra_wallet_ffi.so"
-    _bundle_android_cpp_shared "$abi" "$JNILIBS/$abi"
+    native_build_ffi_cmake "$ROOT" "$ZENTRA_ROOT" "$zbuild" "$toolchain" "$JNILIBS/$abi" "android-$abi" "$JOBS" \
+      -DANDROID=ON || return 1
+    _bundle_android_cpp_shared "$abi" "$JNILIBS/$abi" || return 1
     echo "==> Installed $JNILIBS/$abi/libzentra_wallet_ffi.so ($(du -h "$JNILIBS/$abi/libzentra_wallet_ffi.so" | cut -f1))"
   }
 
   _bundle_android_cpp_shared() {
     local abi="$1" dest="$2"
-    local ndk="${ANDROID_NDK:-${ANDROID_NDK_HOME:-}}"
-    if [[ -z "$ndk" && -n "${ANDROID_HOME:-}" ]]; then
-      ndk="$(find "$ANDROID_HOME/ndk" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -1)"
-    fi
-    [[ -n "$ndk" ]] || {
-      echo "Warning: ANDROID_NDK not set; skipping libc++_shared.so for $abi"
-      return 0
-    }
-    local triple
+    local triple lib=""
     case "$abi" in
       arm64-v8a) triple=aarch64-linux-android ;;
       armeabi-v7a) triple=arm-linux-androideabi ;;
@@ -171,13 +147,23 @@ native_build_android() {
       x86) triple=i686-linux-android ;;
       *) return 0 ;;
     esac
-    local lib="$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/$triple/libc++_shared.so"
-    if [[ -f "$lib" ]]; then
-      cp -f "$lib" "$dest/libc++_shared.so"
-      echo "==> Bundled $dest/libc++_shared.so"
-    else
-      echo "Warning: libc++_shared.so not found for $abi under $ndk"
+
+    local ndk="${ANDROID_NDK:-${ANDROID_NDK_HOME:-}}"
+    if [[ -z "$ndk" && -n "${ANDROID_HOME:-}" ]]; then
+      ndk="$(find "$ANDROID_HOME/ndk" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -1)"
     fi
+    if [[ -n "$ndk" ]]; then
+      lib="$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/$triple/libc++_shared.so"
+    fi
+    if [[ ! -f "$lib" ]]; then
+      lib="$(find "$ZENTRA_ROOT/contrib/depends/SDKs" -path "*/$triple/libc++_shared.so" 2>/dev/null | head -1)"
+    fi
+    if [[ ! -f "$lib" ]]; then
+      echo "::error::libc++_shared.so not found for $abi (install Android NDK or build depends SDK)"
+      return 1
+    fi
+    cp -f "$lib" "$dest/libc++_shared.so"
+    echo "==> Bundled $dest/libc++_shared.so"
   }
 
   echo "==> Android native build"

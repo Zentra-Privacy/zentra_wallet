@@ -61,7 +61,7 @@ class _SendScreenState extends State<SendScreen> {
       );
       if (mounted && gen == _feeEstimateGeneration) {
         setState(() {
-          _feeAtomic = fee;
+          _feeAtomic = fee ?? 0;
           _estimatingFee = false;
         });
       }

@@ -18,8 +18,15 @@ _apply() {
 
 _apply "$BUNDLE/linux/libzentra_wallet_ffi.so" \
   "$ROOT/packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so"
-_apply "$BUNDLE/windows/libzentra_wallet_ffi.dll" \
-  "$ROOT/packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll"
+mkdir -p "$ROOT/packages/zentra_wallet_core/windows"
+for dll in "$BUNDLE/windows"/*.dll; do
+  [[ -f "$dll" ]] || continue
+  _apply "$dll" "$ROOT/packages/zentra_wallet_core/windows/$(basename "$dll")"
+done
+[[ -f "$ROOT/packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll" ]] || {
+  echo "::error::Missing libzentra_wallet_ffi.dll in native-engine-bundle/windows"
+  exit 1
+}
 
 for abi_dir in "$BUNDLE/android"/*; do
   [[ -d "$abi_dir" ]] || continue

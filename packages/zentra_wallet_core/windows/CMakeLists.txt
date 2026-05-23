@@ -14,8 +14,9 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
 target_compile_definitions(${PLUGIN_NAME} PUBLIC DART_SHARED_LIB)
 
 set(_bundled_libs "$<TARGET_FILE:${PLUGIN_NAME}>")
-set(_ffi_dll "${CMAKE_CURRENT_SOURCE_DIR}/libzentra_wallet_ffi.dll")
-if(EXISTS "${_ffi_dll}")
-  list(APPEND _bundled_libs "${_ffi_dll}")
+# Prebuilt MinGW wallet engine + runtime DLLs (after ./wallet.sh build-windows).
+file(GLOB _prebuilt_dlls "${CMAKE_CURRENT_SOURCE_DIR}/*.dll")
+if(_prebuilt_dlls)
+  list(APPEND _bundled_libs ${_prebuilt_dlls})
 endif()
 set(zentra_wallet_core_bundled_libraries ${_bundled_libs} PARENT_SCOPE)
