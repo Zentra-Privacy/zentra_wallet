@@ -21,6 +21,8 @@ Common **Phase 1 · engine-ubuntu** failures and fixes.
 | `mutex_t has no member named get_mutex` (zeromq) | `--with-cv-impl=pthread` wrong for MinGW | Same patch: **4.3.1**, no pthread override |
 | `std::mutex` / `once_flag` (protobuf 3.6.1, MinGW) | Ubuntu MinGW defaults to **win32** threading | `ci-configure-mingw-posix.sh` → **gcc/g++-posix** |
 | `too many arguments to mkdir` (FFI, MinGW) | Windows `mkdir` is single-arg; POSIX uses mode | FFI uses `std::filesystem::create_directories` |
+| `__stack_chk_fail` / `__memcpy_chk` (FFI link, MinGW) | Fortify/stack protector without **libssp** | Link `ssp` in FFI CMake (Windows) |
+| `CertOpenStore` / `CertOpenSystemStoreA` (FFI link) | Windows cert APIs in epee/unbound | Link `crypt32` (+ `mswsock`) |
 | `ZENTRA_BUILD_DIR` newline / wrong path | Was capturing cmake stdout in `$(...)` | Fixed: explicit `zbuild=` paths |
 | Missing `libwallet-crypto.a` | Android uses internal crypto | Optional in FFI CMake |
 | `cannot find -lboost_*` | Depends libs need full `.a` paths | `ZentraDepends.cmake` |

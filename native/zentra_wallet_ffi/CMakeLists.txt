@@ -143,7 +143,10 @@ elseif(DEPENDS OR ANDROID)
     target_link_libraries(zentra_wallet_ffi PRIVATE ${LOG_LIB})
   endif()
   if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    target_link_libraries(zentra_wallet_ffi PRIVATE ws2_32 bcrypt iphlpapi)
+    # libssp: Zentra/depends built with _FORTIFY_SOURCE / stack protector (__memcpy_chk, etc.)
+    # crypt32: OpenSSL/epee/unbound Windows cert store (CertOpenStore, ...)
+    target_link_libraries(zentra_wallet_ffi PRIVATE
+      ws2_32 mswsock iphlpapi bcrypt crypt32 ssp)
   endif()
   if(APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
     target_link_libraries(zentra_wallet_ffi PRIVATE
