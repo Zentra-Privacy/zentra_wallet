@@ -16,7 +16,7 @@ One job builds all three native targets:
 
 | Job | Runner | Outputs |
 |-----|--------|---------|
-| `engine-ubuntu` | ubuntu-22.04 | Linux `.so`, Android ABIs, Windows `.dll` |
+| `engine-ubuntu` | ubuntu-22.04 | Linux `.so`, Android ABIs, Windows `.dll` (needs MinGW + `libtinfo5` via `ci-install-linux-deps.sh all`) |
 | `package-engine` | ubuntu-latest | Artifact **`native-engine-bundle`** |
 
 Scripts:
