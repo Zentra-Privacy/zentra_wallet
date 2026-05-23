@@ -221,3 +221,9 @@ Full guides (architecture, security, build, user guide, FAQ):
 - `docs/` — guides in English
 - `wallet.sh` — build and run (single entry point)
 - `.github/workflows/` — CI/CD
+
+---
+
+## License
+
+[BSD 3-Clause License](LICENSE). Wallet engine code is built against [Zentra](https://github.com/Zentra-Privacy/zentra) (`wallet2` / `wallet_api`); see the Zentra repository for its license terms.
