@@ -20,7 +20,8 @@ Common **Phase 1 · engine-ubuntu** failures and fixes.
 | `condition_variable_any` (zeromq 4.3.4, MinGW) | STL11 CV broken on MinGW cross-compile | `ci-patch` → **zeromq 4.3.1** + `-O1` |
 | `mutex_t has no member named get_mutex` (zeromq) | `--with-cv-impl=pthread` wrong for MinGW | Same patch: **4.3.1**, no pthread override |
 | `std::mutex` / `once_flag` (protobuf 3.6.1, MinGW) | Ubuntu MinGW defaults to **win32** threading | `ci-configure-mingw-posix.sh` → **gcc/g++-posix** |
-| `too many arguments to mkdir` (FFI, MinGW) | Windows `mkdir` is single-arg; POSIX uses mode | FFI uses `std::filesystem::create_directories` |
+| `too many arguments to mkdir` (FFI, MinGW) | Windows `mkdir` is single-arg; POSIX uses mode | `_mkdir` on `_WIN32`, else `mkdir(..., 0700)` |
+| `'filesystem' file not found` (FFI, Android NDK) | NDK libc++ may lack `<filesystem>` | Same portable `mkdir` helper (no `<filesystem>`) |
 | `__stack_chk_fail` / `__memcpy_chk` (FFI link, MinGW) | Fortify/stack protector without **libssp** | Link `ssp` in FFI CMake (Windows) |
 | `CertOpenStore` / `CertOpenSystemStoreA` (FFI link) | Windows cert APIs in epee/unbound | Link `crypt32` (+ `mswsock`) |
 | `ZENTRA_BUILD_DIR` newline / wrong path | Was capturing cmake stdout in `$(...)` | Fixed: explicit `zbuild=` paths |

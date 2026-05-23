@@ -4,10 +4,16 @@
 
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
 #include <mutex>
 #include <sstream>
 #include <string>
+
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 namespace {
 
@@ -164,14 +170,10 @@ std::string json_escape(const std::string& s) {
 
 void ensure_wallet_dir(const std::string& dir) {
   if (dir.empty()) return;
-  std::error_code ec;
-  std::filesystem::create_directories(dir, ec);
-#ifndef _WIN32
-  std::filesystem::permissions(
-      dir,
-      std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |
-          std::filesystem::perms::owner_exec,
-      std::filesystem::perm_options::replace, ec);
+#ifdef _WIN32
+  _mkdir(dir.c_str());
+#else
+  mkdir(dir.c_str(), 0700);
 #endif
 }
 
