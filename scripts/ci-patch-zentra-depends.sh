@@ -53,12 +53,13 @@ _fix_zeromq_mingw_mk() {
   _zeromq_mingw_sed_fix
 }
 
-_invalidate_mingw_zeromq_cache() {
-  echo "==> Invalidating cached MinGW zeromq builds"
-  rm -rf "$ZENTRA/contrib/depends/work/build/${MINGW_HOST}/zeromq" \
-    "$ZENTRA/contrib/depends/work/staging/${MINGW_HOST}/zeromq" 2>/dev/null || true
-  if [[ -d "$ZENTRA/contrib/depends/built/${MINGW_HOST}/zeromq" ]]; then
-    find "$ZENTRA/contrib/depends/built/${MINGW_HOST}/zeromq" -type f -name 'zeromq*.tar.gz*' -delete 2>/dev/null || true
+_invalidate_mingw_package_cache() {
+  local pkg="$1"
+  echo "==> Invalidating cached MinGW ${pkg} builds"
+  rm -rf "$ZENTRA/contrib/depends/work/build/${MINGW_HOST}/${pkg}" \
+    "$ZENTRA/contrib/depends/work/staging/${MINGW_HOST}/${pkg}" 2>/dev/null || true
+  if [[ -d "$ZENTRA/contrib/depends/built/${MINGW_HOST}/${pkg}" ]]; then
+    find "$ZENTRA/contrib/depends/built/${MINGW_HOST}/${pkg}" -type f -name "${pkg}*.tar.gz*" -delete 2>/dev/null || true
   fi
 }
 
@@ -71,6 +72,8 @@ grep -q 'cxxflags_mingw32+=-O1' "$ZMQ_MK" \
 grep -q 'config_opts_mingw32=--with-cv-impl=pthread' "$ZMQ_MK" \
   && { echo "::error::remove pthread cv-impl from zeromq.mk"; exit 1; }
 
-_invalidate_mingw_zeromq_cache
+_invalidate_mingw_package_cache zeromq
+# Rebuild protobuf if a prior win32-toolchain attempt left a broken tree.
+_invalidate_mingw_package_cache protobuf
 
 echo "==> Zentra depends patches applied (PATCHSET_VERSION=$(cat "$PATCH_DIR/PATCHSET_VERSION" 2>/dev/null || echo 0))"

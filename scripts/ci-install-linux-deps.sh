@@ -17,6 +17,13 @@ _flutter_deps() {
 
 # Matches Zentra scripts/install-deps.sh (required to build wallet_api + zentrad).
 # MinGW: required for Phase 1 Windows DLL (contrib/depends HOST=x86_64-w64-mingw32).
+_configure_mingw_posix() {
+  # protobuf / C++11 need posix threading, not win32 (see docs/ci-troubleshooting.md).
+  if [[ -x "$(dirname "$0")/ci-configure-mingw-posix.sh" ]]; then
+    bash "$(dirname "$0")/ci-configure-mingw-posix.sh"
+  fi
+}
+
 _native_deps() {
   apt-get install -y --no-install-recommends \
     build-essential cmake pkg-config git python3 curl \
@@ -37,8 +44,8 @@ fi
 apt-get update
 case "$MODE" in
   flutter) _flutter_deps ;;
-  native)  _native_deps ;;
-  all)     _flutter_deps; _native_deps ;;
+  native)  _native_deps; _configure_mingw_posix ;;
+  all)     _flutter_deps; _native_deps; _configure_mingw_posix ;;
   *)
     echo "Usage: $0 [flutter|native|all]"
     exit 1

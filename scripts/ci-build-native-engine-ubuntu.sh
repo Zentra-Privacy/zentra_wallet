@@ -19,6 +19,7 @@ source "$ROOT/scripts/lib/native_build_mingw.sh"
 
 chmod +x "$ROOT/scripts/ci-clone-zentra.sh" \
   "$ROOT/scripts/ci-patch-zentra-depends.sh" \
+  "$ROOT/scripts/ci-configure-mingw-posix.sh" \
   "$ROOT/scripts/ci-preflight-engine.sh" \
   "$ROOT/scripts/ci-verify-native-engine.sh"
 

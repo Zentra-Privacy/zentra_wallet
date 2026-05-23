@@ -23,6 +23,10 @@ if ! x86_64-w64-mingw32-g++ -dumpmachine >/dev/null 2>&1; then
   fail "x86_64-w64-mingw32-g++ cannot run. Install: g++-mingw-w64-x86-64 gcc-mingw-w64-x86-64 mingw-w64"
 fi
 
+if [[ -x "$ROOT/scripts/ci-configure-mingw-posix.sh" ]]; then
+  bash "$ROOT/scripts/ci-configure-mingw-posix.sh"
+fi
+
 # Quick MinGW smoke compile (catches broken toolchain before libiconv/zeromq).
 _mingw_ok=0
 if x86_64-w64-mingw32-gcc -x c - -o /tmp/zw-mingw-test.exe <<<'int main(){return 0;}' 2>/dev/null; then

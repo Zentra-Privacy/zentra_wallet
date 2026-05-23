@@ -19,6 +19,7 @@ Common **Phase 1 · engine-ubuntu** failures and fixes.
 | `x86_64-w64-mingw32-gcc` / `cannot create executables` (libiconv) | MinGW not installed on runner | `ci-install-linux-deps.sh all` includes `g++-mingw-w64-x86-64` |
 | `condition_variable_any` (zeromq 4.3.4, MinGW) | STL11 CV broken on MinGW cross-compile | `ci-patch` → **zeromq 4.3.1** + `-O1` |
 | `mutex_t has no member named get_mutex` (zeromq) | `--with-cv-impl=pthread` wrong for MinGW | Same patch: **4.3.1**, no pthread override |
+| `std::mutex` / `once_flag` (protobuf 3.6.1, MinGW) | Ubuntu MinGW defaults to **win32** threading | `ci-configure-mingw-posix.sh` → **gcc/g++-posix** |
 | `ZENTRA_BUILD_DIR` newline / wrong path | Was capturing cmake stdout in `$(...)` | Fixed: explicit `zbuild=` paths |
 | Missing `libwallet-crypto.a` | Android uses internal crypto | Optional in FFI CMake |
 | `cannot find -lboost_*` | Depends libs need full `.a` paths | `ZentraDepends.cmake` |
@@ -41,7 +42,7 @@ Windows runs **before** Android so MinGW/zeromq issues fail in ~30–90 min, not
 ## Local = CI
 
 ```bash
-sudo ./scripts/ci-install-linux-deps.sh all
+sudo ./scripts/ci-install-linux-deps.sh all   # sets MinGW gcc/g++ to posix
 ./scripts/ci-clone-zentra.sh third_party/zentra
 ./scripts/ci-patch-zentra-depends.sh third_party/zentra
 ./scripts/ci-preflight-engine.sh third_party/zentra
