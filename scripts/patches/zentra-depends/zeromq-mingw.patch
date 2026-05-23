@@ -1,0 +1,13 @@
+--- contrib/depends/packages/zeromq.mk
++++ contrib/depends/packages/zeromq.mk
+@@ -8,7 +8,9 @@
+ define $(package)_set_vars
+   $(package)_config_opts=--without-documentation --disable-shared --without-libsodium --disable-curve
+   $(package)_config_opts_linux=--with-pic
+   $(package)_config_opts_freebsd=--with-pic
++  $(package)_config_opts_mingw32=--with-cv-impl=pthread
+   $(package)_cxxflags=-std=c++11
++  $(package)_cxxflags_mingw32+=-O1
+ endef
+ 
+ define $(package)_preprocess_cmds

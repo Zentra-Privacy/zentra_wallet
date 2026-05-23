@@ -49,6 +49,14 @@ _check_elf "$LINUX_SO" "x86-64"
 _check_elf "$ARM64_SO" "aarch64"
 _check_elf "$ARM32_SO" "ARM"
 
+if command -v file >/dev/null 2>&1; then
+  _win_info="$(file -b "$WIN_DLL")"
+  if [[ "$_win_info" != *"PE32"* ]]; then
+    echo "::error::Windows DLL is not a PE32 executable: $_win_info"
+    exit 1
+  fi
+  echo "  arch OK: $_win_info"
+fi
 if [[ -f "$WIN_DLL" ]] && command -v x86_64-w64-mingw32-objdump >/dev/null 2>&1; then
   x86_64-w64-mingw32-objdump -f "$WIN_DLL" | head -3 || true
 fi

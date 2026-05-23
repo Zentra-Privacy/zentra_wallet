@@ -21,16 +21,21 @@ One job builds all three native targets:
 
 Scripts:
 
-- `scripts/ci-clone-zentra.sh`
-- `scripts/ci-build-native-engine-ubuntu.sh`
-- `scripts/ci-package-native-engine.sh`
-- `scripts/ci-verify-native-engine.sh` (Linux + Windows + Android only)
+- `scripts/ci-clone-zentra.sh` — Zentra v0.1.0
+- `scripts/ci-patch-zentra-depends.sh` — MinGW zeromq fix (required)
+- `scripts/ci-preflight-engine.sh` — fail fast (MinGW, libtinfo5, patches)
+- `scripts/ci-build-native-engine-ubuntu.sh` — **Linux → Windows → Android** order
+- `scripts/ci-package-native-engine.sh` / `ci-verify-native-engine.sh`
 
-First run can take **2–6+ hours** (Zentra `contrib/depends`). GitHub cache speeds up later runs.
+First run can take **2–6+ hours** (Zentra `contrib/depends`). Cache key includes `scripts/patches/zentra-depends/PATCHSET_VERSION` (bump when patches change).
+
+See [ci-troubleshooting.md](ci-troubleshooting.md) for common errors.
 
 Every run builds the engine from **Zentra v0.1.0** (no “skip rebuild” shortcut).
 
 **FFI linking (Android / Windows cross-build):** `native/zentra_wallet_ffi/cmake/ZentraDepends.cmake` resolves static `.a` files directly from `contrib/depends/<triplet>/lib` (tagged Boost names, no `-lboost_*`). Optional Zentra libs: `libwallet-crypto.a`, `libdevice_trezor.a` (Android uses `USE_DEVICE_TREZOR=OFF`). Phase 1 verifies bundle size and ELF architecture before upload.
+
+**Windows depends (MinGW):** Ubuntu needs `g++-mingw-w64-x86-64` (in `ci-install-linux-deps.sh all`). Zentra v0.1.0 zeromq 4.3.4 needs `scripts/ci-patch-zentra-depends.sh` (`--with-cv-impl=pthread` for MinGW — fixes `condition_variable_any` compile errors).
 
 ---
 
@@ -75,9 +80,9 @@ export ZENTRA_REF=v0.1.0
 git clone -b v0.1.0 --recurse-submodules https://github.com/Zentra-Privacy/zentra.git third_party/zentra
 
 sudo ./scripts/ci-install-linux-deps.sh all
-./wallet.sh build              # Linux
-./wallet.sh build-android      # Android
-./wallet.sh build-windows      # Windows DLL
+./scripts/ci-clone-zentra.sh third_party/zentra
+./scripts/ci-patch-zentra-depends.sh third_party/zentra
+./scripts/ci-build-native-engine-ubuntu.sh   # same as CI Phase 1
 ```
 
 ---
