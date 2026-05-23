@@ -108,12 +108,16 @@ native_build_ffi_cmake() {
   depends_prefix="$(cd "$(dirname "$toolchain")/.." && pwd)"
   local ffibuild="$root/build/native_ffi/$ffi_tag"
   mkdir -p "$ffibuild"
+  local -a cmake_args=(
+    -DCMAKE_TOOLCHAIN_FILE="$toolchain"
+    -DCMAKE_BUILD_TYPE=Release
+    -DZENTRA_ROOT="$zentra_root"
+    -DZENTRA_BUILD_DIR="$zbuild"
+    -DZENTRA_DEPENDS_PREFIX="$depends_prefix"
+    -DDEPENDS=ON
+  )
   cmake -S "$root/native/zentra_wallet_ffi" -B "$ffibuild" \
-    -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DZENTRA_ROOT="$zentra_root" \
-    -DZENTRA_BUILD_DIR="$zbuild" \
-    -DZENTRA_DEPENDS_PREFIX="$depends_prefix" \
+    "${cmake_args[@]}" \
     "${extra[@]}" || return 1
   cmake --build "$ffibuild" --parallel "$jobs" || return 1
   mkdir -p "$out_dir"
