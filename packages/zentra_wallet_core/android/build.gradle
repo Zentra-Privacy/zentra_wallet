@@ -39,4 +39,10 @@ android {
     defaultConfig {
         minSdk = 24
     }
+
+    packaging {
+        jniLibs {
+            keepDebugSymbols += "**/libc++_shared.so"
+        }
+    }
 }

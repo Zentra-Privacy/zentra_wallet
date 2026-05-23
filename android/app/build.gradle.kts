@@ -32,6 +32,14 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    // stripReleaseDebugSymbols shrinks libc++_shared.so (~9 MiB → ~1 MiB) and breaks C++
+    // exception unwinding (SIGSEGV in __gxx_personality_v0 during wallet daemon connect).
+    packaging {
+        jniLibs {
+            keepDebugSymbols += "**/libc++_shared.so"
+        }
+    }
 }
 
 kotlin {
