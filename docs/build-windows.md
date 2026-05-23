@@ -39,7 +39,8 @@ sudo ./scripts/ci-install-linux-deps.sh all
 Also install MinGW cross toolchain:
 
 ```bash
-sudo apt install -y g++-mingw-w64-x86-64 mingw-w64
+sudo apt install -y g++-mingw-w64-x86-64 gcc-mingw-w64-x86-64 mingw-w64
+sudo ./scripts/ci-configure-mingw-posix.sh   # required: posix threading for protobuf
 ```
 
 ### A2. Clone repos
