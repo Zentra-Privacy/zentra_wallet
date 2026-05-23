@@ -199,7 +199,7 @@ The app could not load `libzentra_wallet_ffi.so` (missing from APK, wrong CPU ty
 4. **Android version:** **7.0+** (API 24).
 5. Reinstall: uninstall old app → install new APK.
 
-CI now bundles `libc++_shared.so` next to the wallet library when the NDK is available.
+CI bundles `libc++_shared.so` from the **same Zentra depends SDK** used to link `libzentra_wallet_ffi.so` (not the newer Flutter/SDK NDK). A mismatched `libc++_shared` can crash on wallet create with `__gxx_personality_v0` in the tombstone.
 | Emulator ABI mismatch | Build `x86_64` or use an arm64 emulator image |
 
 ---

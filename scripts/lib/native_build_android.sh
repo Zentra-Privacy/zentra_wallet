@@ -148,22 +148,25 @@ native_build_android() {
       *) return 0 ;;
     esac
 
-    local ndk="${ANDROID_NDK:-${ANDROID_NDK_HOME:-}}"
-    if [[ -z "$ndk" && -n "${ANDROID_HOME:-}" ]]; then
-      ndk="$(find "$ANDROID_HOME/ndk" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -1)"
-    fi
-    if [[ -n "$ndk" ]]; then
-      lib="$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/$triple/libc++_shared.so"
+    # Must match the NDK used by Zentra depends (wallet2 / libzentra_wallet_ffi are
+    # linked against that libc++). CI's Flutter/SDK NDK is often newer; bundling its
+    # libc++_shared.so causes SIGSEGV in __gxx_personality_v0 during daemon connect.
+    lib="$(find "$ZENTRA_ROOT/contrib/depends/SDKs" -path "*/$triple/libc++_shared.so" 2>/dev/null | head -1)"
+    if [[ ! -f "$lib" ]]; then
+      local ndk="${ANDROID_NDK:-${ANDROID_NDK_HOME:-}}"
+      if [[ -z "$ndk" && -n "${ANDROID_HOME:-}" ]]; then
+        ndk="$(find "$ANDROID_HOME/ndk" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -1)"
+      fi
+      if [[ -n "$ndk" ]]; then
+        lib="$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/$triple/libc++_shared.so"
+      fi
     fi
     if [[ ! -f "$lib" ]]; then
-      lib="$(find "$ZENTRA_ROOT/contrib/depends/SDKs" -path "*/$triple/libc++_shared.so" 2>/dev/null | head -1)"
-    fi
-    if [[ ! -f "$lib" ]]; then
-      echo "::error::libc++_shared.so not found for $abi (install Android NDK or build depends SDK)"
+      echo "::error::libc++_shared.so not found for $abi (build Zentra depends first, or install Android NDK)"
       return 1
     fi
     cp -f "$lib" "$dest/libc++_shared.so"
-    echo "==> Bundled $dest/libc++_shared.so"
+    echo "==> Bundled $dest/libc++_shared.so (from $lib)"
   }
 
   echo "==> Android native build"
