@@ -96,3 +96,5 @@ packages/zentra_wallet_core/ios/lib/libzentra_wallet_ffi.a
 packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework/
 build/ios-deps/
 build/ios-deps-src/
+
+monero_wallet_design
