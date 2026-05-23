@@ -17,7 +17,8 @@ Common **Phase 1 · engine-ubuntu** failures and fixes.
 | Symptom | Cause | Fix |
 |---------|--------|-----|
 | `x86_64-w64-mingw32-gcc` / `cannot create executables` (libiconv) | MinGW not installed on runner | `ci-install-linux-deps.sh all` includes `g++-mingw-w64-x86-64` |
-| `condition_variable_any` (zeromq, MinGW) | Zentra zeromq 4.3.4 uses broken STL11 CV on MinGW | `ci-patch-zentra-depends.sh` → `--with-cv-impl=pthread` |
+| `condition_variable_any` (zeromq 4.3.4, MinGW) | STL11 CV broken on MinGW cross-compile | `ci-patch` → **zeromq 4.3.1** + `-O1` |
+| `mutex_t has no member named get_mutex` (zeromq) | `--with-cv-impl=pthread` wrong for MinGW | Same patch: **4.3.1**, no pthread override |
 | `ZENTRA_BUILD_DIR` newline / wrong path | Was capturing cmake stdout in `$(...)` | Fixed: explicit `zbuild=` paths |
 | Missing `libwallet-crypto.a` | Android uses internal crypto | Optional in FFI CMake |
 | `cannot find -lboost_*` | Depends libs need full `.a` paths | `ZentraDepends.cmake` |
