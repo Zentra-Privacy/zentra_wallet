@@ -9,6 +9,7 @@ Common **Phase 1 · engine-ubuntu** failures and fixes.
 1. Push **all** fixes in `scripts/`, `native/zentra_wallet_ffi/`, and `.github/workflows/build-artifacts.yml`.
 2. In GitHub Actions, **cancel** old runs and start a **new** workflow (old runs use old scripts).
 3. First green run after cache key change may take **hours**; later runs use cache.
+4. **Every push rebuilds from scratch?** Usually: (a) cache key included too many files (fixed: key = PATCHSET + depends patches only), (b) push cancelled the previous run before cache saved (`cancel-in-progress` — wait for green Phase 1), (c) clone ran after cache restore and deleted depends (fixed: **Clone and patch Zentra** step before cache), (d) first run on a new PATCHSET. Check log step **Cache status** for HIT/MISS.
 
 ---
 

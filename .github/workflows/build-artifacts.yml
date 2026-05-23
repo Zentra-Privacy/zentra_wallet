@@ -48,14 +48,34 @@ jobs:
 
       - run: yes | sdkmanager --licenses || true
 
+      # Clone before cache restore — otherwise ci-clone-zentra.sh rm -rf deletes restored depends.
+      - name: Clone and patch Zentra
+        run: |
+          chmod +x scripts/ci-clone-zentra.sh scripts/ci-patch-zentra-depends.sh
+          ./scripts/ci-clone-zentra.sh third_party/zentra
+          ./scripts/ci-patch-zentra-depends.sh third_party/zentra
+
+      # Key = depends patches only. Do NOT hash ci-verify/*.sh or every push busts cache (3h rebuild).
+      # Bump scripts/patches/zentra-depends/PATCHSET_VERSION when depends recipes change.
       - name: Cache Zentra tree (depends + builds)
+        id: zentra-cache
         uses: actions/cache@v5
         with:
           path: |
             third_party/zentra/contrib/depends
             third_party/zentra/build
-          # PATCHSET_VERSION + patch files must bump when depends recipes change.
-          key: zentra-${{ env.ZENTRA_REF }}-p${{ hashFiles('scripts/patches/zentra-depends/**', 'scripts/ci-patch-zentra-depends.sh', 'scripts/ci-configure-mingw-posix.sh', 'scripts/ci-install-linux-deps.sh', 'native/zentra_wallet_ffi/**', 'scripts/lib/native_build*.sh', 'scripts/lib/android_libcxx.sh', 'scripts/ci-build-native-engine-ubuntu.sh', 'scripts/ci-verify-native-engine.sh', 'scripts/ci-verify-android-apk.sh') }}
+          key: zentra-${{ env.ZENTRA_REF }}-depends-${{ hashFiles('scripts/patches/zentra-depends/PATCHSET_VERSION', 'scripts/patches/zentra-depends/**', 'scripts/ci-patch-zentra-depends.sh', 'scripts/ci-configure-mingw-posix.sh') }}
+          restore-keys: |
+            zentra-${{ env.ZENTRA_REF }}-depends-
+            zentra-${{ env.ZENTRA_REF }}-
+
+      - name: Cache status
+        run: |
+          if [[ "${{ steps.zentra-cache.outputs.cache-hit }}" == "true" ]]; then
+            echo "==> Zentra depends cache HIT (incremental engine build)"
+          else
+            echo "==> Zentra depends cache MISS (first run or PATCHSET bump — expect hours)"
+          fi
 
       - name: Build engine (Ubuntu)
         run: |

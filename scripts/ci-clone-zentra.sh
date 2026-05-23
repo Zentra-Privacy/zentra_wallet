@@ -16,6 +16,10 @@ if [[ -d "$DEST/.git" ]]; then
   git -C "$DEST" checkout -f "$REF"
   git -C "$DEST" submodule update --init --recursive --depth 1
 else
+  if [[ -d "$DEST/contrib/depends" ]]; then
+    echo "::error::Refusing to remove $DEST: contrib/depends is present (CI must clone Zentra before cache restore)"
+    exit 1
+  fi
   echo "==> Cloning Zentra $REF → $DEST"
   rm -rf "$DEST"
   git clone --depth 1 --branch "$REF" --recurse-submodules "$REPO" "$DEST"
