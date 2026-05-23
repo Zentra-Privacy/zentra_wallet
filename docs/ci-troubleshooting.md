@@ -26,7 +26,8 @@ Common **Phase 1 · engine-ubuntu** failures and fixes.
 | `CertOpenStore` / `CertOpenSystemStoreA` (FFI link) | Windows cert APIs in epee/unbound | Link `crypt32` (+ `mswsock`) |
 | “Wallet engine unavailable” (Windows app) | DLL missing from zip or MinGW runtime DLLs | `build-windows` + bundle `libstdc++`/`libgcc`/`libwinpthread` |
 | “Wallet engine unavailable” (Android APK) | `.so` missing or `libc++_shared` | `build-android` + CI APK verify |
-| SIGSEGV in `libc++_shared` / `__gxx_personality_v0` on wallet create (daemon connect) | `libc++_shared.so` from Flutter NDK ≠ Zentra depends NDK | Rebuild engine: bundle `libc++_shared` from `contrib/depends/SDKs` (see `native_build_android.sh`) |
+| SIGSEGV in `libc++_shared` / `__gxx_personality_v0` on wallet create (daemon connect) | Wrong `libc++_shared.so` or Gradle stripped it in APK | Depends NDK r17 `sources/cxx-stl/.../libc++_shared.so` + `keepDebugSymbols` in Gradle; CI verifies size in bundle/APK |
+| Windows: engine unavailable on user PC | Zip missing MinGW DLLs beside exe | CI requires `libstdc++-6.dll`, `libgcc_s_seh-1.dll`, `libwinpthread-1.dll` in engine bundle + Release folder |
 | `ZENTRA_BUILD_DIR` newline / wrong path | Was capturing cmake stdout in `$(...)` | Fixed: explicit `zbuild=` paths |
 | Missing `libwallet-crypto.a` | Android uses internal crypto | Optional in FFI CMake |
 | `cannot find -lboost_*` | Depends libs need full `.a` paths | `ZentraDepends.cmake` |

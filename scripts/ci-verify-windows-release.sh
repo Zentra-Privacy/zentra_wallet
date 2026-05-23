@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify Flutter Windows Release folder contains wallet DLL (and MinGW runtimes if bundled).
+# Verify Flutter Windows Release folder contains wallet DLL and MinGW runtimes.
 set -euo pipefail
 
 REL="${1:-build/windows/x64/runner/Release}"
@@ -12,11 +12,12 @@ main="$REL/libzentra_wallet_ffi.dll"
 echo "  OK $(basename "$main")"
 
 for dll in libstdc++-6.dll libgcc_s_seh-1.dll libwinpthread-1.dll; do
-  if [[ -f "$REL/$dll" ]]; then
-    echo "  OK $dll"
-  else
-    echo "::warning::$dll not in Release (may be statically linked or load may fail on user PCs)"
+  if [[ ! -f "$REL/$dll" ]]; then
+    echo "::error::Missing $REL/$dll — MinGW runtime required beside zentra_wallet.exe"
+    echo "       Rebuild engine (native_build_mingw) and re-run ci-apply-native-libs before flutter build windows."
+    exit 1
   fi
+  echo "  OK $dll"
 done
 
 echo "==> Windows Release native libs OK"

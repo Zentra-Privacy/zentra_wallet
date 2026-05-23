@@ -4,6 +4,10 @@
 # Optional: INCLUDE_MACOS=1, INCLUDE_IOS=1 for extended bundles.
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=lib/android_libcxx.sh
+source "$ROOT/scripts/lib/android_libcxx.sh"
+
 BUNDLE="${1:?native-engine-bundle directory required}"
 
 _req() {
@@ -47,12 +51,15 @@ _req "$ARM32_SO"
 
 for abi in arm64-v8a armeabi-v7a; do
   cpp="$BUNDLE/android/$abi/libc++_shared.so"
-  if [[ -f "$cpp" ]]; then
-    echo "  OK $(basename "$cpp") ($(du -h "$cpp" | cut -f1))"
-  else
+  if [[ ! -f "$cpp" ]]; then
     echo "::error::Missing $cpp (required for Android wallet engine load)"
     exit 1
   fi
+  android_verify_libcxx_shared_size "$cpp" "$abi" "engine bundle libc++" || exit 1
+done
+
+for dll in libstdc++-6.dll libgcc_s_seh-1.dll libwinpthread-1.dll; do
+  _req "$BUNDLE/windows/$dll"
 done
 
 _check_elf "$LINUX_SO" "x86-64"

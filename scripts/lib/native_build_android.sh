@@ -4,6 +4,8 @@
 _LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=native_build_common.sh
 source "$_LIB_DIR/native_build_common.sh"
+# shellcheck source=android_libcxx.sh
+source "$_LIB_DIR/android_libcxx.sh"
 
 native_build_android() {
   local ZENTRA_ROOT="$1"
@@ -148,24 +150,30 @@ native_build_android() {
       *) return 0 ;;
     esac
 
-    # Must match the NDK used by Zentra depends (wallet2 / libzentra_wallet_ffi are
-    # linked against that libc++). CI's Flutter/SDK NDK is often newer; bundling its
-    # libc++_shared.so causes SIGSEGV in __gxx_personality_v0 during daemon connect.
-    lib="$(find "$ZENTRA_ROOT/contrib/depends/SDKs" -path "*/$triple/libc++_shared.so" 2>/dev/null | head -1)"
+    # Must match the NDK used by Zentra depends. Flutter/SDK NDK libc++ causes SIGSEGV
+    # in __gxx_personality_v0 during wallet daemon connect.
+    local lib=""
+    lib="$(android_find_libcxx_shared "$ZENTRA_ROOT" "$abi" "$triple" || true)"
     if [[ ! -f "$lib" ]]; then
-      local ndk="${ANDROID_NDK:-${ANDROID_NDK_HOME:-}}"
-      if [[ -z "$ndk" && -n "${ANDROID_HOME:-}" ]]; then
-        ndk="$(find "$ANDROID_HOME/ndk" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -1)"
+      if android_has_depends_ndk "$ZENTRA_ROOT"; then
+        echo "::error::Zentra depends NDK is present but libc++_shared.so not found for $abi"
+        echo "       Expected under contrib/depends/SDKs/.../sources/cxx-stl/llvm-libc++/libs/${abi}/"
+        return 1
       fi
-      if [[ -n "$ndk" ]]; then
-        lib="$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/$triple/libc++_shared.so"
+      lib="$(android_find_libcxx_shared_fallback "$triple" || true)"
+      if [[ -f "$lib" ]]; then
+        echo "::warning::Using SDK NDK libc++ (build Zentra depends for production/CI)"
       fi
     fi
     if [[ ! -f "$lib" ]]; then
       echo "::error::libc++_shared.so not found for $abi (build Zentra depends first, or install Android NDK)"
       return 1
     fi
+    if [[ "$lib" == *"/Android/Sdk/ndk/"* ]] || [[ "$lib" == *"/android/sdk/ndk/"* ]]; then
+      echo "::warning::Bundling Flutter/SDK libc++ — prefer Zentra depends NDK for release builds"
+    fi
     cp -f "$lib" "$dest/libc++_shared.so"
+    android_verify_libcxx_shared_size "$dest/libc++_shared.so" "$abi" "bundled libc++" || return 1
     echo "==> Bundled $dest/libc++_shared.so (from $lib)"
   }
 
