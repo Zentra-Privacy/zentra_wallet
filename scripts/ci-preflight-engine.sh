@@ -34,8 +34,12 @@ fi
 [[ -f "$ZENTRA/src/wallet/api/wallet2_api.h" ]] || fail "Zentra not checked out: $ZENTRA"
 
 if [[ -f "$ZENTRA/contrib/depends/packages/zeromq.mk" ]]; then
+  grep -q '$(package)_version=4.3.1' "$ZENTRA/contrib/depends/packages/zeromq.mk" \
+    || fail "zeromq must be 4.3.1 for MinGW. Run: ./scripts/ci-patch-zentra-depends.sh"
+  grep -q 'cxxflags_mingw32+=-O1' "$ZENTRA/contrib/depends/packages/zeromq.mk" \
+    || fail "zeromq MinGW -O1 missing. Run: ./scripts/ci-patch-zentra-depends.sh"
   grep -q 'config_opts_mingw32=--with-cv-impl=pthread' "$ZENTRA/contrib/depends/packages/zeromq.mk" \
-    || fail "zeromq MinGW patch not applied. Run: ./scripts/ci-patch-zentra-depends.sh"
+    && fail "zeromq pthread cv-impl breaks MinGW (remove via ci-patch-zentra-depends.sh)"
 fi
 
 echo "==> Preflight OK (toolchain, libtinfo5, MinGW, Zentra, depends patches)"

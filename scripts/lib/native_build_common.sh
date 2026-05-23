@@ -21,7 +21,8 @@ native_ensure_zentra_depends_patched() {
   local zentra_root="$1"
   local patch_sh="${WALLET_ROOT:?}/scripts/ci-patch-zentra-depends.sh"
   [[ -f "$zentra_root/contrib/depends/packages/zeromq.mk" ]] || return 0
-  if grep -q 'config_opts_mingw32=--with-cv-impl=pthread' "$zentra_root/contrib/depends/packages/zeromq.mk"; then
+  if grep -q '$(package)_version=4.3.1' "$zentra_root/contrib/depends/packages/zeromq.mk" \
+    && grep -q 'cxxflags_mingw32+=-O1' "$zentra_root/contrib/depends/packages/zeromq.mk"; then
     return 0
   fi
   [[ -x "$patch_sh" ]] || {

@@ -35,7 +35,7 @@ Every run builds the engine from **Zentra v0.1.0** (no “skip rebuild” shortc
 
 **FFI linking (Android / Windows cross-build):** `native/zentra_wallet_ffi/cmake/ZentraDepends.cmake` resolves static `.a` files directly from `contrib/depends/<triplet>/lib` (tagged Boost names, no `-lboost_*`). Optional Zentra libs: `libwallet-crypto.a`, `libdevice_trezor.a` (Android uses `USE_DEVICE_TREZOR=OFF`). Phase 1 verifies bundle size and ELF architecture before upload.
 
-**Windows depends (MinGW):** Ubuntu needs `g++-mingw-w64-x86-64` (in `ci-install-linux-deps.sh all`). Zentra v0.1.0 zeromq 4.3.4 needs `scripts/ci-patch-zentra-depends.sh` (`--with-cv-impl=pthread` for MinGW — fixes `condition_variable_any` compile errors).
+**Windows depends (MinGW):** Ubuntu needs `g++-mingw-w64-x86-64` (in `ci-install-linux-deps.sh all`). Zentra v0.1.0 ships zeromq **4.3.4**; `ci-patch-zentra-depends.sh` downgrades to **4.3.1** + `cxxflags_mingw32+=-O1` (fixes MinGW `condition_variable` / `get_mutex` errors).
 
 ---
 
