@@ -46,12 +46,14 @@ cp -f "$ROOT/packages/zentra_wallet_core/windows/libzentra_wallet_ffi.dll" "$STA
 
 echo "==> Android arm64-v8a"
 native_build_android "$ZENTRA" arm64-v8a
-cp -f "$ROOT/packages/zentra_wallet_core/android/src/main/jniLibs/arm64-v8a/libzentra_wallet_ffi.so" \
+mkdir -p "$STAGE/android/arm64-v8a"
+cp -a "$ROOT/packages/zentra_wallet_core/android/src/main/jniLibs/arm64-v8a/." \
   "$STAGE/android/arm64-v8a/"
 
 echo "==> Android armeabi-v7a"
 native_build_android "$ZENTRA" armeabi-v7a
-cp -f "$ROOT/packages/zentra_wallet_core/android/src/main/jniLibs/armeabi-v7a/libzentra_wallet_ffi.so" \
+mkdir -p "$STAGE/android/armeabi-v7a"
+cp -a "$ROOT/packages/zentra_wallet_core/android/src/main/jniLibs/armeabi-v7a/." \
   "$STAGE/android/armeabi-v7a/"
 
 {

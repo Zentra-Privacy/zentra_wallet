@@ -149,7 +149,35 @@ native_build_android() {
 
     mkdir -p "$JNILIBS/$abi"
     cp -f "$out" "$JNILIBS/$abi/libzentra_wallet_ffi.so"
+    _bundle_android_cpp_shared "$abi" "$JNILIBS/$abi"
     echo "==> Installed $JNILIBS/$abi/libzentra_wallet_ffi.so ($(du -h "$JNILIBS/$abi/libzentra_wallet_ffi.so" | cut -f1))"
+  }
+
+  _bundle_android_cpp_shared() {
+    local abi="$1" dest="$2"
+    local ndk="${ANDROID_NDK:-${ANDROID_NDK_HOME:-}}"
+    if [[ -z "$ndk" && -n "${ANDROID_HOME:-}" ]]; then
+      ndk="$(find "$ANDROID_HOME/ndk" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -1)"
+    fi
+    [[ -n "$ndk" ]] || {
+      echo "Warning: ANDROID_NDK not set; skipping libc++_shared.so for $abi"
+      return 0
+    }
+    local triple
+    case "$abi" in
+      arm64-v8a) triple=aarch64-linux-android ;;
+      armeabi-v7a) triple=arm-linux-androideabi ;;
+      x86_64) triple=x86_64-linux-android ;;
+      x86) triple=i686-linux-android ;;
+      *) return 0 ;;
+    esac
+    local lib="$ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/$triple/libc++_shared.so"
+    if [[ -f "$lib" ]]; then
+      cp -f "$lib" "$dest/libc++_shared.so"
+      echo "==> Bundled $dest/libc++_shared.so"
+    else
+      echo "Warning: libc++_shared.so not found for $abi under $ndk"
+    fi
   }
 
   echo "==> Android native build"

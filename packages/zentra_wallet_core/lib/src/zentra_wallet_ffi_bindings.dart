@@ -14,19 +14,30 @@ class NativeWalletUnavailable implements Exception {
 class ZentraNativeWallet {
   ZentraNativeWallet._(this._lib);
   static ZentraNativeWallet? _instance;
+  static String? _loadError;
+
+  /// Last error from [isAvailable] (library missing, dlopen failed, or bad symbols).
+  static String? get loadError => _loadError;
 
   static ZentraNativeWallet get instance {
     if (_instance != null) return _instance!;
     throw NativeWalletUnavailable(
-      'Wallet engine is not available on this device.',
+      _loadError ?? 'Wallet engine is not available on this device.',
     );
   }
 
   static bool get isAvailable {
     try {
+      _loadError = null;
       _instance ??= ZentraNativeWallet._(_NativeLib(_openLib()));
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      _loadError = e.toString();
+      assert(() {
+        // ignore: avoid_print
+        print('ZentraNativeWallet load failed: $e\n$st');
+        return true;
+      }());
       return false;
     }
   }
@@ -57,6 +68,15 @@ class ZentraNativeWallet {
       }
     }
     if (Platform.isAndroid) {
+      // C++ runtime (required when wallet .so links against shared libc++).
+      for (final dep in <String>[
+        'libc++_shared.so',
+        'libzentra_wallet_core_plugin.so',
+      ]) {
+        try {
+          ffi.DynamicLibrary.open(dep);
+        } catch (_) {}
+      }
       return ffi.DynamicLibrary.open('libzentra_wallet_ffi.so');
     }
     if (Platform.isWindows) {

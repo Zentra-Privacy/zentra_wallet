@@ -183,7 +183,23 @@ export SKIP_DEPENDS=1    # only if toolchain already built
 | Depends download fails | Check network; `curl`, `unzip`, `sha256sum` installed |
 | `libtinfo.so.5` missing | `sudo apt install libtinfo5` |
 | `libwallet_api.a not found` | Let Zentra finish; inspect `zentra/build/android-*/release/lib/` |
-| APK: engine unavailable | Rebuild jniLibs **then** `flutter clean && flutter build apk` |
+| APK: engine unavailable | See below |
+
+### “Wallet engine unavailable” on a real phone
+
+The app could not load `libzentra_wallet_ffi.so` (missing from APK, wrong CPU type, or load error).
+
+1. **Use the latest CI APK** (after a green Release pipeline), not an old draft or a local `flutter build apk` without `./wallet.sh build-android`.
+2. **Check the APK** (on a PC):
+   ```bash
+   unzip -l app-release.apk | grep zentra
+   ```
+   You should see `lib/arm64-v8a/libzentra_wallet_ffi.so` and `lib/armeabi-v7a/...` (each usually **50+ MiB** inside the zip listing).
+3. **Device CPU:** must be **ARM** (arm64 or 32-bit). Pure **x86** phones/emulators need a separate `x86_64` build (`./wallet.sh build-android x86_64`).
+4. **Android version:** **7.0+** (API 24).
+5. Reinstall: uninstall old app → install new APK.
+
+CI now bundles `libc++_shared.so` next to the wallet library when the NDK is available.
 | Emulator ABI mismatch | Build `x86_64` or use an arm64 emulator image |
 
 ---

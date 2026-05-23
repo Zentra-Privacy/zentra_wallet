@@ -24,8 +24,11 @@ _apply "$BUNDLE/windows/libzentra_wallet_ffi.dll" \
 for abi_dir in "$BUNDLE/android"/*; do
   [[ -d "$abi_dir" ]] || continue
   abi="$(basename "$abi_dir")"
-  _apply "$abi_dir/libzentra_wallet_ffi.so" \
-    "$ROOT/packages/zentra_wallet_core/android/src/main/jniLibs/$abi/libzentra_wallet_ffi.so"
+  mkdir -p "$ROOT/packages/zentra_wallet_core/android/src/main/jniLibs/$abi"
+  for so in "$abi_dir"/*.so; do
+    [[ -f "$so" ]] || continue
+    _apply "$so" "$ROOT/packages/zentra_wallet_core/android/src/main/jniLibs/$abi/$(basename "$so")"
+  done
 done
 
 if [[ -f "$BUNDLE/macos/lib/libzentra_wallet_ffi.dylib" ]]; then
