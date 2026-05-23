@@ -4,11 +4,10 @@
 
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <mutex>
 #include <sstream>
 #include <string>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 namespace {
 
@@ -163,6 +162,19 @@ std::string json_escape(const std::string& s) {
   return out;
 }
 
+void ensure_wallet_dir(const std::string& dir) {
+  if (dir.empty()) return;
+  std::error_code ec;
+  std::filesystem::create_directories(dir, ec);
+#ifndef _WIN32
+  std::filesystem::permissions(
+      dir,
+      std::filesystem::perms::owner_read | std::filesystem::perms::owner_write |
+          std::filesystem::perms::owner_exec,
+      std::filesystem::perm_options::replace, ec);
+#endif
+}
+
 std::string full_path(const char* name) {
   if (!name || !*name) return {};
   std::string p(name);
@@ -184,7 +196,7 @@ ZENTRA_WM_API int zentra_wm_init(const char* wallet_dir) {
   try {
     if (wallet_dir) {
       g_wallet_dir = wallet_dir;
-      mkdir(wallet_dir, 0700);
+      ensure_wallet_dir(g_wallet_dir);
     }
     if (!g_wm) {
       Monero::Utils::onStartup();
