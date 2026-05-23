@@ -25,6 +25,14 @@ ZENTRA="$zentra_path"
 
 native_prepare_python_shim "$ROOT"
 
+if ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1 \
+  || ! x86_64-w64-mingw32-gcc -dumpmachine >/dev/null 2>&1; then
+  echo "::error::MinGW cross compiler missing (needed for Windows .dll in this job)."
+  echo "       CI must run: sudo ./scripts/ci-install-linux-deps.sh all"
+  echo "       (installs g++-mingw-w64-x86-64 gcc-mingw-w64-x86-64 mingw-w64)"
+  exit 1
+fi
+
 rm -rf "$STAGE"
 mkdir -p "$STAGE/linux" "$STAGE/windows" "$STAGE/android/arm64-v8a" "$STAGE/android/armeabi-v7a"
 

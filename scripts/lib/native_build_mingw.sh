@@ -17,6 +17,15 @@ native_build_mingw() {
   }
 
   native_prepare_python_shim "$ROOT"
+  if ! command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+    echo "Error: x86_64-w64-mingw32-gcc not found."
+    echo "  Install: sudo apt install -y g++-mingw-w64-x86-64 gcc-mingw-w64-x86-64 mingw-w64"
+    return 1
+  fi
+  if ! x86_64-w64-mingw32-gcc -dumpmachine >/dev/null 2>&1; then
+    echo "Error: x86_64-w64-mingw32-gcc cannot run (broken MinGW toolchain)."
+    return 1
+  fi
   native_build_depends "$ZENTRA_ROOT" "$HOST" "$JOBS" || return 1
 
   local toolchain="$ZENTRA_ROOT/contrib/depends/$HOST/share/toolchain.cmake"
