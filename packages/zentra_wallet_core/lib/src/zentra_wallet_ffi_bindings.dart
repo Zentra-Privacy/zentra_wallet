@@ -230,7 +230,7 @@ class ZentraNativeWallet {
       _lib.startBgRefresh(handle) == 1;
 
   void pauseBackgroundRefresh(ffi.Pointer<ffi.Void> handle) {
-    _lib.pauseBgRefresh(handle);
+    _lib.pauseBgRefresh?.call(handle);
   }
 
   String lastErrorMessage() => _lastError();
@@ -338,7 +338,7 @@ class _NativeLib {
         closeWallet = lib.lookupFunction<_CloseNative, _Close>('zentra_wm_close_wallet'),
         refresh = lib.lookupFunction<_RefreshNative, _Refresh>('zentra_wm_refresh'),
         startBgRefresh = lib.lookupFunction<_RefreshNative, _Refresh>('zentra_wm_start_background_refresh'),
-        pauseBgRefresh = lib.lookupFunction<_PauseBgNative, _PauseBg>('zentra_wm_pause_background_refresh'),
+        pauseBgRefresh = _tryLookupPauseBg(lib),
         balance = lib.lookupFunction<_BalNative, _Bal>('zentra_wm_balance'),
         unlockedBalance = lib.lookupFunction<_BalNative, _Bal>('zentra_wm_unlocked_balance'),
         walletHeight = lib.lookupFunction<_BalNative, _Bal>('zentra_wm_wallet_height'),
@@ -364,7 +364,7 @@ class _NativeLib {
   final _Close closeWallet;
   final _Refresh refresh;
   final _Refresh startBgRefresh;
-  final _PauseBg pauseBgRefresh;
+  final _PauseBg? pauseBgRefresh;
   final _Bal balance;
   final _Bal unlockedBalance;
   final _Bal walletHeight;
@@ -417,3 +417,13 @@ typedef _SetHeightNative = ffi.Int32 Function(ffi.Pointer<ffi.Void>, ffi.Uint64)
 typedef _SetHeight = int Function(ffi.Pointer<ffi.Void>, int);
 typedef _PauseBgNative = ffi.Int32 Function(ffi.Pointer<ffi.Void>);
 typedef _PauseBg = int Function(ffi.Pointer<ffi.Void>);
+
+_PauseBg? _tryLookupPauseBg(ffi.DynamicLibrary lib) {
+  try {
+    return lib.lookupFunction<_PauseBgNative, _PauseBg>(
+      'zentra_wm_pause_background_refresh',
+    );
+  } catch (_) {
+    return null;
+  }
+}
