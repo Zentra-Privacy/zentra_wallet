@@ -22,6 +22,24 @@ class WalletDirectory {
     return list;
   }
 
+  /// Picks [desired] if unused, otherwise `desired1`, `desired2`, … (case-insensitive).
+  static String uniqueWalletFilename(String desired, Iterable<String> existing) {
+    final base = desired.trim();
+    if (base.isEmpty) return base;
+
+    final taken = <String>{
+      for (final name in existing)
+        if (name.trim().isNotEmpty) name.trim().toLowerCase(),
+    };
+    if (!taken.contains(base.toLowerCase())) return base;
+
+    for (var n = 1; n < 100000; n++) {
+      final candidate = '$base$n';
+      if (!taken.contains(candidate.toLowerCase())) return candidate;
+    }
+    throw ArgumentError('Too many wallets named like "$base"');
+  }
+
   static String _basename(String path) {
     final sep = Platform.pathSeparator;
     final i = path.lastIndexOf(sep);

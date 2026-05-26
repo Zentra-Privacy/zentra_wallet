@@ -177,6 +177,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (ok) {
       if (!mounted) return;
       final isNewWallet = !_openMode && !_restoreMode;
+      final savedName = p.walletFilename ?? name;
+      if (!_openMode && savedName != name) {
+        _snack('Wallet saved as "$savedName" — that name was already in use');
+      }
       if (isNewWallet) {
         final backup = await p.fetchBackupInfo();
         if (!mounted) return;
@@ -186,7 +190,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               backup: backup ??
                   WalletBackupInfo(
                     address: p.primaryAddress?.address ?? '',
-                    walletName: _filename.text.trim(),
+                    walletName: savedName,
                   ),
             ),
           ),

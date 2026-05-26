@@ -93,6 +93,15 @@ class WalletProvider extends ChangeNotifier {
     return WalletDirectory.listWalletFilenames(_walletDir!);
   }
 
+  /// Returns [desired] or the next free name (`my_wallet` → `my_wallet1`, …).
+  Future<String> resolveAvailableWalletFilename(String desired) async {
+    final existing = await listLocalWalletFilenames();
+    return WalletDirectory.uniqueWalletFilename(desired, existing);
+  }
+
+  Future<String> _resolveAvailableFilename(String desired) =>
+      resolveAvailableWalletFilename(desired);
+
   Future<void> _ensureWallet() async {
     if (_wallet != null) return;
     if (networkConfig == null || nodeSettings == null) await initialize();
@@ -451,6 +460,7 @@ class WalletProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    final resolved = await _resolveAvailableFilename(filename);
     await _ensureWallet();
     _beginWalletOperation();
     try {
@@ -459,7 +469,7 @@ class WalletProvider extends ChangeNotifier {
         walletDir: _walletDir!,
         daemonAddress: nodeSettings!.daemonAddress,
         trustedDaemon: trusted,
-        filename: filename.trim(),
+        filename: resolved,
         password: password,
         nettype: networkConfig!.type.index,
         restoreHeight: restoreHeight ?? 0,
@@ -470,7 +480,7 @@ class WalletProvider extends ChangeNotifier {
       }
       final ok = await _syncAfterOpen();
       if (ok) {
-        await _persistWalletSession(filename, password);
+        await _persistWalletSession(resolved, password);
         if (restoreHeight != null) await updateDefaultRestoreHeight(restoreHeight);
       }
       return ok;
@@ -507,6 +517,7 @@ class WalletProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    final resolved = await _resolveAvailableFilename(filename);
     await _ensureWallet();
     _beginWalletOperation();
     try {
@@ -515,7 +526,7 @@ class WalletProvider extends ChangeNotifier {
         walletDir: _walletDir!,
         daemonAddress: nodeSettings!.daemonAddress,
         trustedDaemon: trusted,
-        filename: filename.trim(),
+        filename: resolved,
         password: password,
         seed: normalized,
         nettype: networkConfig!.type.index,
@@ -524,7 +535,7 @@ class WalletProvider extends ChangeNotifier {
       _wallet!.adoptHandle(WalletNativeWorker.pointerFromAddress(handleAddr));
       final ok = await _syncAfterOpen();
       if (ok) {
-        await _persistWalletSession(filename, password);
+        await _persistWalletSession(resolved, password);
         if (restoreHeight != null) await updateDefaultRestoreHeight(restoreHeight);
       }
       return ok;

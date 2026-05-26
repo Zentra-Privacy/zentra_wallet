@@ -17,4 +17,31 @@ void main() {
       await dir.delete(recursive: true);
     }
   });
+
+  group('uniqueWalletFilename', () {
+    test('returns desired when free', () {
+      expect(
+        WalletDirectory.uniqueWalletFilename('my_wallet', ['other']),
+        'my_wallet',
+      );
+    });
+
+    test('appends increment when taken', () {
+      expect(
+        WalletDirectory.uniqueWalletFilename('my_wallet', ['my_wallet']),
+        'my_wallet1',
+      );
+      expect(
+        WalletDirectory.uniqueWalletFilename('my_wallet', ['my_wallet', 'my_wallet1']),
+        'my_wallet2',
+      );
+    });
+
+    test('case-insensitive collision', () {
+      expect(
+        WalletDirectory.uniqueWalletFilename('my_wallet', ['My_Wallet']),
+        'my_wallet1',
+      );
+    });
+  });
 }
