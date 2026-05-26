@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -32,6 +33,7 @@ class WalletProvider extends ChangeNotifier {
   final WalletAutoStore _autoStore = WalletAutoStore();
   Future<void> _storeTail = Future<void>.value();
   bool _pollInFlight = false;
+  int _zeroDaemonPolls = 0;
 
   WalletConnectionState connectionState = WalletConnectionState.disconnected;
   WalletSyncStatus syncStatus = WalletSyncStatus.disconnected;
@@ -160,6 +162,7 @@ class WalletProvider extends ChangeNotifier {
     _blockchainJobs.reset();
     _storeTail = Future<void>.value();
     _pollInFlight = false;
+    _zeroDaemonPolls = 0;
     syncStatus = WalletSyncStatus.disconnected;
   }
 
@@ -175,6 +178,15 @@ class WalletProvider extends ChangeNotifier {
     );
   }
 
+  /// Blocking refresh + snapshot before native background sync (daemon height is 0 until then).
+  Future<void> _runInitialWalletRefresh() async {
+    await _blockchainJobs.run(() async {
+      await _wallet!.refresh();
+      await _applyWalletSnapshot();
+    });
+    _updateSyncStatusFromHeights();
+  }
+
   Future<void> _pollSnapshotFromBackground() async {
     if (_wallet == null || !_wallet!.isOpen || _pollInFlight) return;
     final gen = _connectGeneration;
@@ -183,6 +195,15 @@ class WalletProvider extends ChangeNotifier {
       await _blockchainJobs.run(() async {
         if (gen != _connectGeneration || _wallet == null || !_wallet!.isOpen) return;
         final wasSynced = isSynced;
+        if (daemonBlockHeight <= 0) {
+          _zeroDaemonPolls++;
+          // Background refresh alone may not update heights on Android; retry refresh periodically.
+          if (_zeroDaemonPolls == 1 || _zeroDaemonPolls % 5 == 0) {
+            await _wallet!.refresh();
+          }
+        } else {
+          _zeroDaemonPolls = 0;
+        }
         await _applyWalletSnapshot();
         if (gen != _connectGeneration) return;
         _updateSyncStatusFromHeights();
@@ -193,11 +214,17 @@ class WalletProvider extends ChangeNotifier {
         }
       });
       if (gen == _connectGeneration) {
-        errorMessage = null;
+        if (daemonBlockHeight > 0) {
+          errorMessage = null;
+        }
         notifyListeners();
       }
     } catch (e) {
       if (gen == _connectGeneration) {
+        if (daemonBlockHeight <= 0) {
+          errorMessage = _userMessage(e);
+          notifyListeners();
+        }
         assert(() {
           debugPrint('Wallet background poll failed: $e');
           return true;
@@ -240,22 +267,6 @@ class WalletProvider extends ChangeNotifier {
     await op;
   }
 
-  Future<void> _openWalletOnWorker({
-    required String filename,
-    required String password,
-  }) async {
-    final trusted = EmbeddedWalletService.isTrustedDaemon(nodeSettings!.daemonAddress);
-    final address = await WalletNativeWorker.openWallet(
-      walletDir: _walletDir!,
-      daemonAddress: nodeSettings!.daemonAddress,
-      trustedDaemon: trusted,
-      filename: filename,
-      password: password,
-      nettype: networkConfig!.type.index,
-    );
-    _wallet!.adoptHandle(WalletNativeWorker.pointerFromAddress(address));
-  }
-
   /// Called when [connect] is aborted externally (e.g. splash screen timeout).
   void markConnectFailed(String message) {
     _connectGeneration++;
@@ -281,7 +292,12 @@ class WalletProvider extends ChangeNotifier {
     return true;
   }
 
-  Future<bool> connect({String? passwordOverride}) async {
+  Future<bool> connect({
+    String? passwordOverride,
+    /// When false, opens the wallet and starts background sync without blocking on [refresh].
+    /// Use on splash so Home can show while the node syncs (mobile networks are slower).
+    bool waitForInitialSync = true,
+  }) async {
     final gen = ++_connectGeneration;
     _stopBlockchainSync();
     _refreshNativeFlag();
@@ -317,17 +333,26 @@ class WalletProvider extends ChangeNotifier {
       if (_connectStale(gen)) return false;
       final password = passwordOverride ?? await _settings.loadWalletPassword() ?? '';
       syncStatus = WalletSyncStatus.connecting;
-      await _blockchainJobs.run(() => _openWalletOnWorker(
-            filename: walletFilename!,
-            password: password,
-          ));
+      await _blockchainJobs.run(() async {
+        _wallet!.openWallet(filename: walletFilename!, password: password);
+      });
       if (_connectStale(gen)) return false;
-      _startBlockchainSync();
-      if (_connectStale(gen)) return false;
-      await _blockchainJobs.run(_applyWalletSnapshot);
-      if (_connectStale(gen)) return false;
-      _updateSyncStatusFromHeights();
+      if (waitForInitialSync) {
+        await _runInitialWalletRefresh();
+        if (_connectStale(gen)) return false;
+      }
       connectionState = WalletConnectionState.connected;
+      _startBlockchainSync();
+      if (!waitForInitialSync) {
+        syncStatus = WalletSyncStatus.syncing;
+        unawaited(_runInitialWalletRefresh().catchError((Object e) {
+          if (gen == _connectGeneration) {
+            errorMessage = _userMessage(e);
+            notifyListeners();
+          }
+        }));
+      }
+      if (_connectStale(gen)) return false;
       errorMessage = null;
       return true;
     } catch (e) {
@@ -532,9 +557,8 @@ class WalletProvider extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
     try {
+      await _runInitialWalletRefresh();
       _startBlockchainSync();
-      await _blockchainJobs.run(_applyWalletSnapshot);
-      _updateSyncStatusFromHeights();
       return true;
     } catch (e) {
       _disposeWalletOnFailure();
@@ -688,11 +712,20 @@ class WalletProvider extends ChangeNotifier {
       syncStatus == WalletSyncStatus.connecting ||
       (connectionState == WalletConnectionState.connecting && !_backgroundSync.isActive);
 
-  /// Connected but daemon height not available yet (node RPC).
+  /// Connected but daemon height not available yet (node RPC / first refresh pending).
   bool get isWaitingForDaemon =>
       connectionState == WalletConnectionState.connected && daemonBlockHeight <= 0;
 
-  bool get showSyncBanner => isWalletBehindDaemon || isWaitingForDaemon;
+  bool get showSyncBanner =>
+      isWalletBehindDaemon || isWaitingForDaemon || (connectionState == WalletConnectionState.connected && !isSynced);
+
+  /// Subtitle under the sync banner on Home / History / Settings.
+  String? get syncBannerSubtitle {
+    if (isWaitingForDaemon) {
+      return isBackgroundSyncing ? 'Fetching node status…' : 'Connecting to node…';
+    }
+    return syncProgressLabel;
+  }
 
   bool get canTransact =>
       connectionState == WalletConnectionState.connected && isSynced;

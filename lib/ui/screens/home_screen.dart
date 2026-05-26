@@ -85,9 +85,7 @@ class _DashboardTab extends StatelessWidget {
             errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
             isConnecting: wallet.isOpeningWallet,
             isSyncing: wallet.showSyncBanner,
-            syncSubtitle: wallet.isWaitingForDaemon
-                ? 'Connecting to node…'
-                : wallet.syncProgressLabel,
+            syncSubtitle: wallet.syncBannerSubtitle,
             syncProgress: wallet.syncProgressFraction,
           ),
           ZentraHeroBalanceCard(
@@ -178,9 +176,7 @@ class _AssetsTab extends StatelessWidget {
             errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
             isConnecting: wallet.isOpeningWallet,
             isSyncing: wallet.showSyncBanner,
-            syncSubtitle: wallet.isWaitingForDaemon
-                ? 'Connecting to node…'
-                : wallet.syncProgressLabel,
+            syncSubtitle: wallet.syncBannerSubtitle,
             syncProgress: wallet.syncProgressFraction,
           ),
           ZentraHeroBalanceCard(

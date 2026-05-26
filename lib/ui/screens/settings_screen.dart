@@ -198,9 +198,7 @@ class SettingsScreen extends StatelessWidget {
             errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
             isConnecting: wallet.isOpeningWallet,
             isSyncing: wallet.showSyncBanner,
-            syncSubtitle: wallet.isWaitingForDaemon
-                ? 'Connecting to node…'
-                : wallet.syncProgressLabel,
+            syncSubtitle: wallet.syncBannerSubtitle,
             syncProgress: wallet.syncProgressFraction,
           ),
           Expanded(child: list),

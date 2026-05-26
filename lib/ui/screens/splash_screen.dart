@@ -44,8 +44,8 @@ class _SplashScreenState extends State<SplashScreen> {
       }
 
       setState(() => _status = 'Opening wallet…');
-      final ok = await provider.connect().timeout(
-        const Duration(seconds: 25),
+      final ok = await provider.connect(waitForInitialSync: false).timeout(
+        const Duration(seconds: 45),
         onTimeout: () {
           provider.markConnectFailed(
             'Could not open wallet in time. Check node in Settings.',

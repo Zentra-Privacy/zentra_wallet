@@ -68,9 +68,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
           isConnecting: wallet.isOpeningWallet,
           isSyncing: wallet.showSyncBanner,
-          syncSubtitle: wallet.isWaitingForDaemon
-              ? 'Connecting to node…'
-              : wallet.syncProgressLabel,
+          syncSubtitle: wallet.syncBannerSubtitle,
           syncProgress: wallet.syncProgressFraction,
         ),
         Padding(
