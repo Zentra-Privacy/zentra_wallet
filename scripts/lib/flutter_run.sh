@@ -41,6 +41,11 @@ EOF
   if [[ ("$DEVICE" == "linux" || -z "$DEVICE") && ! -f "$SO" ]]; then
     echo "==> Native .so missing; run: ./wallet.sh build"
   fi
+  local MAC_DYLIB="$ROOT/packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib"
+  if [[ "$DEVICE" == "macos" && ! -f "$MAC_DYLIB" ]]; then
+    echo "==> Native macOS dylib missing; run: ./wallet.sh build-macos"
+    echo "    Then: cd macos && pod install && cd .."
+  fi
 
   if [[ -z "$DEVICE" ]]; then
     DEVICE="$(flutter devices --machine 2>/dev/null | python3 -c "

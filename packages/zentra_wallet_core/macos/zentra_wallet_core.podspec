@@ -1,5 +1,5 @@
 #
-# FFI plugin — zentra_core helpers + vendored libzentra_wallet_ffi.dylib (after build-native / CI).
+# FFI plugin — zentra_core helpers + vendored libzentra_wallet_ffi.dylib (after build-macos / CI).
 #
 Pod::Spec.new do |s|
   s.name             = 'zentra_wallet_core'
@@ -12,15 +12,22 @@ Pod::Spec.new do |s|
 
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'
-  s.vendored_libraries = 'lib/libzentra_wallet_ffi.dylib'
-  s.preserve_paths   = 'lib/libzentra_wallet_ffi.dylib'
+
+  dylib = 'lib/libzentra_wallet_ffi.dylib'
+  if File.file?(dylib)
+    s.vendored_libraries = dylib
+    s.preserve_paths   = dylib
+  else
+    Pod::UI.warn "#{s.name}: #{dylib} missing — run ./wallet.sh build-macos (wallet engine unavailable)"
+  end
 
   s.dependency 'FlutterMacOS'
 
-  s.platform = :osx, '10.15'
+  s.platform = :osx, '12.0'
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
     'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17',
+    'MACOSX_DEPLOYMENT_TARGET' => '12.0',
   }
   s.swift_version = '5.0'
 end

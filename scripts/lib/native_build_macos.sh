@@ -28,7 +28,12 @@ native_build_macos_brew() {
   [[ -f "$WALLET_API" ]] || { echo "Error: $WALLET_API missing"; return 1; }
 
   mkdir -p "$ffibuild" "$OUT"
-  local -a cmake_extra=()
+  local arch
+  arch="$(uname -m)"
+  local -a cmake_extra=(
+    -DCMAKE_OSX_ARCHITECTURES="$arch"
+    -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+  )
   if command -v brew >/dev/null 2>&1; then
     local brew_prefix
     brew_prefix="$(brew --prefix)"
@@ -52,7 +57,10 @@ native_build_macos_brew() {
     return 1
   fi
   echo "==> Installed $OUT/libzentra_wallet_ffi.$ext"
+  file "$OUT/libzentra_wallet_ffi.$ext" || true
   ls -la "$OUT"
+  echo "    Note: Homebrew-linked dylib needs Homebrew libs on the target Mac."
+  echo "    For portable release builds use: ZENTRA_MACOS_USE_DEPENDS=1 ./wallet.sh build-macos"
 }
 
 native_build_macos() {
@@ -83,6 +91,11 @@ native_build_macos() {
     HOST="aarch64-apple-darwin11"
   else
     HOST="x86_64-apple-darwin11"
+  fi
+
+  local patch_sh="${ROOT}/scripts/ci-patch-zentra-depends.sh"
+  if [[ -x "$patch_sh" ]]; then
+    "$patch_sh" "$ZENTRA_ROOT" || return 1
   fi
 
   native_build_depends "$ZENTRA_ROOT" "$HOST" "$JOBS" || return 1

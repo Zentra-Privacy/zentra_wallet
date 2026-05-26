@@ -14,12 +14,20 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #endif
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#include <cstdlib>
+#endif
 
 namespace {
 
 std::mutex g_mutex;
 Monero::WalletManager* g_wm = nullptr;
 std::string g_wallet_dir;
+#if defined(__APPLE__) && TARGET_OS_OSX
+std::string g_saved_home;
+bool g_home_redirected = false;
+#endif
 std::string g_daemon_address;
 int g_trusted_daemon = 1;
 std::string g_last_error;
@@ -203,6 +211,18 @@ ZENTRA_WM_API int zentra_wm_init(const char* wallet_dir) {
     if (wallet_dir) {
       g_wallet_dir = wallet_dir;
       ensure_wallet_dir(g_wallet_dir);
+#if defined(__APPLE__) && TARGET_OS_OSX
+      // macOS App Sandbox: container $HOME (Data/) is not writable for LMDB ringdb.
+      // Redirect $HOME to the app wallet folder (Application Support/.../zentra_wallets).
+      if (!g_home_redirected) {
+        if (const char* cur = std::getenv("HOME")) {
+          g_saved_home = cur;
+        }
+        g_home_redirected = true;
+      }
+      setenv("HOME", g_wallet_dir.c_str(), 1);
+      ensure_wallet_dir(g_wallet_dir + "/.shared-ringdb");
+#endif
     }
     if (!g_wm) {
       Monero::Utils::onStartup();
@@ -218,6 +238,17 @@ ZENTRA_WM_API int zentra_wm_init(const char* wallet_dir) {
 ZENTRA_WM_API void zentra_wm_shutdown(void) {
   std::lock_guard<std::mutex> lock(g_mutex);
   g_wm = nullptr;
+#if defined(__APPLE__) && TARGET_OS_OSX
+  if (g_home_redirected) {
+    if (!g_saved_home.empty()) {
+      setenv("HOME", g_saved_home.c_str(), 1);
+    } else {
+      unsetenv("HOME");
+    }
+    g_home_redirected = false;
+    g_saved_home.clear();
+  }
+#endif
 }
 
 ZENTRA_WM_API void zentra_wm_set_daemon(const char* daemon_address, int trusted_daemon) {

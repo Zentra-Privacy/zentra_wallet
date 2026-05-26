@@ -34,6 +34,45 @@ export ZENTRA_WALLET_FFI_PATH=/full/path/to/libzentra_wallet_ffi.so
 
 ---
 
+## macOS — wallet engine, ringdb, or “invalid password”
+
+**Symptoms:**
+
+- “Wallet engine unavailable” after `flutter run -d macos`
+- Log: `Failed to initialize ringdb` / `Operation not permitted`
+- `invalid password` right after open (often ringdb failed first)
+
+**Fix:**
+
+```bash
+./wallet.sh build-macos          # builds packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib
+cd macos && pod install && cd ..
+flutter run -d macos
+```
+
+**Check dylib arch matches the app** (Apple Silicon vs Intel):
+
+```bash
+file packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib
+# expect: arm64 on M-series Mac
+```
+
+**Portable dylib for distribution** (no Homebrew on target Mac):
+
+```bash
+ZENTRA_MACOS_USE_DEPENDS=1 ./wallet.sh build-macos
+```
+
+**Manual load override:**
+
+```bash
+export ZENTRA_WALLET_FFI_PATH=/full/path/to/libzentra_wallet_ffi.dylib
+```
+
+**Dart VM / hot reload warning in debug:** ensure `macos/Runner/DebugProfile.entitlements` includes `com.apple.security.network.server` (Flutter DevTools).
+
+---
+
 ## “Zentra source not found” on build
 
 **Symptom:** `./wallet.sh build` fails immediately.

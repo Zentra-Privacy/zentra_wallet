@@ -123,6 +123,19 @@ Search order in `zentra_wallet_ffi_bindings.dart`:
 
 Android: `libzentra_wallet_ffi.so` in APK jniLibs.
 
+## Loading the library (macOS)
+
+Search order in `zentra_wallet_ffi_bindings.dart`:
+
+1. `ZENTRA_WALLET_FFI_PATH` environment variable
+2. `Runner.app/Contents/Frameworks/libzentra_wallet_ffi.dylib` (CocoaPods vendored)
+3. Bare name `libzentra_wallet_ffi.dylib`
+4. Dev/repo path: `packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib`
+
+Build the dylib first: `./wallet.sh build-macos`, then `cd macos && pod install`.
+
+Ring DB (`.shared-ringdb`) is stored under the app wallet directory on macOS (see `zentra_wallet_ffi.cpp`, `TARGET_OS_OSX` HOME redirect).
+
 ---
 
 ## Adding a new FFI function

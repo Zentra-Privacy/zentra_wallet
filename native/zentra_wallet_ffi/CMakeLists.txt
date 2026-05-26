@@ -136,25 +136,31 @@ if(FFI_IOS)
     "-framework SystemConfiguration" "-framework CFNetwork"
   )
 elseif(DEPENDS OR ANDROID)
-  target_link_libraries(zentra_wallet_ffi PRIVATE
-    -Wl,--start-group
-    ${ZENTRA_STATIC_LIBS}
-    -Wl,--end-group
-    ${FFI_DEPENDS_LIBS}
-    ${CMAKE_DL_LIBS}
-    Threads::Threads)
-  if(ANDROID)
-    target_link_libraries(zentra_wallet_ffi PRIVATE ${LOG_LIB})
-  endif()
-  if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    # libssp: Zentra/depends built with _FORTIFY_SOURCE / stack protector (__memcpy_chk, etc.)
-    # crypt32: OpenSSL/epee/unbound Windows cert store (CertOpenStore, ...)
-    target_link_libraries(zentra_wallet_ffi PRIVATE
-      ws2_32 mswsock iphlpapi bcrypt crypt32 ssp)
-  endif()
   if(APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    # macOS ld does not support --start-group; force_load each static archive.
+    foreach(_zentra_lib IN LISTS ZENTRA_STATIC_LIBS)
+      target_link_libraries(zentra_wallet_ffi PRIVATE "-Wl,-force_load,${_zentra_lib}")
+    endforeach()
     target_link_libraries(zentra_wallet_ffi PRIVATE
-      "-framework Foundation" "-framework IOKit" "-framework AppKit")
+      ${FFI_DEPENDS_LIBS}
+      ${CMAKE_DL_LIBS}
+      Threads::Threads
+      "-framework Foundation" "-framework IOKit" "-framework AppKit" "-framework Security")
+  else()
+    target_link_libraries(zentra_wallet_ffi PRIVATE
+      -Wl,--start-group
+      ${ZENTRA_STATIC_LIBS}
+      -Wl,--end-group
+      ${FFI_DEPENDS_LIBS}
+      ${CMAKE_DL_LIBS}
+      Threads::Threads)
+    if(ANDROID)
+      target_link_libraries(zentra_wallet_ffi PRIVATE ${LOG_LIB})
+    endif()
+    if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+      target_link_libraries(zentra_wallet_ffi PRIVATE
+        ws2_32 mswsock iphlpapi bcrypt crypt32 ssp)
+    endif()
   endif()
 else()
   set(_boost_libs

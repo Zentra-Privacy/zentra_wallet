@@ -24,7 +24,26 @@ class ZentraCore {
     if (Platform.isWindows) {
       return ffi.DynamicLibrary.open('zentra_wallet_core_plugin.dll');
     }
-    if (Platform.isMacOS || Platform.isIOS) {
+    if (Platform.isIOS) {
+      return ffi.DynamicLibrary.process();
+    }
+    if (Platform.isMacOS) {
+      final exe = Platform.resolvedExecutable;
+      final dir = exe.contains('/')
+          ? exe.substring(0, exe.lastIndexOf('/'))
+          : exe;
+      for (final path in <String>[
+        '$dir/../Frameworks/libzentra_wallet_core_plugin.dylib',
+        '@executable_path/../Frameworks/libzentra_wallet_core_plugin.dylib',
+        'libzentra_wallet_core_plugin.dylib',
+      ]) {
+        try {
+          if (path.contains('/') && !path.startsWith('@') && !File(path).existsSync()) {
+            continue;
+          }
+          return ffi.DynamicLibrary.open(path);
+        } catch (_) {}
+      }
       return ffi.DynamicLibrary.process();
     }
     throw UnsupportedError('Platform not supported: ${Platform.operatingSystem}');

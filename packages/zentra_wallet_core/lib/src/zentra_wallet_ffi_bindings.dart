@@ -122,14 +122,37 @@ class ZentraNativeWallet {
       );
     }
     if (Platform.isMacOS) {
+      final fromEnv = Platform.environment['ZENTRA_WALLET_FFI_PATH'];
+      if (fromEnv != null && fromEnv.isNotEmpty) {
+        return ffi.DynamicLibrary.open(fromEnv);
+      }
+      final exe = Platform.resolvedExecutable;
+      final dir = exe.contains('/')
+          ? exe.substring(0, exe.lastIndexOf('/'))
+          : exe;
+      Object? lastErr;
       for (final path in <String>[
-        'libzentra_wallet_ffi.dylib',
+        '$dir/../Frameworks/libzentra_wallet_ffi.dylib',
         '@executable_path/../Frameworks/libzentra_wallet_ffi.dylib',
+        '$dir/libzentra_wallet_ffi.dylib',
+        'libzentra_wallet_ffi.dylib',
+        // `flutter run` from repo before pod embed
+        '$dir/../packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib',
+        '$dir/../../packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib',
       ]) {
         try {
+          if (path.contains('/') && !path.startsWith('@') && !File(path).existsSync()) {
+            continue;
+          }
           return ffi.DynamicLibrary.open(path);
-        } catch (_) {}
+        } catch (e) {
+          lastErr = e;
+        }
       }
+      throw NativeWalletUnavailable(
+        lastErr?.toString() ??
+            'libzentra_wallet_ffi.dylib not found. Run: ./wallet.sh build-macos',
+      );
     }
     if (Platform.isIOS) {
       return ffi.DynamicLibrary.process();

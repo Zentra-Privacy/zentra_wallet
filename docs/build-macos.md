@@ -149,7 +149,7 @@ Or open the `.app` from Finder (you may need to allow unsigned apps in **Privacy
 
 | Check | Expected |
 |-------|----------|
-| Dylib exists | `macos/lib/libzentra_wallet_ffi.dylib` |
+| Dylib exists | `packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib` |
 | App launches | No “Wallet engine unavailable” |
 | Wallet works | Create/restore wallet, sync |
 
@@ -186,6 +186,7 @@ Or both:
 | Depends build fails | Free disk; retry; check `brew` deps |
 | `pod install` fails | `cd macos && pod repo update && pod install` |
 | Dylib missing at runtime | Re-run `build-macos` before `flutter build macos` |
+| Linker warning “built for newer macOS 26.0” | Rebuild Zentra `wallet_api` with deployment target 12: `cd ../zentra/build/release && cmake -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 . && cmake --build . --target wallet_api`, then `./wallet.sh build-macos` |
 | Gatekeeper blocks app | Sign/notarize for distribution, or allow in System Settings |
 
 ---
