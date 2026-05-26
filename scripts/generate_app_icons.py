@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -65,25 +66,51 @@ WINDOWS_ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
 DEFAULT_FILL = 0.94
 
 
-def remove_black_background(img: Image.Image, threshold: int = 28) -> Image.Image:
-    """Make near-black pixels transparent; preserve logo interior detail."""
+def remove_black_background(
+    img: Image.Image,
+    *,
+    ring_lo: int = 95,
+    ring_hi: int = 170,
+    shadow_th: int = 86,
+    ring_pad: float = 1.0,
+    protect_pct: float = 0.12,
+    num_angles: int = 720,
+) -> Image.Image:
+    """Remove outer black + soft shadow; keep chrome ring and all interior art."""
     rgba = img.convert("RGBA")
     pixels = rgba.load()
     w, h = rgba.size
-    cx, cy = w / 2, h / 2
-    max_r = min(cx, cy) * 0.98
+    cx, cy = w / 2.0, h / 2.0
+
+    def is_ring_pixel(r: int, g: int, b: int) -> bool:
+        level = max(r, g, b)
+        return ring_lo <= level <= ring_hi
+
+    ring_r = [0.0] * num_angles
+    for y in range(h):
+        for x in range(w):
+            r, g, b, _a = pixels[x, y]
+            if not is_ring_pixel(r, g, b):
+                continue
+            angle = math.atan2(y - cy, x - cx)
+            bucket = int((angle + math.pi) / (2 * math.pi) * num_angles) % num_angles
+            dist = math.hypot(x - cx, y - cy)
+            ring_r[bucket] = max(ring_r[bucket], dist)
+
+    positive = sorted(v for v in ring_r if v > 0)
+    protect_r = positive[int(len(positive) * protect_pct)] if positive else 0.0
 
     for y in range(h):
         for x in range(w):
-            r, g, b, a = pixels[x, y]
-            if r > threshold or g > threshold or b > threshold:
+            dist = math.hypot(x - cx, y - cy)
+            if dist < protect_r:
                 continue
-            # Only strip black outside the circular emblem (avoid eating dark UI inside).
-            dx, dy = x - cx, y - cy
-            dist = (dx * dx + dy * dy) ** 0.5
-            if dist > max_r * 0.88:
-                pixels[x, y] = (r, g, b, 0)
-            elif r < 12 and g < 12 and b < 12:
+            angle = math.atan2(y - cy, x - cx)
+            bucket = int((angle + math.pi) / (2 * math.pi) * num_angles) % num_angles
+            if dist <= ring_r[bucket] + ring_pad:
+                continue
+            r, g, b, _a = pixels[x, y]
+            if max(r, g, b) <= shadow_th:
                 pixels[x, y] = (r, g, b, 0)
 
     return rgba
@@ -151,9 +178,9 @@ def write_windows_ico(img: Image.Image, path: Path) -> None:
     )
 
 
-def generate_all(source: Path, root: Path, threshold: int, fill: float) -> None:
+def generate_all(source: Path, root: Path, fill: float) -> None:
     raw = Image.open(source)
-    logo = tighten_logo(remove_black_background(raw, threshold=threshold), fill=fill)
+    logo = tighten_logo(remove_black_background(raw), fill=fill)
 
     # Keep master asset in repo
     assets_dir = root / "assets" / "brand"
@@ -198,12 +225,6 @@ def main() -> int:
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument(
-        "--threshold",
-        type=int,
-        default=28,
-        help="RGB threshold for black background removal",
-    )
-    parser.add_argument(
         "--fill",
         type=float,
         default=DEFAULT_FILL,
@@ -215,7 +236,7 @@ def main() -> int:
         print(f"Source image not found: {args.source}", file=sys.stderr)
         return 1
 
-    generate_all(args.source, args.root, args.threshold, args.fill)
+    generate_all(args.source, args.root, args.fill)
     return 0
 
 
