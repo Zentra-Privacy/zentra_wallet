@@ -63,7 +63,7 @@ WEB_ICONS = {
 WINDOWS_ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
 
 # Fraction of the square canvas occupied by the logo (higher = less side padding).
-DEFAULT_FILL = 0.94
+DEFAULT_FILL = 0.98
 
 
 def remove_black_background(
