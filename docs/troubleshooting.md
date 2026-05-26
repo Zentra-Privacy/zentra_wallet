@@ -85,6 +85,22 @@ cd macos && pod install && cd ..
 flutter run -d macos
 ```
 
+---
+
+## iOS — wallet engine, ringdb, or “invalid password”
+
+**Symptoms:** Same as macOS (`Failed to initialize ringdb`, “Wallet engine unavailable”, false “invalid password” after open).
+
+**Cause:** iOS app sandbox blocks LMDB default locking; `./wallet.sh build-ios` applies the same `ringdb` patch as macOS (`scripts/patches/zentra/ringdb-macos-sandbox.patch`).
+
+**Fix:**
+
+```bash
+./wallet.sh build-ios
+cd ios && pod install && cd ..
+flutter run -d <your-ios-device-or-simulator>
+```
+
 **Check dylib arch matches the app** (Apple Silicon vs Intel):
 
 ```bash

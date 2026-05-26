@@ -5,7 +5,7 @@
    THROW_WALLET_EXCEPTION_IF(dbr, tools::error::wallet_internal_error, "Failed to set max env dbs: " + std::string(mdb_strerror(dbr)));
    const std::string actual_filename = get_rings_filename(filename); 
 -  dbr = mdb_env_open(env, actual_filename.c_str(), 0, 0664);
-+  // macOS App Sandbox rejects LMDB's default file locking (System V semaphores).
++  // Apple app sandbox rejects LMDB's default file locking (System V semaphores).
 +  // Wallet FFI serializes all wallet calls on one mutex; MDB_NOLOCK is safe here.
 +#if defined(__APPLE__)
 +  const unsigned int mdb_flags = MDB_NOLOCK;

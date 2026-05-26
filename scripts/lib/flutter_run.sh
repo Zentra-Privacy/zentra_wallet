@@ -46,6 +46,11 @@ EOF
     echo "==> Native macOS dylib missing; run: ./wallet.sh build-macos"
     echo "    Then: cd macos && pod install && cd .."
   fi
+  local IOS_XCF="$ROOT/packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework"
+  if [[ "$DEVICE" == "ios" && ! -d "$IOS_XCF" ]]; then
+    echo "==> Native iOS XCFramework missing; run: ./wallet.sh build-ios"
+    echo "    Then: cd ios && pod install && cd .."
+  fi
 
   if [[ -z "$DEVICE" ]]; then
     DEVICE="$(flutter devices --machine 2>/dev/null | python3 -c "
@@ -59,6 +64,18 @@ except Exception:
 " 2>/dev/null || true)"
     [[ -z "$DEVICE" ]] && { echo "Error: no device. Use -d linux"; return 1; }
     echo "==> Auto-selected device: $DEVICE"
+  fi
+
+  if [[ ! -d "$IOS_XCF" ]] && flutter devices --machine 2>/dev/null | python3 -c "
+import json, sys
+dev = sys.argv[1]
+for d in json.load(sys.stdin):
+    if d.get('id') == dev and d.get('platformType') == 'ios':
+        sys.exit(0)
+sys.exit(1)
+" "$DEVICE" 2>/dev/null; then
+    echo "==> Native iOS XCFramework missing; run: ./wallet.sh build-ios"
+    echo "    Then: cd ios && pod install && cd .."
   fi
 
   local FLUTTER_BUILD=(flutter build) FLUTTER_RUN=(flutter run -d "$DEVICE" --no-pub)

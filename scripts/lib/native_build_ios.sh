@@ -25,6 +25,9 @@ native_build_ios() {
     return 1
   }
 
+  # Same LMDB MDB_NOLOCK patch as macOS (iOS app sandbox blocks default locking).
+  native_apply_zentra_source_patches "$ZENTRA_ROOT" || return 1
+
   native_build_ios_deps "$DEPS_BASE"
 
   mkdir -p "$OUT"
@@ -54,6 +57,7 @@ native_build_ios() {
       -DIOS=ON \
       -DIOS_PLATFORM="$IOS_PLATFORM" \
       $ARCH_FLAG \
+      -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 \
       -DCMAKE_BUILD_TYPE=Release \
       -DSTATIC=ON \
       -DBUILD_TESTS=OFF \

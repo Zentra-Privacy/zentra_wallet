@@ -24,7 +24,7 @@ native_apply_zentra_source_patches() {
   if grep -q 'MDB_NOLOCK' "$zentra_root/src/wallet/ringdb.cpp" 2>/dev/null; then
     return 0
   fi
-  echo "==> Patching Zentra sources: ringdb-macos-sandbox"
+  echo "==> Patching Zentra sources: ringdb Apple sandbox (macOS + iOS)"
   if patch -p0 -R --dry-run -d "$zentra_root" < "$patch" >/dev/null 2>&1; then
     return 0
   fi

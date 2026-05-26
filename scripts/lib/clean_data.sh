@@ -2,8 +2,11 @@
 # Clean local wallet test data. Usage: clean_wallet_data [--yes] [--force]
 clean_wallet_data() {
   local ROOT="${WALLET_ROOT:?}"
-  local APP_ID="${ZENTRA_APP_ID:-com.example.zentra_wallet}"
-  local DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/$APP_ID"
+  local LINUX_APP_ID="${ZENTRA_APP_ID:-com.example.zentra_wallet}"
+  local APPLE_APP_ID="${ZENTRA_APPLE_APP_ID:-com.example.zentraWallet}"
+  local DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/$LINUX_APP_ID"
+  local MAC_WALLETS="$HOME/Library/Application Support/$APPLE_APP_ID/zentra_wallets"
+  local MAC_CONTAINER_WALLETS="$HOME/Library/Containers/$APPLE_APP_ID/Data/Library/Application Support/zentra_wallets"
   local DRY_RUN=1 FORCE=0
 
   while [[ $# -gt 0 ]]; do
@@ -15,12 +18,12 @@ clean_wallet_data() {
   done
 
   local -a _targets=()
-  for p in "$DATA_DIR"; do
+  for p in "$DATA_DIR" "$MAC_WALLETS" "$MAC_CONTAINER_WALLETS"; do
     [[ -e "$p" ]] && _targets+=("$p")
   done
 
   if [[ ${#_targets[@]} -eq 0 ]]; then
-    echo "No data at $DATA_DIR"
+    echo "No wallet data found (Linux: $DATA_DIR; macOS: $MAC_WALLETS or $MAC_CONTAINER_WALLETS)"
     return 0
   fi
 
@@ -37,7 +40,7 @@ clean_wallet_data() {
     [[ "$c" == "yes" ]] || { echo "Aborted."; return 1; }
   fi
 
-  rm -rf "$DATA_DIR"
-  command -v secret-tool >/dev/null 2>&1 && secret-tool clear-by-attribute "xdg:schema" "$APP_ID" 2>/dev/null || true
+  rm -rf "${_targets[@]}"
+  command -v secret-tool >/dev/null 2>&1 && secret-tool clear-by-attribute "xdg:schema" "$LINUX_APP_ID" 2>/dev/null || true
   echo "==> Local wallet data removed."
 }

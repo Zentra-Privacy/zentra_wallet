@@ -77,7 +77,7 @@ test -f third_party/zentra/src/wallet/api/wallet2_api.h && echo OK
 | Step | Result |
 |------|--------|
 | `native_build_ios_deps.sh` | OpenSSL, libsodium, ICU, Boost, Protobuf for **iphoneos** + **iphonesimulator** |
-| Zentra `wallet_api` | `-DIOS=ON` per SDK → static libs |
+| Zentra `wallet_api` | `-DIOS=ON` per SDK → static libs; applies Apple `ringdb` sandbox patch (`MDB_NOLOCK`) |
 | FFI `-DFFI_IOS=ON` | `libzentra_wallet_ffi.a` per SDK |
 | `xcodebuild -create-xcframework` | `zentra_wallet_ffi.xcframework` |
 
@@ -211,7 +211,8 @@ Upload with **Transporter** or Xcode **Organizer**.
 | `build-ios` fails at OpenSSL | Xcode 14+; full Xcode selected in `xcode-select` |
 | Missing `protoc` | `brew install protobuf` |
 | Pod: XCFramework missing | Run `./wallet.sh build-ios` first |
-| Engine unavailable | Clean: `flutter clean`, rebuild ios, `pod install` |
+| Engine unavailable | Clean: `flutter clean`, rebuild ios, `pod install`; re-run `./wallet.sh build-ios` |
+| `Failed to initialize ringdb` | Re-run `./wallet.sh build-ios` (patches Zentra `ringdb` for iOS sandbox) |
 | Signing errors | Set Team in Xcode; use `--no-codesign` for unsigned test |
 | Boost / ICU errors | `rm -rf build/ios-deps` and re-run `build-ios` |
 
