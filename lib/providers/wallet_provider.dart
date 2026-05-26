@@ -323,6 +323,15 @@ class WalletProvider extends ChangeNotifier {
       return false;
     }
 
+    _walletDir ??= await _resolveWalletDir();
+    if (!await WalletDirectory.walletKeysExist(_walletDir!, walletFilename!)) {
+      await _settings.clearWalletFilename();
+      walletFilename = null;
+      connectionState = WalletConnectionState.disconnected;
+      notifyListeners();
+      return false;
+    }
+
     connectionState = WalletConnectionState.connecting;
     syncStatus = WalletSyncStatus.disconnected;
     errorMessage = null;

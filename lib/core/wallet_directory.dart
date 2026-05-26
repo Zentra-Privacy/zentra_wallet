@@ -4,6 +4,12 @@ import 'dart:io';
 class WalletDirectory {
   const WalletDirectory._();
 
+  static Future<bool> walletKeysExist(String walletDir, String filename) async {
+    final name = filename.trim();
+    if (name.isEmpty) return false;
+    return File('$walletDir/$name.keys').exists();
+  }
+
   static Future<List<String>> listWalletFilenames(String walletDir) async {
     final dir = Directory(walletDir);
     if (!await dir.exists()) return [];

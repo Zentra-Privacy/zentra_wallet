@@ -92,6 +92,11 @@ class SettingsStore {
     await p.setString(_keyWalletName, name);
   }
 
+  Future<void> clearWalletFilename() async {
+    final p = await _prefs;
+    await p.remove(_keyWalletName);
+  }
+
   /// Wallet password: Keychain on mobile/desktop (except macOS dev), SharedPreferences on macOS.
   Future<String?> loadWalletPassword() async {
     final p = await _prefs;
