@@ -13,6 +13,7 @@ class RestoreHeightField extends StatelessWidget {
     required this.controller,
     this.showRestoreHint = false,
     this.compact = false,
+    this.restoreOnly = false,
   });
 
   final bool enabled;
@@ -21,6 +22,8 @@ class RestoreHeightField extends StatelessWidget {
   final bool showRestoreHint;
   /// Shorter labels for onboarding.
   final bool compact;
+  /// Restore flow: required block hint. New wallet uses auto tip (no toggle).
+  final bool restoreOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -35,15 +38,19 @@ class RestoreHeightField extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    compact ? 'Sync from block' : 'Custom sync height',
+                    restoreOnly
+                        ? 'Restore block'
+                        : (compact ? 'Sync from block' : 'Custom sync height'),
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
-                  if (!compact) ...[
+                  if (restoreOnly || !compact) ...[
                     const SizedBox(height: 4),
                     Text(
-                      showRestoreHint
-                          ? 'Block when wallet was first used (restore) or scan start (new)'
-                          : 'Start blockchain scan from a specific block',
+                      restoreOnly
+                          ? 'Block of your first ZTRA receive (faster sync)'
+                          : (showRestoreHint
+                              ? 'Block when wallet was first used (restore) or scan start (new)'
+                              : 'Start blockchain scan from a specific block'),
                       style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
                     ),
                   ],
@@ -63,14 +70,16 @@ class RestoreHeightField extends StatelessWidget {
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
-              labelText: compact ? 'Block' : 'Block height',
+              labelText: compact || restoreOnly ? 'Block' : 'Block height',
               hintText: '2500000',
-              helperText: compact
+              helperText: (compact && !restoreOnly)
                   ? null
-                  : (showRestoreHint
-                      ? 'Restore: block when wallet was first used. Leave off to use saved/default height.'
-                      : 'Leave off to use estimated height. Must be below chain tip (not equal to daemon height).'),
-              helperMaxLines: compact ? 1 : 3,
+                  : restoreOnly
+                      ? 'Wrong block may hide balance until fully scanned'
+                      : showRestoreHint
+                          ? 'Restore: block when wallet was first used. Leave off to use saved/default height.'
+                          : 'Leave off to use estimated height. Must be below chain tip (not equal to daemon height).',
+              helperMaxLines: restoreOnly ? 2 : (compact ? 1 : 3),
             ),
           ),
         ],

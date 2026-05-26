@@ -7,6 +7,7 @@ import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 import '../core/native_wallet_messages.dart';
 import '../core/network/zentra_network.dart';
 import '../core/network/zentra_public_nodes.dart';
+import '../core/restore_height_utils.dart';
 import '../core/seed_utils.dart';
 import '../core/wallet_exception.dart';
 import '../models/wallet_backup_info.dart';
@@ -255,8 +256,11 @@ class WalletProvider extends ChangeNotifier {
       _wallet!.createWallet(
         filename: filename.trim(),
         password: password,
-        restoreHeight: restoreHeight ?? defaultRestoreHeight,
+        restoreHeight: restoreHeight ?? 0,
       );
+      if (restoreHeight == null) {
+        await _setScanHeightFromDaemonTip();
+      }
       final ok = await _syncAfterOpen();
       if (ok) {
         await _persistWalletSession(filename, password);
@@ -312,6 +316,20 @@ class WalletProvider extends ChangeNotifier {
       errorMessage = _userMessage(e);
       notifyListeners();
       return false;
+    }
+  }
+
+  /// New wallets: start scan near daemon tip (fast). Restore still uses user height.
+  Future<void> _setScanHeightFromDaemonTip() async {
+    if (_wallet == null || !_wallet!.isOpen) return;
+    try {
+      final daemonH = await _wallet!.fetchDaemonHeight();
+      final tip = RestoreHeightUtils.scanHeightFromDaemonTip(daemonH);
+      if (tip > 0) {
+        _wallet!.setRestoreHeight(tip);
+      }
+    } catch (_) {
+      // First refresh may still proceed from height 0.
     }
   }
 

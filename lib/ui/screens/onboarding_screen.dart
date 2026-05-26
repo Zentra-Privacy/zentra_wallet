@@ -60,9 +60,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   int? _resolveRestoreHeight() {
     return RestoreHeightField.resolveHeight(
-      enabled: _customRestoreHeight && !_openMode,
+      enabled: _restoreMode && _customRestoreHeight,
       controller: _restoreHeight,
     );
+  }
+
+  void _selectNewWallet() {
+    setState(() {
+      _restoreMode = false;
+      _openMode = false;
+      _customRestoreHeight = false;
+    });
+  }
+
+  void _selectRestoreWallet() {
+    setState(() {
+      _restoreMode = true;
+      _openMode = false;
+      _customRestoreHeight = true;
+    });
+  }
+
+  void _selectOpenWallet() {
+    setState(() {
+      _restoreMode = false;
+      _openMode = true;
+      _customRestoreHeight = false;
+    });
   }
 
   Future<void> _finishCreate() async {
@@ -80,7 +104,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return;
     }
     final height = _resolveRestoreHeight();
-    if (_customRestoreHeight && !_openMode && height == null) {
+    if (_restoreMode && _customRestoreHeight && height == null) {
       _snack('Enter a valid block number');
       return;
     }
@@ -91,7 +115,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
     setState(() => _loading = true);
     await p.updateNetwork(_network);
-    final syncHeight = _openMode ? null : (height ?? 0);
+    final syncHeight = height ?? 0;
     final ok = _openMode
         ? await p.openExistingWallet(
             filename: _filename.text.trim(),
@@ -107,7 +131,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             : await p.createNewWallet(
                 filename: _filename.text.trim(),
                 password: _password.text,
-                restoreHeight: _customRestoreHeight ? syncHeight : null,
               );
     setState(() => _loading = false);
     if (!mounted) return;
@@ -243,11 +266,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         const SizedBox(height: 12),
         TextButton(
-          onPressed: () => setState(() {
-            _restoreMode = false;
-            _openMode = true;
-            _step = 1;
-          }),
+          onPressed: () {
+            _selectOpenWallet();
+            setState(() => _step = 1);
+          },
           child: const Text('Open wallet saved on this device'),
         ),
         const SizedBox(height: 20),
@@ -268,10 +290,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 icon: Icons.add_circle_outline,
                 title: 'New',
                 selected: !_restoreMode && !_openMode,
-                onTap: () => setState(() {
-                  _restoreMode = false;
-                  _openMode = false;
-                }),
+                onTap: _selectNewWallet,
               ),
             ),
             const SizedBox(width: 8),
@@ -281,10 +300,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 icon: Icons.history,
                 title: 'Restore',
                 selected: _restoreMode,
-                onTap: () => setState(() {
-                  _restoreMode = true;
-                  _openMode = false;
-                }),
+                onTap: _selectRestoreWallet,
               ),
             ),
             const SizedBox(width: 8),
@@ -294,10 +310,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 icon: Icons.folder_open_outlined,
                 title: 'Open',
                 selected: _openMode,
-                onTap: () => setState(() {
-                  _restoreMode = false;
-                  _openMode = true;
-                }),
+                onTap: _selectOpenWallet,
               ),
             ),
           ],
@@ -351,17 +364,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                   ],
                 ),
-                if (!_openMode) ...[
+                if (!_restoreMode && !_openMode) ...[
+                  const SizedBox(height: 12),
+                  const _NewWalletSyncNote(),
+                ],
+                if (_restoreMode) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: ZentraTheme.flatCard(color: ZentraTheme.surface),
                     child: RestoreHeightField(
                       compact: true,
+                      restoreOnly: true,
                       enabled: _customRestoreHeight,
                       onEnabledChanged: (v) => setState(() => _customRestoreHeight = v),
                       controller: _restoreHeight,
-                      showRestoreHint: _restoreMode,
                     ),
                   ),
                 ],
@@ -386,6 +403,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+class _NewWalletSyncNote extends StatelessWidget {
+  const _NewWalletSyncNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: ZentraTheme.flatCard(color: ZentraTheme.surface),
+      child: const Row(
+        children: [
+          Icon(Icons.bolt_outlined, size: 20, color: ZentraTheme.accent),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Sync starts from the latest block automatically.',
+              style: TextStyle(fontSize: 13, color: ZentraTheme.textMuted, height: 1.35),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
