@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/ui_format.dart';
+import '../../core/zentra_assets.dart';
 import '../../models/wallet_models.dart';
 import '../../theme/zentra_theme.dart';
 
@@ -30,14 +31,22 @@ class ZentraLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final cachePx = (size * dpr).round().clamp(1, 1024);
+
+    return SizedBox(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: ZentraTheme.accent,
-        shape: BoxShape.circle,
+      child: Image.asset(
+        ZentraAssets.logo,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        cacheWidth: cachePx,
+        cacheHeight: cachePx,
+        semanticLabel: 'Zentra',
       ),
-      child: Icon(Icons.shield_outlined, size: size * 0.48, color: Colors.white),
     );
   }
 }

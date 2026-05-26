@@ -207,17 +207,7 @@ class _AssetsTab extends StatelessWidget {
               color: ZentraTheme.card,
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: ZentraTheme.surface,
-                    borderRadius: BorderRadius.circular(ZentraTheme.radiusSm),
-                    border: Border.all(color: ZentraTheme.border),
-                  ),
-                  child: const Text('Z', style: TextStyle(fontWeight: FontWeight.w700, color: ZentraTheme.accent)),
-                ),
+                leading: const ZentraLogo(size: 40),
                 title: const Text('Zentra', style: TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: const Text('Native coin · ZTRA', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
                 trailing: Text(

@@ -166,6 +166,22 @@ class SettingsScreen extends StatelessWidget {
             MaterialPageRoute(builder: (_) => const OnboardingScreen()),
           ),
         ),
+        const SizedBox(height: 16),
+        Center(
+          child: Column(
+            children: [
+              const ZentraLogo(size: 52),
+              const SizedBox(height: 10),
+              Text(
+                'Zentra Wallet',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: ZentraTheme.textMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 24),
       ],
     );
