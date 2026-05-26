@@ -269,12 +269,12 @@ class ZentraWalletStatusBanner extends StatelessWidget {
       );
     }
     if (isConnecting) {
-      return const ZentraSyncBanner(message: 'Connecting to network…');
+      return const ZentraSyncBanner(message: 'Opening wallet…');
     }
     if (isSyncing) {
       return ZentraSyncBanner(
-        message: 'Syncing blockchain',
-        subtitle: syncSubtitle,
+        message: 'Syncing with network',
+        subtitle: syncSubtitle ?? 'Scanning blocks in the background',
         progress: syncProgress,
       );
     }

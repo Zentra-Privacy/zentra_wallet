@@ -47,6 +47,9 @@ ZENTRA_WM_API int zentra_wm_refresh(ZentraWalletHandle wallet);
 
 ZENTRA_WM_API int zentra_wm_start_background_refresh(ZentraWalletHandle wallet);
 
+/// Pauses wallet2 background refresh thread (call before close).
+ZENTRA_WM_API int zentra_wm_pause_background_refresh(ZentraWalletHandle wallet);
+
 ZENTRA_WM_API uint64_t zentra_wm_balance(ZentraWalletHandle wallet);
 
 ZENTRA_WM_API uint64_t zentra_wm_unlocked_balance(ZentraWalletHandle wallet);

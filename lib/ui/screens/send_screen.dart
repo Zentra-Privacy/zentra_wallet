@@ -148,7 +148,7 @@ class _SendScreenState extends State<SendScreen> {
   Future<void> _send() async {
     final wallet = context.read<WalletProvider>();
     if (!wallet.canTransact) {
-      final msg = wallet.isWalletBehindDaemon
+      final msg = !wallet.isSynced
           ? 'Wait for sync to finish before sending'
           : 'Wallet is not ready. Check connection in Settings.';
       zentraSnack(context, msg, isError: true);

@@ -13,9 +13,12 @@ import '../core/wallet_directory.dart';
 import '../core/wallet_exception.dart';
 import '../models/wallet_backup_info.dart';
 import '../models/wallet_models.dart';
+import '../models/wallet_sync_status.dart';
 import '../services/embedded_wallet_service.dart';
 import '../services/settings_store.dart';
+import '../services/wallet_auto_store.dart';
 import '../services/wallet_blockchain_jobs.dart';
+import '../services/wallet_native_worker.dart';
 
 enum WalletConnectionState { disconnected, connecting, connected, error }
 
@@ -26,8 +29,12 @@ class WalletProvider extends ChangeNotifier {
   final SettingsStore _settings;
   final WalletBlockchainJobRunner _blockchainJobs = WalletBlockchainJobRunner();
   final WalletBackgroundSync _backgroundSync = WalletBackgroundSync();
+  final WalletAutoStore _autoStore = WalletAutoStore();
+  Future<void> _storeTail = Future<void>.value();
+  bool _pollInFlight = false;
 
   WalletConnectionState connectionState = WalletConnectionState.disconnected;
+  WalletSyncStatus syncStatus = WalletSyncStatus.disconnected;
   String? errorMessage;
   bool nativeAvailable = ZentraNativeWallet.isAvailable;
 
@@ -124,21 +131,84 @@ class WalletProvider extends ChangeNotifier {
 
   void _stopBlockchainSync() {
     _backgroundSync.stop();
+    _autoStore.stop();
     _blockchainJobs.reset();
+    _storeTail = Future<void>.value();
+    _pollInFlight = false;
+    syncStatus = WalletSyncStatus.disconnected;
   }
 
   void _startBlockchainSync() {
     if (_wallet == null || !_wallet!.isOpen) return;
+    syncStatus = WalletSyncStatus.attempting;
     _backgroundSync.start(
       onNativeStart: () => _wallet!.startBackgroundRefresh(),
       onPoll: _pollSnapshotFromBackground,
     );
+    _autoStore.start(
+      onStore: ({required bool force}) => _persistWalletFile(force: force),
+    );
   }
 
   Future<void> _pollSnapshotFromBackground() async {
+    if (_wallet == null || !_wallet!.isOpen || _pollInFlight) return;
+    _pollInFlight = true;
+    try {
+      final wasSynced = isSynced;
+      await _applyWalletSnapshot();
+      _updateSyncStatusFromHeights();
+      if (!wasSynced && isSynced) {
+        await _persistWalletFile(force: true);
+      } else {
+        await _persistWalletFile(force: false);
+      }
+      notifyListeners();
+    } finally {
+      _pollInFlight = false;
+    }
+  }
+
+  void _updateSyncStatusFromHeights() {
+    if (connectionState != WalletConnectionState.connected) return;
+    if (isSynced) {
+      syncStatus = WalletSyncStatus.synced;
+    } else if (daemonBlockHeight > 0) {
+      syncStatus = WalletSyncStatus.syncing;
+    } else {
+      syncStatus = WalletSyncStatus.attempting;
+    }
+  }
+
+  /// Serializes wallet [store] without the blockchain job queue (avoids deadlock with send).
+  Future<void> _persistWalletFile({required bool force}) async {
     if (_wallet == null || !_wallet!.isOpen) return;
-    await _applyWalletSnapshot();
-    notifyListeners();
+    final op = _storeTail.then((_) async {
+      if (_wallet == null || !_wallet!.isOpen) return;
+      await _autoStore.maybeStore(
+        force: force,
+        isSynced: isSynced,
+        walletHeight: walletHeight,
+        store: () async => _wallet!.store(),
+      );
+    });
+    _storeTail = op.catchError((_) {});
+    await op;
+  }
+
+  Future<void> _openWalletOnWorker({
+    required String filename,
+    required String password,
+  }) async {
+    final trusted = EmbeddedWalletService.isTrustedDaemon(nodeSettings!.daemonAddress);
+    final address = await WalletNativeWorker.openWallet(
+      walletDir: _walletDir!,
+      daemonAddress: nodeSettings!.daemonAddress,
+      trustedDaemon: trusted,
+      filename: filename,
+      password: password,
+      nettype: networkConfig!.type.index,
+    );
+    _wallet!.adoptHandle(WalletNativeWorker.pointerFromAddress(address));
   }
 
   /// Called when [connect] is aborted externally (e.g. splash screen timeout).
@@ -193,20 +263,24 @@ class WalletProvider extends ChangeNotifier {
       await _ensureWallet();
       if (_connectStale(gen)) return false;
       final password = passwordOverride ?? await _settings.loadWalletPassword() ?? '';
-      _wallet!.openWallet(
-        filename: walletFilename!,
-        password: password,
-      );
+      syncStatus = WalletSyncStatus.connecting;
+      await _blockchainJobs.run(() => _openWalletOnWorker(
+            filename: walletFilename!,
+            password: password,
+          ));
       if (_connectStale(gen)) return false;
+      connectionState = WalletConnectionState.connected;
+      syncStatus = WalletSyncStatus.connected;
       _startBlockchainSync();
       if (_connectStale(gen)) return false;
       await _applyWalletSnapshot();
       if (_connectStale(gen)) return false;
-      connectionState = WalletConnectionState.connected;
+      _updateSyncStatusFromHeights();
       errorMessage = null;
       return true;
     } catch (e) {
       if (_connectStale(gen)) return false;
+      _stopBlockchainSync();
       connectionState = WalletConnectionState.error;
       errorMessage = _userMessage(e);
       _wallet?.dispose();
@@ -215,6 +289,7 @@ class WalletProvider extends ChangeNotifier {
     } finally {
       if (gen == _connectGeneration) {
         if (connectionState == WalletConnectionState.connecting) {
+          _stopBlockchainSync();
           connectionState = WalletConnectionState.error;
           errorMessage ??= 'Connection interrupted';
           _wallet?.dispose();
@@ -261,21 +336,24 @@ class WalletProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+    _stopBlockchainSync();
     try {
       _wallet!.setRestoreHeight(height);
       await updateDefaultRestoreHeight(height);
-      _stopBlockchainSync();
       await _blockchainJobs.run(() async {
         await _wallet!.refresh();
         await _applyWalletSnapshot();
       });
-      _startBlockchainSync();
-      notifyListeners();
+      _updateSyncStatusFromHeights();
       return true;
     } catch (e) {
       errorMessage = _userMessage(e);
-      notifyListeners();
       return false;
+    } finally {
+      if (_wallet != null && _wallet!.isOpen) {
+        _startBlockchainSync();
+      }
+      notifyListeners();
     }
   }
 
@@ -298,11 +376,17 @@ class WalletProvider extends ChangeNotifier {
     }
     await _ensureWallet();
     try {
-      _wallet!.createWallet(
+      final trusted = EmbeddedWalletService.isTrustedDaemon(nodeSettings!.daemonAddress);
+      final handleAddr = await WalletNativeWorker.createWallet(
+        walletDir: _walletDir!,
+        daemonAddress: nodeSettings!.daemonAddress,
+        trustedDaemon: trusted,
         filename: filename.trim(),
         password: password,
+        nettype: networkConfig!.type.index,
         restoreHeight: restoreHeight ?? 0,
       );
+      _wallet!.adoptHandle(WalletNativeWorker.pointerFromAddress(handleAddr));
       if (restoreHeight == null) {
         await _setScanHeightFromDaemonTip();
       }
@@ -345,12 +429,18 @@ class WalletProvider extends ChangeNotifier {
     }
     await _ensureWallet();
     try {
-      _wallet!.restoreWallet(
+      final trusted = EmbeddedWalletService.isTrustedDaemon(nodeSettings!.daemonAddress);
+      final handleAddr = await WalletNativeWorker.restoreWallet(
+        walletDir: _walletDir!,
+        daemonAddress: nodeSettings!.daemonAddress,
+        trustedDaemon: trusted,
         filename: filename.trim(),
         password: password,
         seed: normalized,
+        nettype: networkConfig!.type.index,
         restoreHeight: restoreHeight ?? defaultRestoreHeight,
       );
+      _wallet!.adoptHandle(WalletNativeWorker.pointerFromAddress(handleAddr));
       final ok = await _syncAfterOpen();
       if (ok) {
         await _persistWalletSession(filename, password);
@@ -384,10 +474,12 @@ class WalletProvider extends ChangeNotifier {
     try {
       _startBlockchainSync();
       await _applyWalletSnapshot();
+      _updateSyncStatusFromHeights();
       connectionState = WalletConnectionState.connected;
       errorMessage = null;
       return true;
     } catch (e) {
+      _stopBlockchainSync();
       connectionState = WalletConnectionState.error;
       errorMessage = _userMessage(e);
       _wallet?.dispose();
@@ -395,6 +487,7 @@ class WalletProvider extends ChangeNotifier {
       return false;
     } finally {
       if (connectionState == WalletConnectionState.connecting) {
+        _stopBlockchainSync();
         connectionState = WalletConnectionState.error;
         errorMessage ??= 'Sync interrupted';
         _wallet?.dispose();
@@ -461,7 +554,7 @@ class WalletProvider extends ChangeNotifier {
       return null;
     }
     if (!canTransact) {
-      errorMessage = isWalletBehindDaemon
+      errorMessage = !isSynced
           ? 'Wait for sync to finish before sending'
           : 'Wallet not ready';
       notifyListeners();
@@ -475,6 +568,7 @@ class WalletProvider extends ChangeNotifier {
           priority: priority ?? sendPriority,
         ),
       );
+      await _persistWalletFile(force: true);
       try {
         await refresh();
       } catch (_) {
@@ -525,34 +619,51 @@ class WalletProvider extends ChangeNotifier {
     return ZentraNativeWallet.instance.addressValid(trimmed, networkConfig!.type.index);
   }
 
-  bool get isWalletBehindDaemon {
-    if (daemonBlockHeight <= 0) return false;
-    // Wallet not scanned yet (height 0) while daemon has blocks — still syncing.
-    if (walletHeight <= 0) return true;
-    return daemonBlockHeight - walletHeight > 3;
+  int get blocksBehindDaemon {
+    if (daemonBlockHeight <= 0) return 0;
+    if (walletHeight <= 0) return daemonBlockHeight;
+    final behind = daemonBlockHeight - walletHeight;
+    return behind > 0 ? behind : 0;
   }
 
-  bool get canTransact =>
+  /// Cake Wallet: synced when within [kWalletSyncedBlocksThreshold] of daemon tip.
+  bool get isSynced =>
       connectionState == WalletConnectionState.connected &&
-      !isWalletBehindDaemon &&
-      daemonBlockHeight > 0;
+      daemonBlockHeight > 0 &&
+      blocksBehindDaemon < kWalletSyncedBlocksThreshold;
+
+  bool get isWalletBehindDaemon => !isSynced && daemonBlockHeight > 0;
+
+  bool get canTransact =>
+      connectionState == WalletConnectionState.connected && isSynced;
 
   String get connectionStatusLabel {
-    switch (connectionState) {
-      case WalletConnectionState.connected:
-        return isWalletBehindDaemon ? 'Syncing' : 'Connected';
-      case WalletConnectionState.connecting:
+    if (connectionState == WalletConnectionState.error) return 'Error';
+    if (connectionState == WalletConnectionState.disconnected) return 'Offline';
+    if (connectionState == WalletConnectionState.connecting) return 'Connecting';
+    switch (syncStatus) {
+      case WalletSyncStatus.synced:
+        return 'Synced';
+      case WalletSyncStatus.syncing:
+        return 'Syncing';
+      case WalletSyncStatus.attempting:
         return 'Connecting';
-      case WalletConnectionState.error:
-        return 'Error';
-      case WalletConnectionState.disconnected:
+      case WalletSyncStatus.connected:
+        return 'Connected';
+      case WalletSyncStatus.connecting:
+        return 'Opening';
+      case WalletSyncStatus.disconnected:
         return 'Offline';
     }
   }
 
-  /// e.g. "Block 650 of 668" while catching up.
+  /// e.g. "Block 650 of 668 · 18 blocks behind" while catching up.
   String? get syncProgressLabel {
     if (!isWalletBehindDaemon || daemonBlockHeight <= 0) return null;
+    final behind = blocksBehindDaemon;
+    if (behind > 0 && behind < daemonBlockHeight) {
+      return 'Block $walletHeight of $daemonBlockHeight · $behind behind';
+    }
     return 'Block $walletHeight of $daemonBlockHeight';
   }
 

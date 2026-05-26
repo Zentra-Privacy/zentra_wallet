@@ -25,6 +25,8 @@ class EmbeddedWalletService {
   }
 
   /// Remote public nodes must not be trusted (Monero wallet2 threat model).
+  static bool isTrustedDaemon(String address) => _isLocalDaemon(address);
+
   static bool _isLocalDaemon(String address) {
     final host = address.split(':').first.trim().toLowerCase();
     return host == '127.0.0.1' || host == 'localhost' || host == '::1';
@@ -69,6 +71,12 @@ class EmbeddedWalletService {
     _handle = _native.openWallet(filename, password, nettypeIndex);
   }
 
+  /// Adopts a wallet handle opened on a worker isolate (native heap pointer).
+  void adoptHandle(ffi.Pointer<ffi.Void> handle) {
+    _close();
+    _handle = handle;
+  }
+
   String restoreWallet({
     required String filename,
     required String password,
@@ -94,8 +102,16 @@ class EmbeddedWalletService {
     }
   }
 
+  void pauseBackgroundRefresh() {
+    if (_handle == null || _handle == ffi.nullptr) return;
+    _native.pauseBackgroundRefresh(_handle!);
+  }
+
   void _close() {
     if (_handle != null && _handle != ffi.nullptr) {
+      try {
+        pauseBackgroundRefresh();
+      } catch (_) {}
       _native.closeWallet(_handle!);
       _handle = null;
     }
@@ -176,7 +192,6 @@ class EmbeddedWalletService {
     final atomic = parseDisplay(amountDisplay);
     if (atomic <= 0) throw WalletException('Invalid amount');
     final txid = _native.send(_handle!, dest, atomic, priority: priority);
-    store();
     return txid;
   }
 

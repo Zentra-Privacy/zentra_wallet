@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/ui_format.dart';
 import '../../models/wallet_models.dart';
+import '../../models/wallet_sync_status.dart';
 import '../../providers/wallet_provider.dart' show WalletConnectionState, WalletProvider;
 import '../../theme/zentra_theme.dart';
 import '../widgets/zentra_ui.dart';
@@ -54,7 +55,7 @@ class _DashboardTab extends StatelessWidget {
 
   void _openSend(BuildContext context) {
     if (!wallet.canTransact) {
-      final msg = wallet.isWalletBehindDaemon
+      final msg = !wallet.isSynced
           ? 'Wait for sync to finish before sending'
           : 'Wait until the wallet is connected';
       zentraSnack(context, msg, isError: true);
@@ -83,7 +84,8 @@ class _DashboardTab extends StatelessWidget {
           ),
           ZentraWalletStatusBanner(
             errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
-            isConnecting: wallet.connectionState == WalletConnectionState.connecting,
+            isConnecting: wallet.connectionState == WalletConnectionState.connecting ||
+                wallet.syncStatus == WalletSyncStatus.attempting,
             isSyncing: wallet.isWalletBehindDaemon,
             syncSubtitle: wallet.syncProgressLabel,
             syncProgress: wallet.syncProgressFraction,
@@ -174,7 +176,8 @@ class _AssetsTab extends StatelessWidget {
           const ZentraDashboardHeader(title: 'Assets'),
           ZentraWalletStatusBanner(
             errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
-            isConnecting: wallet.connectionState == WalletConnectionState.connecting,
+            isConnecting: wallet.connectionState == WalletConnectionState.connecting ||
+                wallet.syncStatus == WalletSyncStatus.attempting,
             isSyncing: wallet.isWalletBehindDaemon,
             syncSubtitle: wallet.syncProgressLabel,
             syncProgress: wallet.syncProgressFraction,

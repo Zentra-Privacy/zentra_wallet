@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../models/wallet_sync_status.dart';
+
 /// Serializes blocking wallet2 FFI work so calls do not overlap (refresh races, mutex).
 class WalletBlockchainJobRunner {
   Future<void> _tail = Future<void>.value();
@@ -46,7 +48,7 @@ class WalletBlockchainJobRunner {
 /// Native wallet2 background refresh plus periodic UI snapshot updates.
 class WalletBackgroundSync {
   WalletBackgroundSync({
-    this.pollInterval = const Duration(seconds: 3),
+    this.pollInterval = kWalletSyncPollInterval,
   });
 
   final Duration pollInterval;

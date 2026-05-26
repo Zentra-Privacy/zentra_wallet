@@ -351,6 +351,9 @@ ZENTRA_WM_API void zentra_wm_close_wallet(ZentraWalletHandle wallet) {
   if (!g_wm || !wallet) return;
   auto* w = as_wallet(wallet);
   if (w) {
+    try {
+      w->pauseRefresh();
+    } catch (...) {}
     persist_scan_checkpoint(w);
   }
   g_wm->closeWallet(w, true);
@@ -380,6 +383,19 @@ ZENTRA_WM_API int zentra_wm_start_background_refresh(ZentraWalletHandle wallet) 
   if (!w) return 0;
   try {
     w->startRefresh();
+    return 1;
+  } catch (const std::exception& e) {
+    set_error(e.what());
+    return 0;
+  }
+}
+
+ZENTRA_WM_API int zentra_wm_pause_background_refresh(ZentraWalletHandle wallet) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  auto* w = as_wallet(wallet);
+  if (!w) return 0;
+  try {
+    w->pauseRefresh();
     return 1;
   } catch (const std::exception& e) {
     set_error(e.what());

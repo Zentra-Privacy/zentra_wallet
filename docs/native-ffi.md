@@ -39,6 +39,7 @@ Opaque `ZentraWalletHandle` (`Pointer<Void>` in Dart).
 |------------|-------------|
 | `zentra_wm_refresh(wallet)` | Blocking refresh |
 | `zentra_wm_start_background_refresh(wallet)` | Background sync thread |
+| `zentra_wm_pause_background_refresh(wallet)` | Pause background sync (before close) |
 | `zentra_wm_balance(wallet)` | Atomic units |
 | `zentra_wm_unlocked_balance(wallet)` | Spendable atomic |
 | `zentra_wm_wallet_height(wallet)` | Wallet scan height |
