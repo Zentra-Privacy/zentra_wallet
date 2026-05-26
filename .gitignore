@@ -37,7 +37,8 @@ coverage/
 # Build outputs — any directory named "build" (not build.gradle files)
 build/
 
-# Native FFI CMake output (./wallet.sh build)
+# Native FFI CMake output (./wallet.sh build / build-macos)
+# e.g. build/native_ffi/darwin-brew/ (Homebrew path on Mac)
 build/native_ffi/
 
 # Android / Gradle / NDK
@@ -88,13 +89,11 @@ zentra-wallet-*.zip
 # Committed on purpose for Linux CI & quick builds (do not ignore):
 # packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
 
-# Native wallet FFI per platform (CI builds these; commit optional for faster CI)
+# Native wallet FFI per platform (build locally or via CI; do not commit binaries)
 packages/zentra_wallet_core/android/src/main/jniLibs/**/*.so
 packages/zentra_wallet_core/windows/*.dll
-packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib
+packages/zentra_wallet_core/macos/lib/*.dylib
 packages/zentra_wallet_core/ios/lib/libzentra_wallet_ffi.a
 packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework/
 build/ios-deps/
 build/ios-deps-src/
-
-monero_wallet_design

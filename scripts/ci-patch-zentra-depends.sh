@@ -64,6 +64,18 @@ _invalidate_mingw_package_cache() {
 }
 
 _fix_zeromq_mingw_mk
+_apply_patch darwin-native-sdk.patch || true
+_apply_patch boost-clang-coalesce.patch || true
+if [[ -f "$ZENTRA/contrib/depends/builders/darwin.mk" ]] \
+  && ! grep -q 'DARWIN_SDK:=$(shell xcrun --show-sdk-path)' "$ZENTRA/contrib/depends/builders/darwin.mk"; then
+  echo "::error::darwin-native-sdk patch not applied (missing -isysroot in builders/darwin.mk)"
+  exit 1
+fi
+BOOST_MK="$ZENTRA/contrib/depends/packages/boost.mk"
+if [[ -f "$BOOST_MK" ]] && ! grep -q 'fcoalesce-templates/d' "$BOOST_MK"; then
+  echo "::error::boost-clang-coalesce patch not applied (missing sed in boost.mk)"
+  exit 1
+fi
 
 grep -q '$(package)_version=4.3.1' "$ZMQ_MK" \
   || { echo "::error::zeromq must be 4.3.1 for MinGW cross-build"; exit 1; }

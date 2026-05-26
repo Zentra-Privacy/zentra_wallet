@@ -93,18 +93,19 @@ elseif(DEPENDS OR ANDROID)
     endif()
   endif()
 else()
+  # Boost >= 1.87 (Homebrew): system is header-only — no boost_system CMake target.
   find_package(Boost REQUIRED COMPONENTS
-    system chrono filesystem thread serialization locale regex program_options date_time)
+    chrono filesystem thread serialization locale regex program_options date_time)
   find_package(OpenSSL REQUIRED)
   find_package(Protobuf REQUIRED)
-  find_library(UNBOUND_LIB unbound)
-  find_library(ZMQ_LIB zmq)
+  find_library(UNBOUND_LIB unbound REQUIRED)
+  find_library(ZMQ_LIB zmq REQUIRED)
+  find_library(SODIUM_LIB sodium REQUIRED)
+  find_package(Threads REQUIRED)
   find_library(USB_LIB usb-1.0)
-  find_library(HIDAPI_LIB hidapi-libusb)
-  find_library(SODIUM_LIB sodium)
+  find_library(HIDAPI_LIB NAMES hidapi hidapi-libusb hidapi-hidraw)
   find_library(PGM_LIB pgm)
   find_library(NORM_LIB norm)
-  find_package(Threads REQUIRED)
 endif()
 
 if(FFI_IOS)
@@ -156,16 +157,44 @@ elseif(DEPENDS OR ANDROID)
       "-framework Foundation" "-framework IOKit" "-framework AppKit")
   endif()
 else()
-  target_link_libraries(zentra_wallet_ffi PRIVATE
-    -Wl,--start-group
-    ${ZENTRA_STATIC_LIBS}
-    -Wl,--end-group
-    Boost::system Boost::chrono Boost::filesystem Boost::thread Boost::serialization
-    Boost::locale Boost::regex Boost::program_options Boost::date_time
-    OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf
-    ${UNBOUND_LIB} ${ZMQ_LIB} ${USB_LIB} ${HIDAPI_LIB}
-    ${SODIUM_LIB} ${PGM_LIB} ${NORM_LIB}
-    ${CMAKE_DL_LIBS} pthread rt Threads::Threads)
+  set(_boost_libs
+    Boost::chrono Boost::filesystem Boost::thread Boost::serialization
+    Boost::locale Boost::regex Boost::program_options Boost::date_time)
+  if(TARGET Boost::system)
+    list(PREPEND _boost_libs Boost::system)
+  endif()
+  if(APPLE)
+    foreach(_zentra_lib IN LISTS ZENTRA_STATIC_LIBS)
+      target_link_libraries(zentra_wallet_ffi PRIVATE "-Wl,-force_load,${_zentra_lib}")
+    endforeach()
+    set(_opt_libs ${SODIUM_LIB})
+    foreach(_opt IN ITEMS USB_LIB HIDAPI_LIB PGM_LIB NORM_LIB)
+      if(${_opt})
+        list(APPEND _opt_libs ${${_opt}})
+      endif()
+    endforeach()
+    target_link_libraries(zentra_wallet_ffi PRIVATE
+      ${_boost_libs}
+      OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf
+      ${UNBOUND_LIB} ${ZMQ_LIB} ${_opt_libs}
+      ${CMAKE_DL_LIBS} Threads::Threads
+      "-framework Foundation" "-framework IOKit" "-framework AppKit" "-framework Security")
+  else()
+    set(_opt_libs ${SODIUM_LIB})
+    foreach(_opt IN ITEMS USB_LIB HIDAPI_LIB PGM_LIB NORM_LIB)
+      if(${_opt})
+        list(APPEND _opt_libs ${${_opt}})
+      endif()
+    endforeach()
+    target_link_libraries(zentra_wallet_ffi PRIVATE
+      -Wl,--start-group
+      ${ZENTRA_STATIC_LIBS}
+      -Wl,--end-group
+      ${_boost_libs}
+      OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf
+      ${UNBOUND_LIB} ${ZMQ_LIB} ${_opt_libs}
+      ${CMAKE_DL_LIBS} pthread rt Threads::Threads)
+  endif()
 endif()
 
 set_target_properties(zentra_wallet_ffi PROPERTIES

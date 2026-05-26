@@ -78,7 +78,22 @@ test -f third_party/zentra/src/wallet/api/wallet2_api.h && echo OK
 ./wallet.sh build-macos
 ```
 
-**Architecture:**
+### Fast path (recommended on Apple Silicon / Xcode 15+)
+
+If you already built Zentra with Homebrew deps (`../zentra` + `scripts/build.sh`):
+
+```bash
+# Auto-detects ../zentra/build/release and links Homebrew Boost/OpenSSL
+./wallet.sh build-macos
+```
+
+Force the slow `contrib/depends` toolchain (portable, hours on first run):
+
+```bash
+ZENTRA_MACOS_USE_DEPENDS=1 ./wallet.sh build-macos
+```
+
+**Architecture (depends path only):**
 
 | Mac | Zentra depends HOST |
 |-----|---------------------|

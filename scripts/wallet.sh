@@ -77,6 +77,8 @@ cmd_status() {
     fi
   done
   [[ "$android_ok" -eq 0 ]] && _warn "Android FFI: missing (./wallet.sh build-android)"
+  local macdylib="$ROOT/packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib"
+  [[ -f "$macdylib" ]] && _ok "macOS FFI: $(ls -lh "$macdylib" | awk '{print $5, $9}')" || _warn "macOS FFI: missing (./wallet.sh build-macos)"
   local iosxcf="$ROOT/packages/zentra_wallet_core/ios/lib/zentra_wallet_ffi.xcframework"
   [[ -d "$iosxcf" ]] && _ok "iOS XCFramework: present" || _warn "iOS FFI: missing (./wallet.sh build-ios on Mac)"
   command -v flutter >/dev/null 2>&1 && _ok "Flutter: $(flutter --version 2>/dev/null | head -1)" || _warn "Flutter: not in PATH"

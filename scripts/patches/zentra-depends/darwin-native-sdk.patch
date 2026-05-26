@@ -1,0 +1,23 @@
+--- contrib/depends/hosts/darwin.mk
++++ contrib/depends/hosts/darwin.mk
+@@ -1,4 +1,4 @@
+-OSX_MIN_VERSION=10.8
++OSX_MIN_VERSION=11.0
+ LD64_VERSION=609
+ ifeq (aarch64, $(host_arch))
+ CC_target=arm64-apple-$(host_os)
+--- contrib/depends/builders/darwin.mk
++++ contrib/depends/builders/darwin.mk
+@@ -10,8 +10,11 @@ build_darwin_SHA256SUM = shasum -a 256
+ build_darwin_DOWNLOAD = curl --location --fail --connect-timeout $(DOWNLOAD_CONNECT_TIMEOUT) --retry $(DOWNLOAD_RETRIES) -o
+ 
+ #darwin host on darwin builder. overrides darwin host preferences.
+-darwin_CC=$(shell xcrun -f clang) -mmacosx-version-min=$(OSX_MIN_VERSION)
+-darwin_CXX:=$(shell xcrun -f clang++) -mmacosx-version-min=$(OSX_MIN_VERSION) -stdlib=libc++
++# -isysroot required when LDFLAGS uses -L<depends-prefix>/lib (else ld: library 'System' not found).
++DARWIN_SDK:=$(shell xcrun --show-sdk-path)
++darwin_CC=$(shell xcrun -f clang) -mmacosx-version-min=$(OSX_MIN_VERSION) -isysroot $(DARWIN_SDK)
++darwin_CXX:=$(shell xcrun -f clang++) -mmacosx-version-min=$(OSX_MIN_VERSION) -stdlib=libc++ -isysroot $(DARWIN_SDK)
+ darwin_AR:=$(shell xcrun -f ar)
+ darwin_RANLIB:=$(shell xcrun -f ranlib)
+ darwin_STRIP:=$(shell xcrun -f strip)
