@@ -41,6 +41,10 @@ export ZENTRA_WALLET_FFI_PATH=/full/path/to/libzentra_wallet_ffi.so
 - `A required entitlement isn't present` / `Unexpected security result code, Code: -34018`
 - Wallet auto-open fails; logs may show `invalid password` (password was never read from Keychain)
 
+**macOS dev:** wallet password is stored in **SharedPreferences** (not Keychain) because ad-hoc signing cannot use Keychain reliably (`Keychain Not Found`, `-34018`, `-60008`). Wallet `.keys` files remain encrypted with your password.
+
+**Other platforms:** `MacOsOptions(useDataProtectionKeyChain: false)` avoids `-34018` when Keychain is used.
+
 **Debug (`flutter run -d macos`):** `DebugProfile.entitlements` disables App Sandbox so Keychain works with ad-hoc signing (no Apple team required).
 
 **Release (`flutter build macos --release`):** needs a development team and `keychain-access-groups` in `Release.entitlements`:

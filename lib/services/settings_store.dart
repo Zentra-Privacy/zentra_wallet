@@ -1,3 +1,7 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,9 +20,14 @@ class SettingsStore {
   static const _keyWalletNetwork = 'wallet_network';
   static const _secureWalletPass = 'wallet_password';
 
+  /// macOS Keychain needs a development cert + entitlements; ad-hoc `flutter run`
+  /// hits "Keychain Not Found" / -34018. Wallet files are already password-encrypted.
+  static final bool _passwordInSharedPrefs =
+      !kIsWeb && Platform.isMacOS;
+
   static const _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
-    mOptions: MacOsOptions(),
+    mOptions: MacOsOptions(useDataProtectionKeyChain: false),
   );
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
@@ -83,31 +92,59 @@ class SettingsStore {
     await p.setString(_keyWalletName, name);
   }
 
-  /// Wallet password stored in OS secure storage (migrates legacy SharedPreferences).
+  /// Wallet password: Keychain on mobile/desktop (except macOS dev), SharedPreferences on macOS.
   Future<String?> loadWalletPassword() async {
-    final secure = await _secureStorage.read(key: _secureWalletPass);
-    if (secure != null && secure.isNotEmpty) return secure;
-
     final p = await _prefs;
+    if (_passwordInSharedPrefs) {
+      return p.getString(_keyWalletPassLegacy);
+    }
+
+    try {
+      final secure = await _secureStorage.read(key: _secureWalletPass);
+      if (secure != null && secure.isNotEmpty) return secure;
+    } on PlatformException {
+      // Fall through to legacy prefs.
+    }
+
     final legacy = p.getString(_keyWalletPassLegacy);
     if (legacy != null && legacy.isNotEmpty) {
-      await _secureStorage.write(key: _secureWalletPass, value: legacy);
-      await p.remove(_keyWalletPassLegacy);
+      try {
+        await _secureStorage.write(key: _secureWalletPass, value: legacy);
+        await p.remove(_keyWalletPassLegacy);
+      } on PlatformException {
+        // Keep legacy in prefs if Keychain is unavailable.
+      }
       return legacy;
     }
     return null;
   }
 
   Future<void> saveWalletPassword(String password) async {
-    await _secureStorage.write(key: _secureWalletPass, value: password);
-    final p = await _prefs;
-    await p.remove(_keyWalletPassLegacy);
+    if (_passwordInSharedPrefs) {
+      final p = await _prefs;
+      await p.setString(_keyWalletPassLegacy, password);
+      return;
+    }
+
+    try {
+      await _secureStorage.write(key: _secureWalletPass, value: password);
+      final p = await _prefs;
+      await p.remove(_keyWalletPassLegacy);
+    } on PlatformException {
+      final p = await _prefs;
+      await p.setString(_keyWalletPassLegacy, password);
+    }
   }
 
   Future<void> clearWalletPassword() async {
-    await _secureStorage.delete(key: _secureWalletPass);
     final p = await _prefs;
     await p.remove(_keyWalletPassLegacy);
+    if (_passwordInSharedPrefs) return;
+    try {
+      await _secureStorage.delete(key: _secureWalletPass);
+    } on PlatformException {
+      // Already cleared prefs above.
+    }
   }
 
   Future<int> loadDefaultRestoreHeight() async {
