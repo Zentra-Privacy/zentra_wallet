@@ -5,8 +5,9 @@ clean_wallet_data() {
   local LINUX_APP_ID="${ZENTRA_APP_ID:-com.example.zentra_wallet}"
   local APPLE_APP_ID="${ZENTRA_APPLE_APP_ID:-com.example.zentraWallet}"
   local DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/$LINUX_APP_ID"
+  # path_provider (2.0.12+): .../Application Support/<bundle-id>/zentra_wallets
   local MAC_WALLETS="$HOME/Library/Application Support/$APPLE_APP_ID/zentra_wallets"
-  local MAC_CONTAINER_WALLETS="$HOME/Library/Containers/$APPLE_APP_ID/Data/Library/Application Support/zentra_wallets"
+  local MAC_CONTAINER_WALLETS="$HOME/Library/Containers/$APPLE_APP_ID/Data/Library/Application Support/$APPLE_APP_ID/zentra_wallets"
   local DRY_RUN=1 FORCE=0
 
   while [[ $# -gt 0 ]]; do
