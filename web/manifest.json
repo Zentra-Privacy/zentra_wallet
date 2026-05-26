@@ -1,6 +1,6 @@
 {
-    "name": "zentra_wallet",
-    "short_name": "zentra_wallet",
+    "name": "Zentra Wallet",
+    "short_name": "Zentra",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
