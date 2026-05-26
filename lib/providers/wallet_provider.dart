@@ -442,7 +442,7 @@ class WalletProvider extends ChangeNotifier {
   }) async {
     if (_wallet == null || !_wallet!.isOpen) return null;
     return _blockchainJobs.run(
-      () => _wallet!.estimateFee(
+      () async => _wallet!.estimateFee(
         address: address,
         amountDisplay: amount,
         priority: priority ?? sendPriority,
