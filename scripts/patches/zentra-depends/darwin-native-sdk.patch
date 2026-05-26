@@ -8,7 +8,7 @@
  CC_target=arm64-apple-$(host_os)
 --- contrib/depends/builders/darwin.mk
 +++ contrib/depends/builders/darwin.mk
-@@ -10,8 +10,11 @@ build_darwin_SHA256SUM = shasum -a 256
+@@ -10,8 +10,10 @@
  build_darwin_DOWNLOAD = curl --location --fail --connect-timeout $(DOWNLOAD_CONNECT_TIMEOUT) --retry $(DOWNLOAD_RETRIES) -o
  
  #darwin host on darwin builder. overrides darwin host preferences.
