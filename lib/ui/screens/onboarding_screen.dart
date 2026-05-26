@@ -25,7 +25,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   int _step = 0;
   final ZentraNetType _network = ZentraNetType.mainnet;
-  final _filename = TextEditingController(text: 'zentra_mobile');
+  final _filename = TextEditingController(text: 'my_wallet');
   final _password = TextEditingController();
   final _seed = TextEditingController();
   final _restoreHeight = TextEditingController();
@@ -264,7 +264,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           icon: const Icon(Icons.history, size: 20),
           label: const Text('I already have a wallet'),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 12),
+        TextButton(
+          onPressed: () => setState(() {
+            _restoreMode = false;
+            _openMode = true;
+            _step = 1;
+          }),
+          child: const Text('Open wallet saved on this device'),
+        ),
+        const SizedBox(height: 20),
       ],
     );
   }

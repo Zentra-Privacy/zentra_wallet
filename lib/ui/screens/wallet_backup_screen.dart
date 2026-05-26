@@ -66,10 +66,12 @@ class _WalletBackupScreenState extends State<WalletBackupScreen> {
     final backup = widget.backup;
 
     return ZentraScaffold(
-      appBar: AppBar(
-        title: const Text('Backup your wallet'),
-        automaticallyImplyLeading: !widget.blockBack,
-      ),
+      appBar: widget.blockBack
+          ? AppBar(
+              title: const Text('Backup wallet'),
+              automaticallyImplyLeading: false,
+            )
+          : zentraAppBar(context, title: 'Backup wallet'),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

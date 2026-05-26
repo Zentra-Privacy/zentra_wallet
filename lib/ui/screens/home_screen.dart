@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/ui_format.dart';
 import '../../models/wallet_models.dart';
-import '../../providers/wallet_provider.dart';
+import '../../providers/wallet_provider.dart' show WalletConnectionState, WalletProvider;
 import '../../theme/zentra_theme.dart';
 import '../widgets/zentra_ui.dart';
 import 'receive_screen.dart';
@@ -85,9 +85,16 @@ class _DashboardTab extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           ZentraDashboardHeader(
-            title: 'Wallet',
+            title: 'Home',
             isRefreshing: wallet.isRefreshing,
             onRefresh: wallet.refresh,
+          ),
+          ZentraWalletStatusBanner(
+            errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
+            isConnecting: wallet.connectionState == WalletConnectionState.connecting,
+            isSyncing: wallet.isWalletBehindDaemon,
+            syncSubtitle: wallet.syncProgressLabel,
+            syncProgress: wallet.syncProgressFraction,
           ),
           ZentraHeroBalanceCard(
             amountZtr: balance != null
@@ -110,8 +117,6 @@ class _DashboardTab extends StatelessWidget {
             actions: [
               ZentraQuickActionItem(icon: Icons.arrow_outward, label: 'Send', onTap: () => _openSend(context)),
               ZentraQuickActionItem(icon: Icons.arrow_downward, label: 'Receive', onTap: () => _openReceive(context)),
-              const ZentraQuickActionItem(icon: Icons.swap_horiz, label: 'Swap', enabled: false),
-              const ZentraQuickActionItem(icon: Icons.add, label: 'Buy', enabled: false),
             ],
           ),
           ZentraSectionHeader(title: 'Recent activity', actionLabel: 'See all', onAction: onSeeAllTx),
@@ -154,39 +159,7 @@ class _DashboardTab extends StatelessWidget {
       isIncoming: incoming,
       pending: t.pending,
       showDivider: showDivider,
-      onTap: () => _showTxDetail(context, t, format),
-    );
-  }
-
-  void _showTxDetail(BuildContext context, WalletTransfer t, String Function(int) format) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: ZentraTheme.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              t.isIncoming ? 'Incoming transfer' : 'Outgoing transfer',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
-            ZentraCopyField(label: 'Amount', value: '${format(t.amountAtomic)} ZTRA', maxLines: 1),
-            const SizedBox(height: 12),
-            ZentraCopyField(label: 'Transaction ID', value: t.txid),
-            const SizedBox(height: 12),
-            Text(
-              'Time: ${UiFormat.relativeTime(t.timestamp)} · Confirmations: ${t.confirmations}',
-              style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
-            ),
-          ],
-        ),
-      ),
+      onTap: () => showZentraTxDetailSheet(context, transfer: t, formatAmount: format),
     );
   }
 }
@@ -207,7 +180,14 @@ class _AssetsTab extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           const ZentraDashboardHeader(title: 'Assets'),
-        ZentraHeroBalanceCard(
+          ZentraWalletStatusBanner(
+            errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
+            isConnecting: wallet.connectionState == WalletConnectionState.connecting,
+            isSyncing: wallet.isWalletBehindDaemon,
+            syncSubtitle: wallet.syncProgressLabel,
+            syncProgress: wallet.syncProgressFraction,
+          ),
+          ZentraHeroBalanceCard(
           amountZtr: balance != null
               ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA'
               : '— ZTRA',

@@ -15,10 +15,7 @@ class ReceiveScreen extends StatelessWidget {
     final address = wallet.primaryAddress?.address ?? '';
 
     return ZentraScaffold(
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: const Text('Receive ZTRA'),
-      ),
+      appBar: zentraAppBar(context, title: 'Receive ZTRA'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -45,8 +42,8 @@ class ReceiveScreen extends StatelessWidget {
             else
               const ZentraEmptyState(
                 icon: Icons.hourglass_empty,
-                title: 'Address loading',
-                subtitle: 'Pull to refresh on Home if this takes too long.',
+                title: 'Address not ready',
+                subtitle: 'Wait for sync to finish, or tap Refresh on the Home tab.',
               ),
             const SizedBox(height: 24),
             ZentraCopyField(label: 'Your address', value: address, maxLines: 4),

@@ -202,10 +202,7 @@ class _SendScreenState extends State<SendScreen> {
     final totalNeeded = amountAtomic > 0 ? amountAtomic + _feeAtomic : 0;
 
     return ZentraScaffold(
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: const Text('Send ZTRA'),
-      ),
+      appBar: zentraAppBar(context, title: 'Send ZTRA'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

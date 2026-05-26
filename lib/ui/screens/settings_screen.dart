@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/network/zentra_network.dart';
 import '../../core/native_wallet_messages.dart';
-import '../../providers/wallet_provider.dart';
+import '../../providers/wallet_provider.dart' show WalletConnectionState, WalletProvider;
 import '../../theme/zentra_theme.dart';
 import '../network_ui.dart';
 import '../widgets/restore_height_settings_panel.dart';
@@ -126,7 +126,7 @@ class SettingsScreen extends StatelessWidget {
                             : '${ZentraNetworkConfig.fromType(n).label} (soon)',
                         style: TextStyle(
                           color: n == ZentraNetType.mainnet
-                              ? Colors.white
+                              ? ZentraTheme.textPrimary
                               : ZentraTheme.textMuted,
                         ),
                       ),
@@ -175,13 +175,17 @@ class SettingsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const ZentraDashboardHeader(title: 'Settings'),
+          ZentraWalletStatusBanner(
+            errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
+            isConnecting: wallet.connectionState == WalletConnectionState.connecting,
+          ),
           Expanded(child: list),
         ],
       );
     }
 
-    return ZentraGradientScaffold(
-      appBar: AppBar(title: const Text('Settings')),
+    return ZentraScaffold(
+      appBar: zentraAppBar(context, title: 'Settings'),
       body: list,
     );
   }

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/ui_format.dart';
 import '../../models/wallet_models.dart';
-import '../../providers/wallet_provider.dart';
+import '../../providers/wallet_provider.dart' show WalletConnectionState, WalletProvider;
 import '../../theme/zentra_theme.dart';
 import '../widgets/zentra_ui.dart';
 
@@ -64,6 +64,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             isRefreshing: wallet.isRefreshing,
             onRefresh: wallet.refresh,
           ),
+        ZentraWalletStatusBanner(
+          errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
+          isConnecting: wallet.connectionState == WalletConnectionState.connecting,
+          isSyncing: wallet.isWalletBehindDaemon,
+          syncSubtitle: wallet.syncProgressLabel,
+          syncProgress: wallet.syncProgressFraction,
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
           child: SegmentedButton<int>(
@@ -71,11 +78,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               side: WidgetStateProperty.all(const BorderSide(color: ZentraTheme.border)),
               foregroundColor: WidgetStateProperty.resolveWith((s) {
                 return s.contains(WidgetState.selected)
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.55);
+                    ? ZentraTheme.textPrimary
+                    : ZentraTheme.textMuted;
               }),
               backgroundColor: WidgetStateProperty.resolveWith((s) {
-                return s.contains(WidgetState.selected) ? ZentraTheme.surface : ZentraTheme.card;
+                return s.contains(WidgetState.selected)
+                    ? ZentraTheme.accent.withValues(alpha: 0.18)
+                    : ZentraTheme.card;
               }),
             ),
             segments: const [
@@ -94,8 +103,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     if (widget.embedded) return content;
 
     return ZentraScaffold(
-      appBar: AppBar(
-        title: const Text('History'),
+      appBar: zentraAppBar(
+        context,
+        title: 'History',
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: wallet.refresh),
         ],
@@ -113,39 +123,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       isIncoming: incoming,
       pending: t.pending,
       showDivider: showDivider,
-      onTap: () => _showDetail(context, t, format),
-    );
-  }
-
-  void _showDetail(BuildContext context, WalletTransfer t, String Function(int) format) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: ZentraTheme.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              t.isIncoming ? 'Received' : 'Sent',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
-            ZentraCopyField(label: 'Amount', value: '${format(t.amountAtomic)} ZTRA', maxLines: 1),
-            const SizedBox(height: 12),
-            ZentraCopyField(label: 'Transaction ID', value: t.txid),
-            const SizedBox(height: 8),
-            Text(
-              '${UiFormat.relativeTime(t.timestamp)} · ${t.confirmations} confirmations',
-              style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
-            ),
-          ],
-        ),
-      ),
+      onTap: () => showZentraTxDetailSheet(context, transfer: t, formatAmount: format),
     );
   }
 }

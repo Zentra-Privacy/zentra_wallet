@@ -2,7 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/ui_format.dart';
+import '../../models/wallet_models.dart';
 import '../../theme/zentra_theme.dart';
+
+/// Non-empty provider error text for status banners (connect or refresh failures).
+String? zentraStatusErrorMessage(String? errorMessage) {
+  final msg = errorMessage?.trim();
+  if (msg == null || msg.isEmpty) return null;
+  return msg;
+}
 
 void zentraSnack(BuildContext context, String message, {bool isError = false}) {
   ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -207,6 +215,113 @@ class ZentraScaffold extends StatelessWidget {
       bottomNavigationBar: bottomNavigationBar,
     );
   }
+}
+
+/// Standard secondary-screen app bar (send, receive, node setup, etc.).
+PreferredSizeWidget zentraAppBar(
+  BuildContext context, {
+  required String title,
+  List<Widget>? actions,
+}) {
+  return AppBar(
+    leading: IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => Navigator.maybePop(context),
+    ),
+    title: Text(title),
+    actions: actions,
+  );
+}
+
+/// Connection / sync status shown below dashboard headers.
+class ZentraWalletStatusBanner extends StatelessWidget {
+  const ZentraWalletStatusBanner({
+    super.key,
+    this.errorMessage,
+    this.isConnecting = false,
+    this.isSyncing = false,
+    this.syncSubtitle,
+    this.syncProgress,
+  });
+
+  final String? errorMessage;
+  final bool isConnecting;
+  final bool isSyncing;
+  final String? syncSubtitle;
+  final double? syncProgress;
+
+  @override
+  Widget build(BuildContext context) {
+    if (errorMessage != null && errorMessage!.isNotEmpty) {
+      return ZentraSyncBanner(
+        message: errorMessage!,
+        isError: true,
+        subtitle: 'Check node settings or reconnect',
+      );
+    }
+    if (isConnecting) {
+      return const ZentraSyncBanner(message: 'Connecting to network…');
+    }
+    if (isSyncing) {
+      return ZentraSyncBanner(
+        message: 'Syncing blockchain',
+        subtitle: syncSubtitle,
+        progress: syncProgress,
+      );
+    }
+    return const SizedBox.shrink();
+  }
+}
+
+void showZentraTxDetailSheet(
+  BuildContext context, {
+  required WalletTransfer transfer,
+  required String Function(int) formatAmount,
+}) {
+  final t = transfer;
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: ZentraTheme.card,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(ZentraTheme.radiusLg)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: ZentraTheme.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              t.isIncoming ? 'Incoming transfer' : 'Outgoing transfer',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            ZentraCopyField(label: 'Amount', value: '${formatAmount(t.amountAtomic)} ZTRA', maxLines: 1),
+            const SizedBox(height: 12),
+            ZentraCopyField(label: 'Transaction ID', value: t.txid),
+            const SizedBox(height: 12),
+            Text(
+              '${UiFormat.relativeTime(t.timestamp)} · ${t.confirmations} confirmations'
+              '${t.pending ? ' · Pending' : ''}',
+              style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 /// Back-compat name
@@ -731,9 +846,7 @@ class ZentraBottomNav extends StatelessWidget {
                         Icon(
                           currentIndex == i ? items[i].$2 : items[i].$1,
                           size: 22,
-                          color: currentIndex == i
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.45),
+                          color: currentIndex == i ? ZentraTheme.accent : ZentraTheme.textMuted,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -741,9 +854,7 @@ class ZentraBottomNav extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: currentIndex == i ? FontWeight.w600 : FontWeight.w400,
-                            color: currentIndex == i
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.45),
+                            color: currentIndex == i ? ZentraTheme.textPrimary : ZentraTheme.textMuted,
                           ),
                         ),
                       ],
