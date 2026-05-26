@@ -448,6 +448,55 @@ class ZentraDashboardHeader extends StatelessWidget {
   }
 }
 
+/// Explains why part of the balance is locked (confirmation / security delays).
+void showZentraLockedBalanceInfo(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: ZentraTheme.card,
+      title: const Text('Locked balance'),
+      content: const SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'For your security, not every ZTRA in your wallet can be spent immediately.',
+              style: TextStyle(fontSize: 14, height: 1.45),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Received funds',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Tokens you receive stay locked until the transaction has about 60 confirmations on the network. After that they move to your unlocked balance and you can send them.',
+              style: TextStyle(fontSize: 13, color: ZentraTheme.textMuted, height: 1.45),
+            ),
+            SizedBox(height: 14),
+            Text(
+              'After you send',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'If you still see locked balance right after sending, that is usually change or outputs waiting to confirm. They typically unlock after about 10 blocks.',
+              style: TextStyle(fontSize: 13, color: ZentraTheme.textMuted, height: 1.45),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Got it'),
+        ),
+      ],
+    ),
+  );
+}
+
 class ZentraHeroBalanceCard extends StatelessWidget {
   const ZentraHeroBalanceCard({
     super.key,
@@ -509,15 +558,23 @@ class ZentraHeroBalanceCard extends StatelessWidget {
             if (lockedZtr != null) ...[
               const SizedBox(height: 8),
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Icon(Icons.lock_outline, size: 16, color: ZentraTheme.textMuted),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Locked $lockedZtr — waiting for confirmations (~10 blocks)',
-                      style: const TextStyle(fontSize: 12, color: ZentraTheme.textMuted, height: 1.35),
+                      'Locked $lockedZtr',
+                      style: const TextStyle(fontSize: 13, color: ZentraTheme.textMuted, height: 1.35),
                     ),
+                  ),
+                  IconButton(
+                    onPressed: () => showZentraLockedBalanceInfo(context),
+                    icon: const Icon(Icons.help_outline, size: 18, color: ZentraTheme.textMuted),
+                    tooltip: 'Why is balance locked?',
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
                 ],
               ),
