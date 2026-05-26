@@ -162,9 +162,12 @@ class SettingsScreen extends StatelessWidget {
         ZentraSettingsTile(
           icon: Icons.swap_horiz,
           title: 'Open different wallet',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-          ),
+          onTap: () {
+            context.read<WalletProvider>().prepareForNewWalletFlow();
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+            );
+          },
         ),
         const SizedBox(height: 16),
         Center(
