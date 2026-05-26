@@ -51,6 +51,51 @@ class ZentraLogo extends StatelessWidget {
   }
 }
 
+/// Primary action with inline spinner — fixed height, no layout jump while loading.
+class ZentraLoadingButton extends StatelessWidget {
+  const ZentraLoadingButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.loading = false,
+    this.loadingLabel,
+  });
+
+  final String label;
+  final String? loadingLabel;
+  final VoidCallback? onPressed;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    return FilledButton(
+      onPressed: loading ? null : onPressed,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: loading
+            ? Row(
+                key: const ValueKey('loading'),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: onPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(loadingLabel ?? label),
+                ],
+              )
+            : Text(label, key: const ValueKey('idle')),
+      ),
+    );
+  }
+}
+
 /// Tappable card for onboarding choices (create / restore / open).
 class ZentraChoiceCard extends StatelessWidget {
   const ZentraChoiceCard({
@@ -61,6 +106,7 @@ class ZentraChoiceCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.compact = false,
+    this.enabled = true,
   });
 
   final IconData icon;
@@ -70,6 +116,7 @@ class ZentraChoiceCard extends StatelessWidget {
   final VoidCallback onTap;
   /// Single-line row: icon + short label only.
   final bool compact;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +133,7 @@ class ZentraChoiceCard extends StatelessWidget {
         color: selected ? ZentraTheme.accent.withValues(alpha: 0.12) : ZentraTheme.card,
         shape: border,
         child: InkWell(
-          onTap: onTap,
+          onTap: enabled ? onTap : null,
           borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
@@ -96,7 +143,11 @@ class ZentraChoiceCard extends StatelessWidget {
                 Icon(
                   icon,
                   size: 20,
-                  color: selected ? ZentraTheme.accent : ZentraTheme.textMuted,
+                  color: !enabled
+                      ? ZentraTheme.textMuted.withValues(alpha: 0.5)
+                      : selected
+                          ? ZentraTheme.accent
+                          : ZentraTheme.textMuted,
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -107,7 +158,11 @@ class ZentraChoiceCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                    color: selected ? ZentraTheme.textPrimary : ZentraTheme.textMuted,
+                    color: !enabled
+                        ? ZentraTheme.textMuted.withValues(alpha: 0.5)
+                        : selected
+                            ? ZentraTheme.textPrimary
+                            : ZentraTheme.textMuted,
                     height: 1.2,
                   ),
                 ),
@@ -122,7 +177,7 @@ class ZentraChoiceCard extends StatelessWidget {
       color: selected ? ZentraTheme.accent.withValues(alpha: 0.12) : ZentraTheme.card,
       shape: border,
       child: InkWell(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

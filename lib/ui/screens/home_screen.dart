@@ -3,8 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/ui_format.dart';
 import '../../models/wallet_models.dart';
-import '../../models/wallet_sync_status.dart';
-import '../../providers/wallet_provider.dart' show WalletConnectionState, WalletProvider;
+import '../../providers/wallet_provider.dart' show WalletProvider;
 import '../../theme/zentra_theme.dart';
 import '../widgets/zentra_ui.dart';
 import 'receive_screen.dart';
@@ -84,10 +83,11 @@ class _DashboardTab extends StatelessWidget {
           ),
           ZentraWalletStatusBanner(
             errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
-            isConnecting: wallet.connectionState == WalletConnectionState.connecting ||
-                wallet.syncStatus == WalletSyncStatus.attempting,
-            isSyncing: wallet.isWalletBehindDaemon,
-            syncSubtitle: wallet.syncProgressLabel,
+            isConnecting: wallet.isOpeningWallet,
+            isSyncing: wallet.showSyncBanner,
+            syncSubtitle: wallet.isWaitingForDaemon
+                ? 'Connecting to node…'
+                : wallet.syncProgressLabel,
             syncProgress: wallet.syncProgressFraction,
           ),
           ZentraHeroBalanceCard(
@@ -176,10 +176,11 @@ class _AssetsTab extends StatelessWidget {
           const ZentraDashboardHeader(title: 'Assets'),
           ZentraWalletStatusBanner(
             errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
-            isConnecting: wallet.connectionState == WalletConnectionState.connecting ||
-                wallet.syncStatus == WalletSyncStatus.attempting,
-            isSyncing: wallet.isWalletBehindDaemon,
-            syncSubtitle: wallet.syncProgressLabel,
+            isConnecting: wallet.isOpeningWallet,
+            isSyncing: wallet.showSyncBanner,
+            syncSubtitle: wallet.isWaitingForDaemon
+                ? 'Connecting to node…'
+                : wallet.syncProgressLabel,
             syncProgress: wallet.syncProgressFraction,
           ),
           ZentraHeroBalanceCard(

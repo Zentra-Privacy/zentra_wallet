@@ -140,7 +140,7 @@ class WalletProvider extends ChangeNotifier {
 
   void _startBlockchainSync() {
     if (_wallet == null || !_wallet!.isOpen) return;
-    syncStatus = WalletSyncStatus.attempting;
+    syncStatus = WalletSyncStatus.syncing;
     _backgroundSync.start(
       onNativeStart: () => _wallet!.startBackgroundRefresh(),
       onPoll: _pollSnapshotFromBackground,
@@ -172,10 +172,8 @@ class WalletProvider extends ChangeNotifier {
     if (connectionState != WalletConnectionState.connected) return;
     if (isSynced) {
       syncStatus = WalletSyncStatus.synced;
-    } else if (daemonBlockHeight > 0) {
-      syncStatus = WalletSyncStatus.syncing;
     } else {
-      syncStatus = WalletSyncStatus.attempting;
+      syncStatus = WalletSyncStatus.syncing;
     }
   }
 
@@ -634,6 +632,15 @@ class WalletProvider extends ChangeNotifier {
 
   bool get isWalletBehindDaemon => !isSynced && daemonBlockHeight > 0;
 
+  /// True only while [connect] is opening the wallet file (not background sync).
+  bool get isOpeningWallet => connectionState == WalletConnectionState.connecting;
+
+  /// Connected but daemon height not available yet (node RPC).
+  bool get isWaitingForDaemon =>
+      connectionState == WalletConnectionState.connected && daemonBlockHeight <= 0;
+
+  bool get showSyncBanner => isWalletBehindDaemon || isWaitingForDaemon;
+
   bool get canTransact =>
       connectionState == WalletConnectionState.connected && isSynced;
 
@@ -647,7 +654,7 @@ class WalletProvider extends ChangeNotifier {
       case WalletSyncStatus.syncing:
         return 'Syncing';
       case WalletSyncStatus.attempting:
-        return 'Connecting';
+        return 'Syncing';
       case WalletSyncStatus.connected:
         return 'Connected';
       case WalletSyncStatus.connecting:

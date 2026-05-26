@@ -150,25 +150,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return;
     }
     setState(() => _loading = true);
-    await p.updateNetwork(_network);
-    final syncHeight = height ?? 0;
-    final ok = _openMode
-        ? await p.openExistingWallet(
-            filename: name,
-            password: _password.text,
-          )
-        : _restoreMode
-            ? await p.restoreFromSeed(
-                filename: name,
-                seed: SeedUtils.normalize(_seed.text),
-                password: _password.text,
-                restoreHeight: _customRestoreHeight ? syncHeight : null,
-              )
-            : await p.createNewWallet(
-                filename: name,
-                password: _password.text,
-              );
-    setState(() => _loading = false);
+    var ok = false;
+    try {
+      await p.updateNetwork(_network);
+      final syncHeight = height ?? 0;
+      ok = _openMode
+          ? await p.openExistingWallet(
+              filename: name,
+              password: _password.text,
+            )
+          : _restoreMode
+              ? await p.restoreFromSeed(
+                  filename: name,
+                  seed: SeedUtils.normalize(_seed.text),
+                  password: _password.text,
+                  restoreHeight: _customRestoreHeight ? syncHeight : null,
+                )
+              : await p.createNewWallet(
+                  filename: name,
+                  password: _password.text,
+                );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
     if (!mounted) return;
     if (ok) {
       if (!mounted) return;
@@ -229,6 +233,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return 'Create';
   }
 
+  String get _loadingButtonLabel {
+    if (_openMode) return 'Opening wallet…';
+    if (_restoreMode) return 'Restoring wallet…';
+    return 'Creating wallet…';
+  }
+
   @override
   Widget build(BuildContext context) {
     return ZentraGradientScaffold(
@@ -236,7 +246,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ? AppBar(
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => setState(() => _step = 0),
+                onPressed: _loading ? null : () => setState(() => _step = 0),
               ),
               title: Text(_walletAppBarTitle),
               actions: [
@@ -289,16 +299,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
         ),
         const Spacer(flex: 3),
-        FilledButton.icon(
+        FilledButton(
           onPressed: _goCreate,
-          icon: const Icon(Icons.add_circle_outline, size: 20),
-          label: const Text('Create new wallet'),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add_circle_outline, size: 20),
+              SizedBox(width: 8),
+              Text('Create new wallet'),
+            ],
+          ),
         ),
         const SizedBox(height: 10),
-        OutlinedButton.icon(
+        OutlinedButton(
           onPressed: _goRestore,
-          icon: const Icon(Icons.history, size: 20),
-          label: const Text('I already have a wallet'),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.history, size: 20),
+              SizedBox(width: 8),
+              Text('I already have a wallet'),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         TextButton(
@@ -318,42 +340,50 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: ZentraChoiceCard(
-                compact: true,
-                icon: Icons.add_circle_outline,
-                title: 'New',
-                selected: !_restoreMode && !_openMode,
-                onTap: _selectNewWallet,
+        Opacity(
+          opacity: _loading ? 0.55 : 1,
+          child: Row(
+            children: [
+              Expanded(
+                child: ZentraChoiceCard(
+                  compact: true,
+                  icon: Icons.add_circle_outline,
+                  title: 'New',
+                  selected: !_restoreMode && !_openMode,
+                  enabled: !_loading,
+                  onTap: _selectNewWallet,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ZentraChoiceCard(
-                compact: true,
-                icon: Icons.history,
-                title: 'Restore',
-                selected: _restoreMode,
-                onTap: _selectRestoreWallet,
+              const SizedBox(width: 8),
+              Expanded(
+                child: ZentraChoiceCard(
+                  compact: true,
+                  icon: Icons.history,
+                  title: 'Restore',
+                  selected: _restoreMode,
+                  enabled: !_loading,
+                  onTap: _selectRestoreWallet,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ZentraChoiceCard(
-                compact: true,
-                icon: Icons.folder_open_outlined,
-                title: 'Open',
-                selected: _openMode,
-                onTap: _selectOpenWallet,
+              const SizedBox(width: 8),
+              Expanded(
+                child: ZentraChoiceCard(
+                  compact: true,
+                  icon: Icons.folder_open_outlined,
+                  title: 'Open',
+                  selected: _openMode,
+                  enabled: !_loading,
+                  onTap: _selectOpenWallet,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         Expanded(
-          child: SingleChildScrollView(
+          child: AbsorbPointer(
+            absorbing: _loading,
+            child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -457,23 +487,51 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ],
             ),
           ),
-        ),
-        if (_loading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: SizedBox(
-              height: 22,
-              width: 22,
-              child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.accent),
-            ),
-          )
-        else
-          FilledButton(
-            onPressed: _finishCreate,
-            child: Text(_primaryButtonLabel),
           ),
+        ),
+        if (_loading) ...[
+          const SizedBox(height: 8),
+          _WalletLoadingBanner(message: _loadingButtonLabel),
+        ],
+        const SizedBox(height: 8),
+        ZentraLoadingButton(
+          label: _primaryButtonLabel,
+          loadingLabel: _loadingButtonLabel,
+          loading: _loading,
+          onPressed: _finishCreate,
+        ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+class _WalletLoadingBanner extends StatelessWidget {
+  const _WalletLoadingBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: ZentraTheme.flatCard(color: ZentraTheme.surface),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: 13, color: ZentraTheme.textMuted, height: 1.35),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

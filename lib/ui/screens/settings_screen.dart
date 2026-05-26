@@ -37,7 +37,7 @@ class SettingsScreen extends StatelessWidget {
                     ZentraConnectionChip(
                       label: wallet.connectionStatusLabel,
                       isError: wallet.connectionState == WalletConnectionState.error,
-                      isSyncing: wallet.isWalletBehindDaemon,
+                      isSyncing: wallet.showSyncBanner,
                     ),
                     const Spacer(),
                     if (wallet.isRefreshing)
@@ -193,7 +193,12 @@ class SettingsScreen extends StatelessWidget {
           const ZentraDashboardHeader(title: 'Settings'),
           ZentraWalletStatusBanner(
             errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
-            isConnecting: wallet.connectionState == WalletConnectionState.connecting,
+            isConnecting: wallet.isOpeningWallet,
+            isSyncing: wallet.showSyncBanner,
+            syncSubtitle: wallet.isWaitingForDaemon
+                ? 'Connecting to node…'
+                : wallet.syncProgressLabel,
+            syncProgress: wallet.syncProgressFraction,
           ),
           Expanded(child: list),
         ],
