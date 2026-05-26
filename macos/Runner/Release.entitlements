@@ -7,5 +7,9 @@
 	<!-- Outbound daemon RPC (release had no network — connect/sync failed like Android release APK). -->
 	<key>com.apple.security.network.client</key>
 	<true/>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.example.zentraWallet</string>
+	</array>
 </dict>
 </plist>

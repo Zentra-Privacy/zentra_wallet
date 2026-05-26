@@ -1,0 +1,17 @@
+--- a/src/wallet/ringdb.cpp
++++ b/src/wallet/ringdb.cpp
+@@ -221,7 +221,14 @@ ringdb::ringdb(std::string filename, const std::string &genesis):
+   dbr = mdb_env_set_maxdbs(env, 2);
+   THROW_WALLET_EXCEPTION_IF(dbr, tools::error::wallet_internal_error, "Failed to set max env dbs: " + std::string(mdb_strerror(dbr)));
+   const std::string actual_filename = get_rings_filename(filename); 
+-  dbr = mdb_env_open(env, actual_filename.c_str(), 0, 0664);
++  // macOS App Sandbox rejects LMDB's default file locking (System V semaphores).
++  // Wallet FFI serializes all wallet calls on one mutex; MDB_NOLOCK is safe here.
++#if defined(__APPLE__)
++  const unsigned int mdb_flags = MDB_NOLOCK;
++#else
++  const unsigned int mdb_flags = 0;
++#endif
++  dbr = mdb_env_open(env, actual_filename.c_str(), mdb_flags, 0664);
+   THROW_WALLET_EXCEPTION_IF(dbr, tools::error::wallet_internal_error, "Failed to open rings database file '"
+       + actual_filename + "': " + std::string(mdb_strerror(dbr)));

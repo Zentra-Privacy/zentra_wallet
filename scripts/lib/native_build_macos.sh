@@ -17,11 +17,13 @@ native_build_macos_brew() {
   local ffibuild="$ROOT/build/native_ffi/darwin-brew"
 
   echo "==> macOS FFI via Homebrew (Zentra build: $ZENTRA_BUILD)"
+  native_apply_zentra_source_patches "$ZENTRA_ROOT" || return 1
   if [[ ! -f "$ZENTRA_BUILD/CMakeCache.txt" ]]; then
     echo "Error: configure Zentra first: cd $ZENTRA_ROOT && scripts/build.sh"
     return 1
   fi
-  if [[ ! -f "$WALLET_API" ]]; then
+  local ringdb="$ZENTRA_ROOT/src/wallet/ringdb.cpp"
+  if [[ ! -f "$WALLET_API" ]] || { grep -q 'MDB_NOLOCK' "$ringdb" 2>/dev/null && [[ "$ringdb" -nt "$WALLET_API" ]]; }; then
     echo "==> Building wallet_api in $ZENTRA_BUILD"
     cmake --build "$ZENTRA_BUILD" --target wallet_api --parallel "$JOBS" || return 1
   fi
@@ -72,6 +74,7 @@ native_build_macos() {
   [[ -n "$ZENTRA_ROOT" ]] || ZENTRA_ROOT="$(native_resolve_zentra)" || {
     echo "Error: Zentra source not found"; return 1
   }
+  native_apply_zentra_source_patches "$ZENTRA_ROOT" || return 1
 
   if [[ "${ZENTRA_MACOS_USE_BREW:-0}" == "1" ]]; then
     native_build_macos_brew "$ZENTRA_ROOT"

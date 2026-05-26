@@ -34,18 +34,49 @@ export ZENTRA_WALLET_FFI_PATH=/full/path/to/libzentra_wallet_ffi.so
 
 ---
 
+## macOS — Keychain / `PlatformException` code -34018
+
+**Symptoms:**
+
+- `A required entitlement isn't present` / `Unexpected security result code, Code: -34018`
+- Wallet auto-open fails; logs may show `invalid password` (password was never read from Keychain)
+
+**Debug (`flutter run -d macos`):** `DebugProfile.entitlements` disables App Sandbox so Keychain works with ad-hoc signing (no Apple team required).
+
+**Release (`flutter build macos --release`):** needs a development team and `keychain-access-groups` in `Release.entitlements`:
+
+```bash
+cp macos/Runner/Configs/Signing.xcconfig.example macos/Runner/Configs/Signing.xcconfig
+# Edit Signing.xcconfig — set DEVELOPMENT_TEAM to your 10-character Team ID from Xcode
+flutter build macos --release
+```
+
+Do **not** run `pod install` before `flutter pub get` (Flutter must generate `macos/Flutter/ephemeral/` first).
+
+---
+
+## macOS — “entitlements that require signing with a development certificate”
+
+**Symptoms:** Xcode error when building after adding Keychain entitlements.
+
+**Fix:** For day-to-day dev use `flutter run -d macos` (Debug entitlements, no sandbox). For release, copy `Signing.xcconfig.example` → `Signing.xcconfig`, set `DEVELOPMENT_TEAM`, and sign in Xcode (Signing & Capabilities → Team).
+
+---
+
 ## macOS — wallet engine, ringdb, or “invalid password”
 
 **Symptoms:**
 
 - “Wallet engine unavailable” after `flutter run -d macos`
 - Log: `Failed to initialize ringdb` / `Operation not permitted`
-- `invalid password` right after open (often ringdb failed first)
+- `invalid password` right after open (often ringdb failed first — not a wrong password)
+
+**Cause:** macOS App Sandbox blocks LMDB’s default locking (System V semaphores). The wallet build applies `MDB_NOLOCK` in Zentra `ringdb.cpp` (safe because the FFI uses one mutex for all wallet calls).
 
 **Fix:**
 
 ```bash
-./wallet.sh build-macos          # builds packages/zentra_wallet_core/macos/lib/libzentra_wallet_ffi.dylib
+./wallet.sh build-macos          # patches Zentra ringdb + rebuilds libzentra_wallet_ffi.dylib
 cd macos && pod install && cd ..
 flutter run -d macos
 ```

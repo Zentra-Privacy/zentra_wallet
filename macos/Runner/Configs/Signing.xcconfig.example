@@ -1,0 +1,8 @@
+// Copy to Signing.xcconfig and set your Apple Development Team ID (10 characters).
+// Xcode → Runner target → Signing & Capabilities → Team, or:
+//   security find-identity -p codesigning -v | head
+//
+// Required for `flutter build macos --release` (sandbox + Keychain entitlements).
+
+DEVELOPMENT_TEAM =
+CODE_SIGN_IDENTITY = Apple Development

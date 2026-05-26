@@ -18,6 +18,7 @@ class SettingsStore {
 
   static const _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    mOptions: MacOsOptions(),
   );
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();

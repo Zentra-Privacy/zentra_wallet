@@ -56,6 +56,7 @@ android/app/release/
 key.properties
 
 # iOS / macOS (Pods & Xcode; platform .gitignore files add more)
+macos/Runner/Configs/Signing.xcconfig
 **/Pods/
 **/DerivedData/
 *.ipa
