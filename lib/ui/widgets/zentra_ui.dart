@@ -231,6 +231,33 @@ class ZentraChoiceCard extends StatelessWidget {
   }
 }
 
+/// Bordered card surface; use for groups of [ListTile] / [RadioListTile] children.
+class ZentraCard extends StatelessWidget {
+  const ZentraCard({
+    super.key,
+    required this.child,
+    this.margin,
+    this.padding,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry? margin;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: margin ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      decoration: ZentraTheme.flatCard(),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: ZentraTheme.card,
+        child: padding != null ? Padding(padding: padding!, child: child) : child,
+      ),
+    );
+  }
+}
+
 /// Groups onboarding form fields in a single card.
 class ZentraFormCard extends StatelessWidget {
   const ZentraFormCard({super.key, required this.children});
@@ -1099,15 +1126,19 @@ class ZentraSettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-      leading: Icon(icon, color: ZentraTheme.textMuted, size: 22),
-      title: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-      subtitle: subtitle != null
-          ? Text(subtitle!, style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12))
-          : null,
-      trailing: trailing ?? (onTap != null ? const Icon(Icons.chevron_right, size: 20, color: ZentraTheme.textMuted) : null),
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+        leading: Icon(icon, color: ZentraTheme.textMuted, size: 22),
+        title: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+        subtitle: subtitle != null
+            ? Text(subtitle!, style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12))
+            : null,
+        trailing:
+            trailing ?? (onTap != null ? const Icon(Icons.chevron_right, size: 20, color: ZentraTheme.textMuted) : null),
+      ),
     );
   }
 }

@@ -135,15 +135,18 @@ class _WalletBackupScreenState extends State<WalletBackupScreen> {
               selectable: _seedVisible,
             ),
             const SizedBox(height: 12),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _seedSaved,
-              onChanged: (v) => setState(() => _seedSaved = v ?? false),
-              title: const Text(
-                'I have saved my seed phrase offline',
-                style: TextStyle(fontSize: 14),
+            Material(
+              color: Colors.transparent,
+              child: CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _seedSaved,
+                onChanged: (v) => setState(() => _seedSaved = v ?? false),
+                title: const Text(
+                  'I have saved my seed phrase offline',
+                  style: TextStyle(fontSize: 14),
+                ),
+                controlAffinity: ListTileControlAffinity.leading,
               ),
-              controlAffinity: ListTileControlAffinity.leading,
             ),
           ],
           const SizedBox(height: 28),

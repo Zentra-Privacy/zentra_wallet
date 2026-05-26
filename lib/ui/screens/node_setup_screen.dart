@@ -112,9 +112,8 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
             const SizedBox(height: 20),
             const Text('Mainnet nodes', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            Container(
-              decoration: ZentraTheme.flatCard(),
-              clipBehavior: Clip.antiAlias,
+            ZentraCard(
+              margin: EdgeInsets.zero,
               child: RadioGroup<String>(
                 groupValue: _useCustom ? 'custom' : (_selectedNodeId ?? ''),
                 onChanged: (v) {
@@ -131,21 +130,27 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
                 child: Column(
                   children: [
                     ...ZentraPublicNode.mainnetNodes.map(
-                      (node) => RadioListTile<String>(
-                        value: node.id,
-                        title: Text(NetworkUi.seedNodeLabel(node)),
-                        subtitle: const Text(
-                          'Recommended seed node',
-                          style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
+                      (node) => Material(
+                        color: Colors.transparent,
+                        child: RadioListTile<String>(
+                          value: node.id,
+                          title: Text(NetworkUi.seedNodeLabel(node)),
+                          subtitle: const Text(
+                            'Recommended seed node',
+                            style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
+                          ),
                         ),
                       ),
                     ),
-                    const RadioListTile<String>(
-                      value: 'custom',
-                      title: Text('Custom daemon'),
-                      subtitle: Text(
-                        'Your own zentrad host:port',
-                        style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
+                    const Material(
+                      color: Colors.transparent,
+                      child: RadioListTile<String>(
+                        value: 'custom',
+                        title: Text('Custom daemon'),
+                        subtitle: Text(
+                          'Your own zentrad host:port',
+                          style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12),
+                        ),
                       ),
                     ),
                   ],

@@ -191,24 +191,22 @@ class _AssetsTab extends StatelessWidget {
               : null,
         ),
           const SizedBox(height: 8),
-          Container(
-            margin: ZentraTheme.pagePadding,
-            decoration: ZentraTheme.flatCard(),
-            clipBehavior: Clip.antiAlias,
-            child: Material(
-              color: ZentraTheme.card,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                leading: const ZentraLogo(size: 40),
-                title: const Text('Zentra', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Native coin · ZTRA', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
-                trailing: Text(
-                  balance != null ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA' : '0',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+            ZentraCard(
+              margin: ZentraTheme.pagePadding,
+              child: Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: const ZentraLogo(size: 40),
+                  title: const Text('Zentra', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Native coin · ZTRA', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
+                  trailing: Text(
+                    balance != null ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA' : '0',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
