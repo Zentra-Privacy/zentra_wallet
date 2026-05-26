@@ -22,14 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<WalletProvider>().refresh();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final wallet = context.watch<WalletProvider>();
     return ZentraScaffold(

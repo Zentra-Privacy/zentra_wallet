@@ -43,24 +43,22 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
 
-      setState(() => _status = 'Syncing with network…');
+      setState(() => _status = 'Opening wallet…');
       final ok = await provider.connect().timeout(
-        const Duration(seconds: 60),
+        const Duration(seconds: 25),
         onTimeout: () {
           provider.markConnectFailed(
-            'Sync timed out. Check node in Settings.',
+            'Could not open wallet in time. Check node in Settings.',
           );
           return false;
         },
       );
       if (!mounted) return;
-      if (ok) {
-        try {
-          await provider.refresh().timeout(const Duration(seconds: 20));
-        } on TimeoutException {
-          provider.errorMessage = provider.errorMessage ??
-              'Refresh timed out. Pull down on Home to retry.';
-        }
+      if (!ok) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+        );
+        return;
       }
       if (!mounted) return;
       Navigator.of(context).pushReplacement(

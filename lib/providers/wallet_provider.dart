@@ -15,6 +15,7 @@ import '../models/wallet_backup_info.dart';
 import '../models/wallet_models.dart';
 import '../services/embedded_wallet_service.dart';
 import '../services/settings_store.dart';
+import '../services/wallet_blockchain_jobs.dart';
 
 enum WalletConnectionState { disconnected, connecting, connected, error }
 
@@ -23,6 +24,8 @@ class WalletProvider extends ChangeNotifier {
       : _settings = settings ?? SettingsStore();
 
   final SettingsStore _settings;
+  final WalletBlockchainJobRunner _blockchainJobs = WalletBlockchainJobRunner();
+  final WalletBackgroundSync _backgroundSync = WalletBackgroundSync();
 
   WalletConnectionState connectionState = WalletConnectionState.disconnected;
   String? errorMessage;
@@ -42,6 +45,9 @@ class WalletProvider extends ChangeNotifier {
   int daemonBlockHeight = 0;
   String? daemonStatus;
   bool isRefreshing = false;
+
+  /// Native wallet2 sync thread is running; UI updates via periodic snapshot polls.
+  bool get isBackgroundSyncing => _backgroundSync.isActive;
 
   String? walletFilename;
   ZentraNetType? walletNetworkType;
@@ -116,9 +122,29 @@ class WalletProvider extends ChangeNotifier {
     walletScanHeight = _wallet!.fetchRestoreHeight();
   }
 
+  void _stopBlockchainSync() {
+    _backgroundSync.stop();
+    _blockchainJobs.reset();
+  }
+
+  void _startBlockchainSync() {
+    if (_wallet == null || !_wallet!.isOpen) return;
+    _backgroundSync.start(
+      onNativeStart: () => _wallet!.startBackgroundRefresh(),
+      onPoll: _pollSnapshotFromBackground,
+    );
+  }
+
+  Future<void> _pollSnapshotFromBackground() async {
+    if (_wallet == null || !_wallet!.isOpen) return;
+    await _applyWalletSnapshot();
+    notifyListeners();
+  }
+
   /// Called when [connect] is aborted externally (e.g. splash screen timeout).
   void markConnectFailed(String message) {
     _connectGeneration++;
+    _stopBlockchainSync();
     connectionState = WalletConnectionState.error;
     errorMessage = message;
     _wallet?.dispose();
@@ -129,6 +155,7 @@ class WalletProvider extends ChangeNotifier {
   /// True when a newer connect/reset superseded [gen]; cleans up stale native wallet.
   bool _connectStale(int gen) {
     if (gen == _connectGeneration) return false;
+    _stopBlockchainSync();
     _wallet?.dispose();
     _wallet = null;
     return true;
@@ -171,9 +198,7 @@ class WalletProvider extends ChangeNotifier {
         password: password,
       );
       if (_connectStale(gen)) return false;
-      await _wallet!.refresh();
-      if (_connectStale(gen)) return false;
-      _wallet!.startBackgroundRefresh();
+      _startBlockchainSync();
       if (_connectStale(gen)) return false;
       await _applyWalletSnapshot();
       if (_connectStale(gen)) return false;
@@ -200,13 +225,20 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> refresh() async {
+  /// Pull-to-refresh / manual update. Uses a light snapshot poll while background sync runs.
+  Future<void> refresh({bool forceBlocking = false}) async {
     if (_wallet == null || !_wallet!.isOpen) return;
     isRefreshing = true;
     notifyListeners();
     try {
-      await _wallet!.refresh();
-      await _applyWalletSnapshot();
+      if (_backgroundSync.isActive && !forceBlocking) {
+        await _pollSnapshotFromBackground();
+      } else {
+        await _blockchainJobs.run(() async {
+          await _wallet!.refresh();
+          await _applyWalletSnapshot();
+        });
+      }
       errorMessage = null;
     } catch (e) {
       errorMessage = _userMessage(e);
@@ -232,7 +264,13 @@ class WalletProvider extends ChangeNotifier {
     try {
       _wallet!.setRestoreHeight(height);
       await updateDefaultRestoreHeight(height);
-      await refresh();
+      _stopBlockchainSync();
+      await _blockchainJobs.run(() async {
+        await _wallet!.refresh();
+        await _applyWalletSnapshot();
+      });
+      _startBlockchainSync();
+      notifyListeners();
       return true;
     } catch (e) {
       errorMessage = _userMessage(e);
@@ -344,8 +382,7 @@ class WalletProvider extends ChangeNotifier {
     connectionState = WalletConnectionState.connecting;
     notifyListeners();
     try {
-      await _wallet!.refresh();
-      _wallet!.startBackgroundRefresh();
+      _startBlockchainSync();
       await _applyWalletSnapshot();
       connectionState = WalletConnectionState.connected;
       errorMessage = null;
@@ -404,10 +441,12 @@ class WalletProvider extends ChangeNotifier {
     int? priority,
   }) async {
     if (_wallet == null || !_wallet!.isOpen) return null;
-    return _wallet!.estimateFee(
-      address: address,
-      amountDisplay: amount,
-      priority: priority ?? sendPriority,
+    return _blockchainJobs.run(
+      () => _wallet!.estimateFee(
+        address: address,
+        amountDisplay: amount,
+        priority: priority ?? sendPriority,
+      ),
     );
   }
 
@@ -429,15 +468,17 @@ class WalletProvider extends ChangeNotifier {
       return null;
     }
     try {
-      final tx = await _wallet!.send(
-        address: address,
-        amountDisplay: amount,
-        priority: priority ?? sendPriority,
+      final tx = await _blockchainJobs.run(
+        () => _wallet!.send(
+          address: address,
+          amountDisplay: amount,
+          priority: priority ?? sendPriority,
+        ),
       );
       try {
         await refresh();
       } catch (_) {
-        // Send may have succeeded; refresh will catch up on Home.
+        // Send may have succeeded; background sync will catch up on Home.
       }
       return tx;
     } catch (e) {
@@ -565,6 +606,7 @@ class WalletProvider extends ChangeNotifier {
 
   void _resetWalletSession() {
     _connectGeneration++;
+    _stopBlockchainSync();
     _wallet?.dispose();
     _wallet = null;
     balance = null;
@@ -581,6 +623,7 @@ class WalletProvider extends ChangeNotifier {
   @override
   void dispose() {
     _connectGeneration++;
+    _stopBlockchainSync();
     _wallet?.dispose();
     _wallet = null;
     ZentraNativeWallet.release();

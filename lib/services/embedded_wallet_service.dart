@@ -86,7 +86,7 @@ class EmbeddedWalletService {
     return _native.address(_handle!);
   }
 
-  /// Call after the first successful [refresh] to avoid racing wallet2 sync paths.
+  /// Starts wallet2 native background sync (non-blocking). Prefer over [refresh] for steady sync.
   void startBackgroundRefresh() {
     _requireOpen();
     if (!_native.startBackgroundRefresh(_handle!)) {
