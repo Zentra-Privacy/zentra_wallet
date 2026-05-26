@@ -4,5 +4,8 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- Outbound daemon RPC (release had no network — connect/sync failed like Android release APK). -->
+	<key>com.apple.security.network.client</key>
+	<true/>
 </dict>
 </plist>
