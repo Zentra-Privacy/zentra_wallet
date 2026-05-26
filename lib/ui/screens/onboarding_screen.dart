@@ -34,6 +34,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _openMode = false;
   bool _customRestoreHeight = false;
   bool _hidePassword = true;
+  List<String> _localWallets = [];
+  bool _loadingWallets = false;
+  String? _selectedLocalWallet;
 
   @override
   void initState() {
@@ -87,17 +90,50 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _openMode = true;
       _customRestoreHeight = false;
     });
+    _refreshLocalWallets();
+  }
+
+  Future<void> _refreshLocalWallets() async {
+    setState(() => _loadingWallets = true);
+    final provider = context.read<WalletProvider>();
+    final list = await provider.listLocalWalletFilenames();
+    if (!mounted) return;
+    final last = provider.walletFilename;
+    String? pick;
+    if (list.isNotEmpty) {
+      pick = (last != null && list.contains(last)) ? last : list.first;
+    }
+    setState(() {
+      _localWallets = list;
+      _loadingWallets = false;
+      _selectedLocalWallet = pick;
+    });
   }
 
   Future<void> _finishCreate() async {
-    final name = _filename.text.trim();
-    if (name.isEmpty || name.contains('/') || name.contains('\\')) {
-      _snack('Pick a simple name — no slashes or folder paths');
-      return;
-    }
-    if (_password.text.length < 8) {
-      _snack('Password needs at least 8 characters', error: true);
-      return;
+    final name = _openMode ? (_selectedLocalWallet?.trim() ?? '') : _filename.text.trim();
+    if (_openMode) {
+      if (_localWallets.isEmpty) {
+        _snack('No wallets on this device — create or restore first', error: true);
+        return;
+      }
+      if (name.isEmpty || !_localWallets.contains(name)) {
+        _snack('Select a wallet', error: true);
+        return;
+      }
+      if (_password.text.isEmpty) {
+        _snack('Enter your wallet password', error: true);
+        return;
+      }
+    } else {
+      if (name.isEmpty || name.contains('/') || name.contains('\\')) {
+        _snack('Pick a simple name — no slashes or folder paths');
+        return;
+      }
+      if (_password.text.length < 8) {
+        _snack('Password needs at least 8 characters', error: true);
+        return;
+      }
     }
     if (_restoreMode && !SeedUtils.isValidWordCount(_seed.text)) {
       _snack('Enter your full seed — 12, 13, 24, or 25 words');
@@ -118,18 +154,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final syncHeight = height ?? 0;
     final ok = _openMode
         ? await p.openExistingWallet(
-            filename: _filename.text.trim(),
+            filename: name,
             password: _password.text,
           )
         : _restoreMode
             ? await p.restoreFromSeed(
-                filename: _filename.text.trim(),
+                filename: name,
                 seed: SeedUtils.normalize(_seed.text),
                 password: _password.text,
                 restoreHeight: _customRestoreHeight ? syncHeight : null,
               )
             : await p.createNewWallet(
-                filename: _filename.text.trim(),
+                filename: name,
                 password: _password.text,
               );
     setState(() => _loading = false);
@@ -267,8 +303,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height: 12),
         TextButton(
           onPressed: () {
-            _selectOpenWallet();
             setState(() => _step = 1);
+            _selectOpenWallet();
           },
           child: const Text('Open wallet saved on this device'),
         ),
@@ -315,11 +351,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: _MainnetChip(),
-        ),
         const SizedBox(height: 16),
         Expanded(
           child: SingleChildScrollView(
@@ -328,21 +359,61 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               children: [
                 ZentraFormCard(
                   children: [
-                    TextField(
-                      controller: _filename,
-                      textCapitalization: TextCapitalization.none,
-                      decoration: const InputDecoration(
-                        labelText: 'Name',
-                        hintText: 'my_wallet',
-                        prefixIcon: Icon(Icons.label_outline, size: 20),
+                    if (_openMode) ...[
+                      if (_loadingWallets)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.accent),
+                            ),
+                          ),
+                        )
+                      else if (_localWallets.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'No wallets on this device yet.',
+                            style: TextStyle(color: ZentraTheme.textMuted, fontSize: 13),
+                          ),
+                        )
+                      else
+                        DropdownButtonFormField<String>(
+                          key: ValueKey(_selectedLocalWallet),
+                          initialValue: _selectedLocalWallet,
+                          decoration: const InputDecoration(
+                            labelText: 'Wallet',
+                            prefixIcon: Icon(Icons.account_balance_wallet_outlined, size: 20),
+                          ),
+                          dropdownColor: ZentraTheme.card,
+                          items: _localWallets
+                              .map(
+                                (w) => DropdownMenuItem(
+                                  value: w,
+                                  child: Text(w, overflow: TextOverflow.ellipsis),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) => setState(() => _selectedLocalWallet = v),
+                        ),
+                    ] else
+                      TextField(
+                        controller: _filename,
+                        textCapitalization: TextCapitalization.none,
+                        decoration: const InputDecoration(
+                          labelText: 'Name',
+                          hintText: 'my_wallet',
+                          prefixIcon: Icon(Icons.label_outline, size: 20),
+                        ),
                       ),
-                    ),
                     TextField(
                       controller: _password,
                       obscureText: _hidePassword,
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        hintText: '8+ characters',
+                        hintText: _openMode ? 'Wallet password' : '8+ characters',
                         prefixIcon: const Icon(Icons.key_outlined, size: 20),
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -424,33 +495,6 @@ class _NewWalletSyncNote extends StatelessWidget {
               'Sync starts from the latest block automatically.',
               style: TextStyle(fontSize: 13, color: ZentraTheme.textMuted, height: 1.35),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MainnetChip extends StatelessWidget {
-  const _MainnetChip();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: ZentraTheme.success.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: ZentraTheme.success.withValues(alpha: 0.35)),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.public, size: 14, color: ZentraTheme.success),
-          SizedBox(width: 6),
-          Text(
-            'Mainnet',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ZentraTheme.success),
           ),
         ],
       ),

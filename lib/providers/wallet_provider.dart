@@ -9,6 +9,7 @@ import '../core/network/zentra_network.dart';
 import '../core/network/zentra_public_nodes.dart';
 import '../core/restore_height_utils.dart';
 import '../core/seed_utils.dart';
+import '../core/wallet_directory.dart';
 import '../core/wallet_exception.dart';
 import '../models/wallet_backup_info.dart';
 import '../models/wallet_models.dart';
@@ -69,6 +70,12 @@ class WalletProvider extends ChangeNotifier {
       await dir.create(recursive: true);
     }
     return dir.path;
+  }
+
+  /// Wallet base names saved on this device (`*.keys` in the wallet folder).
+  Future<List<String>> listLocalWalletFilenames() async {
+    _walletDir ??= await _resolveWalletDir();
+    return WalletDirectory.listWalletFilenames(_walletDir!);
   }
 
   Future<void> _ensureWallet() async {
