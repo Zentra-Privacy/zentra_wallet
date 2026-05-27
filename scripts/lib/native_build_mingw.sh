@@ -32,7 +32,7 @@ native_build_mingw() {
   local toolchain="$ZENTRA_ROOT/contrib/depends/$HOST/share/toolchain.cmake"
   local zbuild="$ZENTRA_ROOT/build/mingw-win64/release"
   native_build_zentra_wallet_api "$ZENTRA_ROOT" "$HOST" "mingw-win64" "$JOBS" \
-    -DBUILD_64=ON -DARCH="x86-64" -DUSE_DEVICE_TREZOR=OFF || return 1
+    -DBUILD_64=ON -DARCH="x86-64" -DUSE_DEVICE_TREZOR=OFF -DANDROID=OFF || return 1
 
   native_build_ffi_cmake "$ROOT" "$ZENTRA_ROOT" "$zbuild" "$toolchain" "$OUT" "mingw-win64" "$JOBS" || return 1
   _bundle_mingw_runtime_dlls "$OUT"

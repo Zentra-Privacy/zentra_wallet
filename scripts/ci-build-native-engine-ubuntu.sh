@@ -23,11 +23,18 @@ chmod +x "$ROOT/scripts/ci-clone-zentra.sh" \
   "$ROOT/scripts/ci-preflight-engine.sh" \
   "$ROOT/scripts/ci-verify-native-engine.sh"
 
-"$ROOT/scripts/ci-clone-zentra.sh" "$ROOT/third_party/zentra"
-"$ROOT/scripts/ci-patch-zentra-depends.sh" "$ROOT/third_party/zentra"
+# Workflow may already clone/patch before cache restore; avoid redundant fetch when present.
+if [[ -n "${ZENTRA_ROOT:-}" && -f "${ZENTRA_ROOT}/src/wallet/api/wallet2_api.h" ]]; then
+  ZENTRA="$(cd "$ZENTRA_ROOT" && pwd)"
+  echo "==> Using Zentra at $ZENTRA (from ZENTRA_ROOT)"
+else
+  "$ROOT/scripts/ci-clone-zentra.sh" "$ROOT/third_party/zentra"
+  ZENTRA="$ROOT/third_party/zentra"
+fi
+"$ROOT/scripts/ci-patch-zentra-depends.sh" "$ZENTRA"
 # shellcheck disable=SC1091
 source "$ROOT/build/zentra-checkout.env"
-ZENTRA="$zentra_path"
+ZENTRA="${ZENTRA_ROOT:-$zentra_path}"
 
 native_prepare_python_shim "$ROOT"
 "$ROOT/scripts/ci-preflight-engine.sh" "$ZENTRA"

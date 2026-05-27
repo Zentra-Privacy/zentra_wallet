@@ -6,6 +6,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export WALLET_ROOT="$ROOT"
 export JOBS="${JOBS:-2}"
+# Portable dylib (no Homebrew runtime on target Macs) — same as docs/build-macos.md CI guidance.
+export ZENTRA_MACOS_USE_DEPENDS="${ZENTRA_MACOS_USE_DEPENDS:-1}"
 STAGE="${1:-$ROOT/build/native-engine-macos}"
 
 # shellcheck source=lib/native_build_common.sh

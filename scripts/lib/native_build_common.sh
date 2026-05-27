@@ -78,19 +78,42 @@ native_build_depends() {
   }
 }
 
+# OpenSSL from Zentra contrib/depends prefix (required for Android / MinGW / macOS cross-builds).
+native_depends_openssl_cmake_args() {
+  local prefix="$1"
+  local -n _out="${2:?output array name required}"
+  _out=()
+  if [[ -f "$prefix/lib/libssl.a" && -f "$prefix/lib/libcrypto.a" ]]; then
+    _out=(
+      -DOPENSSL_ROOT_DIR="$prefix"
+      -DOPENSSL_INCLUDE_DIR="$prefix/include"
+      -DOPENSSL_LIBRARIES="$prefix/lib/libssl.a;$prefix/lib/libcrypto.a"
+    )
+  fi
+}
+
 native_build_zentra_wallet_api() {
   local zentra_root="$1"
   local host="$2"
   local platform_tag="$3"
   local jobs="${4:-4}"
   local depends_dir="$zentra_root/contrib/depends"
+  local prefix="$depends_dir/$host"
   local toolchain="$depends_dir/$host/share/toolchain.cmake"
   local zbuild="$zentra_root/build/$platform_tag/release"
 
   shift 4
   local -a extra=("$@")
+  local -a openssl_args=()
+  native_depends_openssl_cmake_args "$prefix" openssl_args
 
   echo "==> Zentra wallet_api ($platform_tag)"
+  if [[ ${#openssl_args[@]} -gt 0 && -f "$zbuild/CMakeCache.txt" ]]; then
+    if ! grep -qF "OPENSSL_INCLUDE_DIR:PATH=${prefix}/include" "$zbuild/CMakeCache.txt" 2>/dev/null; then
+      rm -f "$zbuild/CMakeCache.txt"
+      rm -rf "$zbuild/CMakeFiles" 2>/dev/null || true
+    fi
+  fi
   mkdir -p "$zbuild"
   cmake -S "$zentra_root" -B "$zbuild" \
     -DCMAKE_TOOLCHAIN_FILE="$toolchain" \
@@ -99,6 +122,7 @@ native_build_zentra_wallet_api() {
     -DBUILD_DOCUMENTATION=OFF \
     -DMANUAL_SUBMODULES=1 \
     -DSTATIC=ON \
+    "${openssl_args[@]}" \
     "${extra[@]}" || return 1
   cmake --build "$zbuild" --target wallet_api --parallel "$jobs" || return 1
   [[ -f "$zbuild/lib/libwallet_api.a" ]] || {

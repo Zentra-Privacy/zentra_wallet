@@ -2,6 +2,14 @@
 # Find and verify Android libc++_shared.so (Zentra depends NDK r17b layout).
 # Sourced by native_build_android.sh and ci-verify-*.sh — do not execute directly.
 
+# Zentra Android depends (NDK r17b) require libtinfo.so.5 on the Linux host.
+android_has_libtinfo5() {
+  ldconfig -p 2>/dev/null | grep -q 'libtinfo.so.5' && return 0
+  [[ -e /lib/x86_64-linux-gnu/libtinfo.so.5 ]] && return 0
+  [[ -e /usr/lib/x86_64-linux-gnu/libtinfo.so.5 ]] && return 0
+  return 1
+}
+
 # Find libc++ matching the NDK used to build libzentra_wallet_ffi.so.
 # Prints absolute path on success; returns 1 if not found.
 android_find_libcxx_shared() {

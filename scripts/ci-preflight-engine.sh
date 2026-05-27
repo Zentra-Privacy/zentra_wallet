@@ -4,6 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ZENTRA="${1:-$ROOT/third_party/zentra}"
+# shellcheck source=lib/android_libcxx.sh
+source "$ROOT/scripts/lib/android_libcxx.sh"
 fail() { echo "::error::$1"; exit 1; }
 
 echo "==> Engine build preflight"
@@ -12,7 +14,7 @@ for cmd in git cmake make patch python3 curl; do
   command -v "$cmd" >/dev/null 2>&1 || fail "Missing command: $cmd"
 done
 
-if ! ldconfig -p 2>/dev/null | grep -q 'libtinfo.so.5'; then
+if ! android_has_libtinfo5; then
   fail "libtinfo5 missing (required for Zentra Android depends NDK). Run: sudo apt install libtinfo5"
 fi
 

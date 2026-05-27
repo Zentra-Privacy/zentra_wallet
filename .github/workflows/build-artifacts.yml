@@ -26,6 +26,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   ZENTRA_REPO: https://github.com/Zentra-Privacy/zentra.git
   ZENTRA_REF: v0.1.0
+  ZENTRA_ROOT: ${{ github.workspace }}/third_party/zentra
 
 jobs:
   # ─── Phase 1: Native engine (Linux + Android + Windows on one Ubuntu runner) ─
@@ -78,6 +79,8 @@ jobs:
           fi
 
       - name: Build engine (Ubuntu)
+        env:
+          ZENTRA_ROOT: ${{ github.workspace }}/third_party/zentra
         run: |
           chmod +x scripts/*.sh scripts/lib/*.sh
           ./scripts/ci-build-native-engine-ubuntu.sh build/engine-ubuntu
@@ -201,7 +204,8 @@ jobs:
       - uses: android-actions/setup-android@v3
       - run: yes | flutter doctor --android-licenses || true
       - run: flutter pub get
-      - run: flutter build apk --release
+      # Match engine bundle ABIs (arm64-v8a + armeabi-v7a only — see ci-build-native-engine-ubuntu.sh).
+      - run: flutter build apk --release --target-platform android-arm,android-arm64
       - run: chmod +x scripts/ci-verify-android-apk.sh && ./scripts/ci-verify-android-apk.sh build/app/outputs/flutter-apk/app-release.apk
       - uses: actions/upload-artifact@v6
         with:
