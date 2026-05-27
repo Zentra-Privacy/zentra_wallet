@@ -19,6 +19,8 @@ class SettingsStore {
   static const _keyRestoreHeight = 'default_restore_height';
   static const _keyWalletNetwork = 'wallet_network';
   static const _secureWalletPass = 'wallet_password';
+  static const _keyWalletPassPrefix = 'wallet_pwd_';
+  static const _keyWalletNetPrefix = 'wallet_net_';
 
   /// macOS Keychain needs a development cert + entitlements; ad-hoc `flutter run`
   /// hits "Keychain Not Found" / -34018. Wallet files are already password-encrypted.
@@ -172,5 +174,74 @@ class SettingsStore {
   Future<void> saveWalletNetwork(ZentraNetType type) async {
     final p = await _prefs;
     await p.setInt(_keyWalletNetwork, type.index);
+  }
+
+  static String _safeWalletKey(String filename) {
+    final t = filename.trim().toLowerCase();
+    return t.replaceAll(RegExp(r'[^a-z0-9._-]'), '_');
+  }
+
+  String _perWalletPassKey(String filename) =>
+      '$_keyWalletPassPrefix${_safeWalletKey(filename)}';
+
+  String _perWalletNetKey(String filename) =>
+      '$_keyWalletNetPrefix${_safeWalletKey(filename)}';
+
+  Future<void> saveWalletPasswordFor(String filename, String password) async {
+    final key = _perWalletPassKey(filename);
+    if (_passwordInSharedPrefs) {
+      final p = await _prefs;
+      await p.setString(key, password);
+      return;
+    }
+    try {
+      await _secureStorage.write(key: key, value: password);
+    } on PlatformException {
+      final p = await _prefs;
+      await p.setString(key, password);
+    }
+  }
+
+  Future<String?> loadWalletPasswordFor(String filename) async {
+    final key = _perWalletPassKey(filename);
+    if (_passwordInSharedPrefs) {
+      final p = await _prefs;
+      final v = p.getString(key);
+      if (v != null && v.isNotEmpty) return v;
+    } else {
+      try {
+        final v = await _secureStorage.read(key: key);
+        if (v != null && v.isNotEmpty) return v;
+      } on PlatformException {
+        // fall through
+      }
+      final p = await _prefs;
+      final legacy = p.getString(key);
+      if (legacy != null && legacy.isNotEmpty) return legacy;
+    }
+
+    final active = await loadWalletFilename();
+    if (active != null &&
+        active.trim().toLowerCase() == filename.trim().toLowerCase()) {
+      return loadWalletPassword();
+    }
+    return null;
+  }
+
+  Future<bool> hasWalletPasswordFor(String filename) async {
+    final p = await loadWalletPasswordFor(filename);
+    return p != null && p.isNotEmpty;
+  }
+
+  Future<void> saveWalletNetworkFor(String filename, ZentraNetType type) async {
+    final p = await _prefs;
+    await p.setInt(_perWalletNetKey(filename), type.index);
+  }
+
+  Future<ZentraNetType?> loadWalletNetworkFor(String filename) async {
+    final p = await _prefs;
+    final idx = p.getInt(_perWalletNetKey(filename));
+    if (idx == null) return null;
+    return ZentraNetType.values[idx.clamp(0, ZentraNetType.values.length - 1)];
   }
 }

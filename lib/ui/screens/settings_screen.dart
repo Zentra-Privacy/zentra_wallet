@@ -8,9 +8,9 @@ import '../../theme/zentra_theme.dart';
 import '../network_ui.dart';
 import '../widgets/restore_height_settings_panel.dart';
 import '../widgets/zentra_ui.dart';
-import 'onboarding_screen.dart';
 import 'node_setup_screen.dart';
 import 'wallet_backup_screen.dart';
+import 'wallets_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, this.embedded = false});
@@ -66,8 +66,15 @@ class SettingsScreen extends StatelessWidget {
         ),
         ZentraSettingsTile(
           icon: Icons.account_balance_wallet_outlined,
-          title: 'My Wallet',
-          subtitle: wallet.walletFilename ?? '—',
+          title: 'Wallets',
+          subtitle: wallet.walletFilename != null
+              ? 'Active: ${wallet.walletFilename}'
+              : 'Switch or add wallets',
+          onTap: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const WalletsScreen()),
+            );
+          },
         ),
         ZentraSettingsTile(
           icon: Icons.lock_outline,
@@ -156,17 +163,6 @@ class SettingsScreen extends StatelessWidget {
             if (context.mounted) {
               zentraSnack(context, ok ? 'Connected to node' : wallet.errorMessage ?? 'Reconnect failed', isError: !ok);
             }
-          },
-        ),
-        const Divider(height: 32),
-        ZentraSettingsTile(
-          icon: Icons.swap_horiz,
-          title: 'Open different wallet',
-          onTap: () {
-            context.read<WalletProvider>().prepareForNewWalletFlow();
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-            );
           },
         ),
         const SizedBox(height: 16),

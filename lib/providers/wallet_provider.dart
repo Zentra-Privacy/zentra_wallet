@@ -14,6 +14,7 @@ import '../core/restore_height_utils.dart';
 import '../core/seed_utils.dart';
 import '../core/wallet_directory.dart';
 import '../core/wallet_exception.dart';
+import '../models/local_wallet_info.dart';
 import '../models/wallet_backup_info.dart';
 import '../models/wallet_models.dart';
 import '../models/wallet_sync_status.dart';
@@ -104,6 +105,106 @@ class WalletProvider extends ChangeNotifier {
   Future<List<String>> listLocalWalletFilenames() async {
     _walletDir ??= await _resolveWalletDir();
     return WalletDirectory.listWalletFilenames(_walletDir!);
+  }
+
+  /// MetaMask-style wallet list for Settings (local `*.keys` files).
+  Future<List<LocalWalletInfo>> listLocalWallets() async {
+    final names = await listLocalWalletFilenames();
+    final active = walletFilename?.trim().toLowerCase();
+    final addr = primaryAddress?.address;
+    final preview = addr != null && addr.length > 16
+        ? '${addr.substring(0, 8)}…${addr.substring(addr.length - 6)}'
+        : addr;
+    final list = <LocalWalletInfo>[];
+    for (final name in names) {
+      final isActive = active != null && name.toLowerCase() == active;
+      final net = await _settings.loadWalletNetworkFor(name);
+      list.add(LocalWalletInfo(
+        filename: name,
+        isActive: isActive,
+        hasStoredPassword: await _settings.hasWalletPasswordFor(name),
+        networkLabel: net != null
+            ? ZentraNetworkConfig.fromType(net).label
+            : networkConfig?.label,
+        addressPreview: isActive ? preview : null,
+      ));
+    }
+    return list;
+  }
+
+  /// Switch active wallet (disconnect current, open selected).
+  Future<bool> switchToWallet({
+    required String filename,
+    String? password,
+  }) async {
+    if (!isValidWalletFilename(filename)) {
+      errorMessage = 'Invalid wallet name';
+      notifyListeners();
+      return false;
+    }
+    _walletDir ??= await _resolveWalletDir();
+    if (!await WalletDirectory.walletKeysExist(_walletDir!, filename)) {
+      errorMessage = 'Wallet file not found';
+      notifyListeners();
+      return false;
+    }
+
+    if (walletFilename?.trim().toLowerCase() == filename.trim().toLowerCase() &&
+        connectionState == WalletConnectionState.connected) {
+      return true;
+    }
+
+    final pwd = password ?? await _settings.loadWalletPasswordFor(filename);
+    if (pwd == null || pwd.isEmpty) {
+      return false;
+    }
+
+    final previousFilename = walletFilename;
+    final previousNetwork = walletNetworkType;
+    final previousNetworkType = networkType;
+
+    final savedNet =
+        await _settings.loadWalletNetworkFor(filename) ?? walletNetworkType ?? networkType;
+    if (savedNet != networkType) {
+      networkType = savedNet;
+      networkConfig = ZentraNetworkConfig.fromType(savedNet);
+      await _settings.saveNetwork(savedNet);
+      if (savedNet == ZentraNetType.mainnet) {
+        final node = ZentraPublicNode.seedPrimary;
+        nodeSettings = node.toNodeSettings();
+        selectedPublicNode = node;
+      } else {
+        final cfg = networkConfig!;
+        nodeSettings = NodeConnectionSettings(
+          daemonAddress: '127.0.0.1:${cfg.daemonRpcPort}',
+        );
+        selectedPublicNode = null;
+      }
+      await _settings.saveNode(nodeSettings!);
+    }
+
+    _connectGeneration++;
+    _stopBlockchainSync();
+    await _closeWalletService();
+    _clearWalletSnapshot();
+    connectionState = WalletConnectionState.disconnected;
+    _wallet = null;
+
+    walletFilename = filename;
+    walletNetworkType = savedNet;
+
+    final ok = await connect(passwordOverride: pwd, waitForInitialSync: false);
+    if (ok) {
+      await _persistWalletSession(filename, pwd);
+      errorMessage = null;
+    } else {
+      walletFilename = previousFilename;
+      walletNetworkType = previousNetwork;
+      networkType = previousNetworkType;
+      networkConfig = ZentraNetworkConfig.fromType(networkType);
+    }
+    notifyListeners();
+    return ok;
   }
 
   /// Returns [desired] or the next free name (`my_wallet` → `my_wallet1`, …).
@@ -732,7 +833,9 @@ class WalletProvider extends ChangeNotifier {
   Future<void> _persistWalletSession(String filename, String password) async {
     await _settings.saveWalletFilename(filename);
     await _settings.saveWalletPassword(password);
+    await _settings.saveWalletPasswordFor(filename, password);
     await _settings.saveWalletNetwork(networkType);
+    await _settings.saveWalletNetworkFor(filename, networkType);
     await _settings.setOnboarded(true);
     walletFilename = filename;
     walletNetworkType = networkType;

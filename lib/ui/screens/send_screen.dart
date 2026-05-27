@@ -6,6 +6,7 @@ import '../../core/qr_payload_parser.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/qr_scanner_launcher.dart';
 import '../../theme/zentra_theme.dart';
+import 'send_confirm_screen.dart';
 import '../widgets/zentra_ui.dart';
 
 class SendScreen extends StatefulWidget {
@@ -18,7 +19,6 @@ class SendScreen extends StatefulWidget {
 class _SendScreenState extends State<SendScreen> {
   final _address = TextEditingController();
   final _amount = TextEditingController();
-  bool _sending = false;
   int _feeAtomic = 0;
   bool _estimatingFee = false;
   int _priority = 0;
@@ -126,57 +126,7 @@ class _SendScreenState extends State<SendScreen> {
     _scheduleFeeEstimate();
   }
 
-  Future<bool> _confirmSend(WalletProvider wallet, String addr, String amount) async {
-    final amountAtomic = wallet.parseAmount(amount);
-    final totalAtomic = amountAtomic + _feeAtomic;
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ZentraTheme.card,
-        title: const Text('Confirm send'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _confirmRow('Amount', '$amount ZTRA'),
-            _confirmRow('Network fee', '${wallet.formatAmount(_feeAtomic)} ZTRA'),
-            _confirmRow('Total deducted', '${wallet.formatAmount(totalAtomic)} ZTRA',
-                bold: true),
-            const SizedBox(height: 12),
-            const Text('To:', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
-            const SizedBox(height: 4),
-            SelectableText(addr, style: const TextStyle(fontSize: 12)),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send now')),
-        ],
-      ),
-    );
-    return result == true;
-  }
-
-  Widget _confirmRow(String label, String value, {bool bold = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 13)),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: bold ? FontWeight.w600 : FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _send() async {
+  void _openConfirmScreen() {
     final wallet = context.read<WalletProvider>();
     if (!wallet.canTransact) {
       final msg = !wallet.isSynced
@@ -209,19 +159,16 @@ class _SendScreenState extends State<SendScreen> {
       );
       return;
     }
-    if (!await _confirmSend(wallet, addr, amountStr)) return;
-
-    wallet.sendPriority = _priority;
-    setState(() => _sending = true);
-    final tx = await wallet.sendTransfer(address: addr, amount: amountStr, priority: _priority);
-    setState(() => _sending = false);
-    if (!mounted) return;
-    if (tx != null && tx.isNotEmpty) {
-      zentraSnack(context, 'Sent successfully');
-      Navigator.pop(context);
-    } else {
-      zentraSnack(context, wallet.errorMessage ?? 'Send failed', isError: true);
-    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SendConfirmScreen(
+          address: addr,
+          amountDisplay: amountStr,
+          feeAtomic: _feeAtomic,
+          priority: _priority,
+        ),
+      ),
+    );
   }
 
   @override
@@ -361,14 +308,8 @@ class _SendScreenState extends State<SendScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: _sending || !wallet.canTransact ? null : _send,
-              child: _sending
-                  ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Text('Review & send'),
+              onPressed: !wallet.canTransact ? null : _openConfirmScreen,
+              child: const Text('Review'),
             ),
           ],
         ),
