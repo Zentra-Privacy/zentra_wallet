@@ -60,6 +60,7 @@ class WalletProvider extends ChangeNotifier {
   EmbeddedWalletService? _wallet;
   String? _walletDir;
   int _connectGeneration = 0;
+  bool _isSwitchingWallet = false;
 
   WalletBalance? balance;
   WalletAddress? primaryAddress;
@@ -139,6 +140,23 @@ class WalletProvider extends ChangeNotifier {
     required String filename,
     String? password,
   }) async {
+    if (_isSwitchingWallet) {
+      errorMessage = 'Wallet switch already in progress';
+      notifyListeners();
+      return false;
+    }
+    _isSwitchingWallet = true;
+    try {
+      return await _switchToWalletImpl(filename: filename, password: password);
+    } finally {
+      _isSwitchingWallet = false;
+    }
+  }
+
+  Future<bool> _switchToWalletImpl({
+    required String filename,
+    String? password,
+  }) async {
     if (!isValidWalletFilename(filename)) {
       errorMessage = 'Invalid wallet name';
       notifyListeners();
@@ -188,12 +206,7 @@ class WalletProvider extends ChangeNotifier {
       await _settings.saveNode(nodeSettings!);
     }
 
-    _connectGeneration++;
-    _stopBlockchainSync();
-    await _closeWalletService();
-    _clearWalletSnapshot();
-    connectionState = WalletConnectionState.disconnected;
-    _wallet = null;
+    await _teardownActiveWallet();
 
     walletFilename = filename;
     walletNetworkType = savedNet;
@@ -351,6 +364,25 @@ class WalletProvider extends ChangeNotifier {
     connectionState = WalletConnectionState.disconnected;
     syncStatus = WalletSyncStatus.disconnected;
     _clearWalletSnapshot();
+  }
+
+  /// Stop sync/polls, drain FFI jobs, then close native wallet (avoids switch crash).
+  Future<void> _teardownActiveWallet() async {
+    _connectGeneration++;
+    _stopBlockchainSync();
+    await _blockchainJobs.awaitIdle();
+    try {
+      await _storeTail;
+    } catch (_) {}
+    final w = _wallet;
+    if (w != null && w.isOpen) {
+      try {
+        await w.pauseBackgroundRefresh();
+      } catch (_) {}
+    }
+    await _closeWalletService();
+    _clearWalletSnapshot();
+    connectionState = WalletConnectionState.disconnected;
   }
 
   void _stopBlockchainSync() {

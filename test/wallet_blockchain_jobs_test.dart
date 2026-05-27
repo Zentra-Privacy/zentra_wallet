@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zentra_wallet/services/wallet_blockchain_jobs.dart';
 
@@ -19,6 +21,21 @@ void main() {
     expect(await first, 'a');
     expect(await second, 'b');
     expect(order, [1, 2]);
+  });
+
+  test('WalletBlockchainJobRunner awaitIdle waits for in-flight jobs', () async {
+    final runner = WalletBlockchainJobRunner();
+    var finished = false;
+
+    unawaited(runner.run(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      finished = true;
+    }));
+
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    expect(finished, isFalse);
+    await runner.awaitIdle();
+    expect(finished, isTrue);
   });
 
   test('WalletBlockchainJobRunner reset cancels queued jobs', () async {

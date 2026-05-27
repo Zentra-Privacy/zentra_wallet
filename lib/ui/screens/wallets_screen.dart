@@ -39,7 +39,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
   }
 
   Future<void> _switchWallet(LocalWalletInfo info) async {
-    if (info.isActive) return;
+    if (info.isActive || _switchingTo != null) return;
     final provider = context.read<WalletProvider>();
     setState(() => _switchingTo = info.filename);
 

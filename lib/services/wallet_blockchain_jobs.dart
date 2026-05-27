@@ -6,6 +6,7 @@ import '../models/wallet_sync_status.dart';
 class WalletBlockchainJobRunner {
   Future<void> _tail = Future<void>.value();
   int _generation = 0;
+  int _inFlight = 0;
 
   /// Runs [job] after earlier queued jobs complete.
   Future<T> run<T>(Future<T> Function() job) {
@@ -18,6 +19,7 @@ class WalletBlockchainJobRunner {
         }
         return;
       }
+      _inFlight++;
       try {
         final result = await job();
         if (gen != _generation) {
@@ -33,6 +35,8 @@ class WalletBlockchainJobRunner {
         if (!completer.isCompleted) {
           completer.completeError(e, st);
         }
+      } finally {
+        _inFlight--;
       }
     });
     return completer.future;
@@ -42,6 +46,14 @@ class WalletBlockchainJobRunner {
   void reset() {
     _generation++;
     _tail = Future<void>.value();
+  }
+
+  /// Waits until native jobs started before [reset] finish (safe before closing wallet).
+  Future<void> awaitIdle() async {
+    while (_inFlight > 0) {
+      await Future<void>.delayed(const Duration(milliseconds: 8));
+    }
+    await _tail;
   }
 }
 
