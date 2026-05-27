@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/qr_payload_parser.dart';
 import '../../core/network/rpc_address.dart';
+import '../../services/qr_scanner_launcher.dart';
 import '../../core/network/zentra_network.dart';
 import '../../core/network/zentra_public_nodes.dart';
 import '../../core/native_wallet_messages.dart';
@@ -48,6 +50,21 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
   void dispose() {
     _daemon.dispose();
     super.dispose();
+  }
+
+  Future<void> _scanDaemonQr() async {
+    final raw = await QrScannerLauncher.scan(context);
+    if (raw == null || !mounted) return;
+    final daemon = QrPayloadParser.parseDaemonAddress(raw);
+    if (daemon == null) {
+      zentraSnack(context, 'QR is not a valid daemon address (use host:port)', isError: true);
+      return;
+    }
+    setState(() {
+      _useCustom = true;
+      _selectedNodeId = null;
+      _daemon.text = daemon;
+    });
   }
 
   Future<void> _save() async {
@@ -162,9 +179,14 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _daemon,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Daemon address (host:port)',
                 helperText: 'RPC endpoint of your zentrad instance',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.qr_code_scanner),
+                  tooltip: 'Scan node QR',
+                  onPressed: _scanDaemonQr,
+                ),
               ),
               onChanged: (_) => setState(() => _useCustom = true),
             ),

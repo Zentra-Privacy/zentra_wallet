@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/qr_payload_parser.dart';
 import '../../providers/wallet_provider.dart';
+import '../../services/qr_scanner_launcher.dart';
 import '../../theme/zentra_theme.dart';
 import '../widgets/zentra_ui.dart';
 
@@ -80,6 +82,35 @@ class _SendScreenState extends State<SendScreen> {
     final text = data?.text?.trim();
     if (text != null && text.isNotEmpty) {
       setState(() => _address.text = text);
+      _scheduleFeeEstimate();
+    }
+  }
+
+  Future<void> _scanQr() async {
+    final raw = await QrScannerLauncher.scan(context);
+    if (raw == null || !mounted) return;
+    final wallet = context.read<WalletProvider>();
+    final payment = QrPayloadParser.parsePayment(
+      raw,
+      validateAddress: wallet.validateAddress,
+    );
+    if (payment == null) {
+      zentraSnack(
+        context,
+        'QR does not contain a valid ${wallet.networkConfig?.label ?? "network"} address',
+        isError: true,
+      );
+      return;
+    }
+    setState(() {
+      _address.text = payment.address;
+      if (payment.amountDisplay != null) {
+        _amount.text = payment.amountDisplay!;
+      }
+    });
+    _scheduleFeeEstimate();
+    if (payment.paymentId != null && mounted) {
+      zentraSnack(context, 'Payment ID in QR is not used for this send');
     }
   }
 
@@ -214,10 +245,20 @@ class _SendScreenState extends State<SendScreen> {
               decoration: InputDecoration(
                 labelText: 'Recipient address',
                 hintText: 'Paste a $prefix address',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.paste),
-                  tooltip: 'Paste',
-                  onPressed: _pasteAddress,
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.qr_code_scanner),
+                      tooltip: 'Scan QR',
+                      onPressed: _scanQr,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.paste),
+                      tooltip: 'Paste',
+                      onPressed: _pasteAddress,
+                    ),
+                  ],
                 ),
               ),
             ),
