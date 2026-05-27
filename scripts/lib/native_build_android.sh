@@ -22,7 +22,13 @@ native_build_android() {
   fi
 
   native_prepare_python_shim "$ROOT"
-  if ! ldconfig -p 2>/dev/null | grep -q 'libtinfo.so.5'; then
+  _android_has_libtinfo() {
+    ldconfig -p 2>/dev/null | grep -q 'libtinfo.so.5' && return 0
+    [[ -e /lib/x86_64-linux-gnu/libtinfo.so.5 ]] && return 0
+    [[ -e /usr/lib/x86_64-linux-gnu/libtinfo.so.5 ]] && return 0
+    return 1
+  }
+  if ! _android_has_libtinfo; then
     echo "Error: libtinfo.so.5 not found — sudo apt install libtinfo5"
     return 1
   fi
