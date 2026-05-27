@@ -322,15 +322,29 @@ class ZentraScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = gradient ? ZentraGradientBackground(child: body) : body;
+    // Gradient must fill the viewport — wrapping only the scroll child leaves a
+    // solid scaffold color band below short pages (Send, Receive, etc.).
+    final Widget bodyChild;
+    if (gradient) {
+      bodyChild = Stack(
+        fit: StackFit.expand,
+        children: [
+          const ZentraGradientBackground(child: SizedBox.expand()),
+          body,
+        ],
+      );
+    } else {
+      bodyChild = body;
+    }
+
     return Scaffold(
-      backgroundColor: ZentraTheme.background,
+      backgroundColor: gradient ? ZentraTheme.backgroundDeep : ZentraTheme.background,
       extendBody: bottomNavigationBar != null,
       appBar: appBar,
       body: SafeArea(
         top: appBar == null,
         bottom: bottomNavigationBar == null,
-        child: content,
+        child: bodyChild,
       ),
       bottomNavigationBar: bottomNavigationBar,
     );
