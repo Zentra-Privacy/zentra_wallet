@@ -125,6 +125,21 @@ class WalletNativeWorker {
         ));
   }
 
+  /// Pause refresh, persist, and close (Cake stopSync / Windows-safe close on isolate).
+  static Future<void> closeWallet({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    return Isolate.run(() => _closeWallet(
+          handleAddress: handleAddress,
+          walletDir: walletDir,
+          daemonAddress: daemonAddress,
+          trustedDaemon: trustedDaemon,
+        ));
+  }
+
   static Future<void> pauseBackgroundRefresh({
     required int handleAddress,
     required String walletDir,
@@ -321,6 +336,23 @@ class WalletNativeWorker {
     if (!native.startBackgroundRefresh(_ptr(handleAddress))) {
       throw NativeWalletUnavailable(native.lastErrorMessage());
     }
+  }
+
+  static void _closeWallet({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    final native = _loadNative(walletDir, daemonAddress, trustedDaemon);
+    final handle = _ptr(handleAddress);
+    try {
+      native.pauseBackgroundRefresh(handle);
+    } catch (_) {}
+    try {
+      native.store(handle);
+    } catch (_) {}
+    native.closeWallet(handle);
   }
 
   static void _pauseBackgroundRefresh({

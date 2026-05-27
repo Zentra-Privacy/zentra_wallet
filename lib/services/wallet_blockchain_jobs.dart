@@ -57,13 +57,11 @@ class WalletBackgroundSync {
 
   bool get isActive => _active;
 
-  /// Starts native background refresh and periodic [onPoll] (balance, heights, txs).
+  /// Starts periodic [onPoll] (native refresh must already be running).
   void start({
-    required void Function() onNativeStart,
     required Future<void> Function() onPoll,
   }) {
     stop();
-    onNativeStart();
     _active = true;
     unawaited(onPoll());
     _pollTimer = Timer.periodic(pollInterval, (_) => unawaited(onPoll()));

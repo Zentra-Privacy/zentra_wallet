@@ -54,7 +54,7 @@ class EmbeddedWalletService {
     required String password,
     int restoreHeight = 0,
   }) {
-    _close();
+    _closeSync();
     _handle = _native.createWallet(
       filename,
       password,
@@ -80,13 +80,13 @@ class EmbeddedWalletService {
   }
 
   void openWallet({required String filename, required String password}) {
-    _close();
+    _closeSync();
     _handle = _native.openWallet(filename, password, nettypeIndex);
   }
 
   /// Adopts a wallet handle opened on a worker isolate (native heap pointer).
   void adoptHandle(ffi.Pointer<ffi.Void> handle) {
-    _close();
+    _closeSync();
     _handle = handle;
   }
 
@@ -96,7 +96,7 @@ class EmbeddedWalletService {
     required String seed,
     int restoreHeight = 0,
   }) {
-    _close();
+    _closeSync();
     _handle = _native.restoreWallet(
       filename,
       password,
@@ -128,7 +128,19 @@ class EmbeddedWalletService {
     );
   }
 
-  void _close() {
+  Future<void> _closeOnWorker() async {
+    if (_handle == null || _handle == ffi.nullptr) return;
+    final addr = _handle!.address;
+    _handle = null;
+    await WalletNativeWorker.closeWallet(
+      handleAddress: addr,
+      walletDir: walletDir,
+      daemonAddress: daemonAddress,
+      trustedDaemon: _trustedDaemon,
+    );
+  }
+
+  void _closeSync() {
     if (_handle != null && _handle != ffi.nullptr) {
       try {
         _native.pauseBackgroundRefresh(_handle!);
@@ -265,9 +277,11 @@ class EmbeddedWalletService {
     );
   }
 
+  /// Cake stopSync: pause, store, close on worker isolate (all platforms, esp. Windows).
+  Future<void> closeAndDispose() => _closeOnWorker();
+
   void dispose() {
-    _close();
-    // Keep WalletManager alive; [ZentraNativeWallet.release] runs on app exit only.
+    _closeSync();
   }
 
   static List<WalletTransfer> transfersFromSnapshot(WalletNativeSnapshot snap) {
