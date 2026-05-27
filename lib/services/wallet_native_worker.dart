@@ -3,6 +3,8 @@ import 'dart:isolate';
 
 import 'package:zentra_wallet_core/zentra_wallet_core.dart';
 
+import 'wallet_native_snapshot.dart';
+
 /// Heavy wallet2 FFI on a worker isolate (Cake Wallet pattern).
 class WalletNativeWorker {
   static Future<int> openWallet({
@@ -65,6 +67,138 @@ class WalletNativeWorker {
         ));
   }
 
+  static Future<void> refresh({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    return Isolate.run(() => _refresh(
+          handleAddress: handleAddress,
+          walletDir: walletDir,
+          daemonAddress: daemonAddress,
+          trustedDaemon: trustedDaemon,
+        ));
+  }
+
+  static Future<WalletNativeSnapshot> snapshot({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+    bool includeTransfers = true,
+  }) {
+    return Isolate.run(() => _snapshot(
+          handleAddress: handleAddress,
+          walletDir: walletDir,
+          daemonAddress: daemonAddress,
+          trustedDaemon: trustedDaemon,
+          includeTransfers: includeTransfers,
+        ));
+  }
+
+  static Future<void> store({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    return Isolate.run(() => _store(
+          handleAddress: handleAddress,
+          walletDir: walletDir,
+          daemonAddress: daemonAddress,
+          trustedDaemon: trustedDaemon,
+        ));
+  }
+
+  static Future<void> startBackgroundRefresh({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    return Isolate.run(() => _startBackgroundRefresh(
+          handleAddress: handleAddress,
+          walletDir: walletDir,
+          daemonAddress: daemonAddress,
+          trustedDaemon: trustedDaemon,
+        ));
+  }
+
+  static Future<void> pauseBackgroundRefresh({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    return Isolate.run(() => _pauseBackgroundRefresh(
+          handleAddress: handleAddress,
+          walletDir: walletDir,
+          daemonAddress: daemonAddress,
+          trustedDaemon: trustedDaemon,
+        ));
+  }
+
+  static Future<int> estimateFee({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+    required String address,
+    required int amountAtomic,
+    required int priority,
+  }) {
+    return Isolate.run(() => _estimateFee(
+          handleAddress: handleAddress,
+          walletDir: walletDir,
+          daemonAddress: daemonAddress,
+          trustedDaemon: trustedDaemon,
+          address: address,
+          amountAtomic: amountAtomic,
+          priority: priority,
+        ));
+  }
+
+  static Future<String> send({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+    required String address,
+    required int amountAtomic,
+    required int priority,
+  }) {
+    return Isolate.run(() => _send(
+          handleAddress: handleAddress,
+          walletDir: walletDir,
+          daemonAddress: daemonAddress,
+          trustedDaemon: trustedDaemon,
+          address: address,
+          amountAtomic: amountAtomic,
+          priority: priority,
+        ));
+  }
+
+  static Future<String?> fetchSeed({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    return Isolate.run(() => _fetchSeed(
+          handleAddress: handleAddress,
+          walletDir: walletDir,
+          daemonAddress: daemonAddress,
+          trustedDaemon: trustedDaemon,
+        ));
+  }
+
+  static ffi.Pointer<ffi.Void> pointerFromAddress(int address) =>
+      ffi.Pointer<ffi.Void>.fromAddress(address);
+
+  static ffi.Pointer<ffi.Void> _ptr(int handleAddress) =>
+      ffi.Pointer<ffi.Void>.fromAddress(handleAddress);
+
   static int _openWallet({
     required String walletDir,
     required String daemonAddress,
@@ -118,6 +252,117 @@ class WalletNativeWorker {
     return handle.address;
   }
 
+  static void _refresh({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    final native = _loadNative(walletDir, daemonAddress, trustedDaemon);
+    native.refresh(_ptr(handleAddress));
+  }
+
+  static WalletNativeSnapshot _snapshot({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+    required bool includeTransfers,
+  }) {
+    final native = _loadNative(walletDir, daemonAddress, trustedDaemon);
+    final handle = _ptr(handleAddress);
+    final transfers = includeTransfers
+        ? native.transfers(handle).map((r) => Map<String, dynamic>.from(r)).toList()
+        : const <Map<String, dynamic>>[];
+    return WalletNativeSnapshot(
+      balanceAtomic: native.balance(handle),
+      unlockedAtomic: native.unlockedBalance(handle),
+      walletHeight: native.walletHeight(handle),
+      daemonHeight: native.daemonHeight(handle),
+      address: native.address(handle),
+      restoreHeight: native.restoreHeight(handle),
+      transfers: transfers,
+    );
+  }
+
+  static void _store({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    final native = _loadNative(walletDir, daemonAddress, trustedDaemon);
+    native.store(_ptr(handleAddress));
+  }
+
+  static void _startBackgroundRefresh({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    final native = _loadNative(walletDir, daemonAddress, trustedDaemon);
+    if (!native.startBackgroundRefresh(_ptr(handleAddress))) {
+      throw NativeWalletUnavailable(native.lastErrorMessage());
+    }
+  }
+
+  static void _pauseBackgroundRefresh({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    final native = _loadNative(walletDir, daemonAddress, trustedDaemon);
+    native.pauseBackgroundRefresh(_ptr(handleAddress));
+  }
+
+  static int _estimateFee({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+    required String address,
+    required int amountAtomic,
+    required int priority,
+  }) {
+    final native = _loadNative(walletDir, daemonAddress, trustedDaemon);
+    return native.estimateFee(
+      _ptr(handleAddress),
+      address,
+      amountAtomic,
+      priority: priority,
+    );
+  }
+
+  static String _send({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+    required String address,
+    required int amountAtomic,
+    required int priority,
+  }) {
+    final native = _loadNative(walletDir, daemonAddress, trustedDaemon);
+    return native.send(
+      _ptr(handleAddress),
+      address,
+      amountAtomic,
+      priority: priority,
+    );
+  }
+
+  static String? _fetchSeed({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+  }) {
+    final native = _loadNative(walletDir, daemonAddress, trustedDaemon);
+    return native.seed(_ptr(handleAddress));
+  }
+
   static ZentraNativeWallet _loadNative(
     String walletDir,
     String daemonAddress,
@@ -133,7 +378,4 @@ class WalletNativeWorker {
     native.setDaemon(daemonAddress, trusted: trustedDaemon);
     return native;
   }
-
-  static ffi.Pointer<ffi.Void> pointerFromAddress(int address) =>
-      ffi.Pointer<ffi.Void>.fromAddress(address);
 }

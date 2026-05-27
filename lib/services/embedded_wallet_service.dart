@@ -6,6 +6,8 @@ import '../core/native_wallet_messages.dart';
 import '../core/network/zentra_network.dart';
 import '../core/wallet_exception.dart';
 import '../models/wallet_models.dart';
+import 'wallet_native_snapshot.dart';
+import 'wallet_native_worker.dart';
 
 /// Embedded wallet2 (Cake/Monero-style) — keys and sync on device; remote zentrad only.
 class EmbeddedWalletService {
@@ -41,6 +43,11 @@ class EmbeddedWalletService {
   int get nettypeIndex => network.type.index;
 
   bool get isOpen => _handle != null && _handle != ffi.nullptr;
+
+  bool get _trustedDaemon => isTrustedDaemon(daemonAddress);
+
+  int? get _handleAddress =>
+      isOpen ? _handle!.address : null;
 
   void createWallet({
     required String filename,
@@ -95,22 +102,30 @@ class EmbeddedWalletService {
   }
 
   /// Starts wallet2 native background sync (non-blocking). Prefer over [refresh] for steady sync.
-  void startBackgroundRefresh() {
+  Future<void> startBackgroundRefresh() async {
     _requireOpen();
-    if (!_native.startBackgroundRefresh(_handle!)) {
-      throw WalletException('Background refresh failed to start');
-    }
+    await WalletNativeWorker.startBackgroundRefresh(
+      handleAddress: _handleAddress!,
+      walletDir: walletDir,
+      daemonAddress: daemonAddress,
+      trustedDaemon: _trustedDaemon,
+    );
   }
 
-  void pauseBackgroundRefresh() {
+  Future<void> pauseBackgroundRefresh() async {
     if (_handle == null || _handle == ffi.nullptr) return;
-    _native.pauseBackgroundRefresh(_handle!);
+    await WalletNativeWorker.pauseBackgroundRefresh(
+      handleAddress: _handle!.address,
+      walletDir: walletDir,
+      daemonAddress: daemonAddress,
+      trustedDaemon: _trustedDaemon,
+    );
   }
 
   void _close() {
     if (_handle != null && _handle != ffi.nullptr) {
       try {
-        pauseBackgroundRefresh();
+        _native.pauseBackgroundRefresh(_handle!);
       } catch (_) {}
       _native.closeWallet(_handle!);
       _handle = null;
@@ -119,41 +134,61 @@ class EmbeddedWalletService {
 
   Future<void> refresh() async {
     _requireOpen();
-    _native.refresh(_handle!);
+    await WalletNativeWorker.refresh(
+      handleAddress: _handleAddress!,
+      walletDir: walletDir,
+      daemonAddress: daemonAddress,
+      trustedDaemon: _trustedDaemon,
+    );
+  }
+
+  Future<WalletNativeSnapshot> fetchSnapshot({bool includeTransfers = true}) async {
+    _requireOpen();
+    return WalletNativeWorker.snapshot(
+      handleAddress: _handleAddress!,
+      walletDir: walletDir,
+      daemonAddress: daemonAddress,
+      trustedDaemon: _trustedDaemon,
+      includeTransfers: includeTransfers,
+    );
   }
 
   Future<WalletBalance> fetchBalance() async {
-    _requireOpen();
+    final snap = await fetchSnapshot(includeTransfers: false);
     return WalletBalance(
-      balanceAtomic: _native.balance(_handle!),
-      unlockedAtomic: _native.unlockedBalance(_handle!),
+      balanceAtomic: snap.balanceAtomic,
+      unlockedAtomic: snap.unlockedAtomic,
     );
   }
 
   Future<WalletAddress> fetchPrimaryAddress() async {
-    _requireOpen();
-    return WalletAddress(address: _native.address(_handle!));
+    final snap = await fetchSnapshot(includeTransfers: false);
+    return WalletAddress(address: snap.address);
   }
 
   Future<int> fetchWalletHeight() async {
-    _requireOpen();
-    return _native.walletHeight(_handle!);
+    final snap = await fetchSnapshot(includeTransfers: false);
+    return snap.walletHeight;
   }
 
   Future<int> fetchDaemonHeight() async {
-    _requireOpen();
-    return _native.daemonHeight(_handle!);
+    final snap = await fetchSnapshot(includeTransfers: false);
+    return snap.daemonHeight;
   }
 
   Future<List<WalletTransfer>> fetchTransfers() async {
-    _requireOpen();
-    final rows = _native.transfers(_handle!);
-    return rows.map(WalletTransfer.fromNative).toList();
+    final snap = await fetchSnapshot(includeTransfers: true);
+    return transfersFromSnapshot(snap);
   }
 
-  String? fetchSeed() {
+  Future<String?> fetchSeed() async {
     _requireOpen();
-    return _native.seed(_handle!);
+    return WalletNativeWorker.fetchSeed(
+      handleAddress: _handleAddress!,
+      walletDir: walletDir,
+      daemonAddress: daemonAddress,
+      trustedDaemon: _trustedDaemon,
+    );
   }
 
   bool validateAddress(String address) =>
@@ -163,7 +198,11 @@ class EmbeddedWalletService {
 
   int parseDisplay(String display) => ZentraCore.instance.displayToAtomic(display.trim());
 
-  int estimateFee({required String address, required String amountDisplay, int priority = 0}) {
+  Future<int> estimateFee({
+    required String address,
+    required String amountDisplay,
+    int priority = 0,
+  }) async {
     _requireOpen();
     final dest = address.trim();
     if (!validateAddress(dest)) {
@@ -171,7 +210,15 @@ class EmbeddedWalletService {
     }
     final atomic = parseDisplay(amountDisplay);
     if (atomic <= 0) throw WalletException('Invalid amount');
-    final fee = _native.estimateFee(_handle!, dest, atomic, priority: priority);
+    final fee = await WalletNativeWorker.estimateFee(
+      handleAddress: _handleAddress!,
+      walletDir: walletDir,
+      daemonAddress: daemonAddress,
+      trustedDaemon: _trustedDaemon,
+      address: dest,
+      amountAtomic: atomic,
+      priority: priority,
+    );
     if (fee <= 0) {
       throw WalletException(_native.lastErrorMessage());
     }
@@ -191,18 +238,34 @@ class EmbeddedWalletService {
     }
     final atomic = parseDisplay(amountDisplay);
     if (atomic <= 0) throw WalletException('Invalid amount');
-    final txid = _native.send(_handle!, dest, atomic, priority: priority);
-    return txid;
+    return WalletNativeWorker.send(
+      handleAddress: _handleAddress!,
+      walletDir: walletDir,
+      daemonAddress: daemonAddress,
+      trustedDaemon: _trustedDaemon,
+      address: dest,
+      amountAtomic: atomic,
+      priority: priority,
+    );
   }
 
-  void store() {
+  Future<void> store() async {
     _requireOpen();
-    _native.store(_handle!);
+    await WalletNativeWorker.store(
+      handleAddress: _handleAddress!,
+      walletDir: walletDir,
+      daemonAddress: daemonAddress,
+      trustedDaemon: _trustedDaemon,
+    );
   }
 
   void dispose() {
     _close();
     // Keep WalletManager alive; [ZentraNativeWallet.release] runs on app exit only.
+  }
+
+  static List<WalletTransfer> transfersFromSnapshot(WalletNativeSnapshot snap) {
+    return snap.transfers.map(WalletTransfer.fromNative).toList();
   }
 
   void _requireOpen() {

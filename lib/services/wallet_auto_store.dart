@@ -10,6 +10,9 @@ class WalletAutoStore {
   int _lastStoredWalletHeight = -1;
   DateTime? _lastStoreAt;
 
+  /// Skip store during long sync unless wallet advanced significantly (Cake ≈ 75k blocks).
+  static const int kMinBlocksBetweenSyncStores = 75000;
+
   void start({required Future<void> Function({required bool force}) onStore}) {
     stop();
     _timer = Timer.periodic(kWalletAutoStoreInterval, (_) {
@@ -32,7 +35,12 @@ class WalletAutoStore {
     required Future<void> Function() store,
   }) async {
     if (!force) {
-      if (!isSynced) return;
+      if (!isSynced) {
+        if (_lastStoredWalletHeight < 0 ||
+            walletHeight < _lastStoredWalletHeight + kMinBlocksBetweenSyncStores) {
+          return;
+        }
+      }
       final lastAt = _lastStoreAt;
       if (lastAt != null &&
           DateTime.now().difference(lastAt) < kWalletAutoStoreInterval) {

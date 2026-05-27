@@ -19,6 +19,7 @@ import '../services/embedded_wallet_service.dart';
 import '../services/settings_store.dart';
 import '../services/wallet_auto_store.dart';
 import '../services/wallet_blockchain_jobs.dart';
+import '../services/wallet_native_snapshot.dart';
 import '../services/wallet_native_worker.dart';
 
 enum WalletConnectionState { disconnected, connecting, connected, error }
@@ -34,6 +35,9 @@ class WalletProvider extends ChangeNotifier {
   Future<void> _storeTail = Future<void>.value();
   bool _pollInFlight = false;
   int _zeroDaemonPolls = 0;
+  int _pollCount = 0;
+  int _lastSnapshotWalletHeight = -1;
+  int _lastSnapshotBalance = -1;
 
   WalletConnectionState connectionState = WalletConnectionState.disconnected;
   WalletSyncStatus syncStatus = WalletSyncStatus.disconnected;
@@ -123,21 +127,52 @@ class WalletProvider extends ChangeNotifier {
     return s.replaceFirst(RegExp(r'^Exception:\s*'), '');
   }
 
-  Future<void> _applyWalletSnapshot() async {
-    balance = await _wallet!.fetchBalance();
-    primaryAddress = await _wallet!.fetchPrimaryAddress();
-    walletHeight = await _wallet!.fetchWalletHeight();
-    daemonBlockHeight = await _wallet!.fetchDaemonHeight();
+  Future<void> _applyWalletSnapshot({bool includeTransfers = true}) async {
+    final snap = await _wallet!.fetchSnapshot(includeTransfers: includeTransfers);
+    await _applyNativeSnapshot(snap, includeTransfers: includeTransfers);
+  }
+
+  Future<void> _applyNativeSnapshot(
+    WalletNativeSnapshot snap, {
+    required bool includeTransfers,
+  }) async {
+    balance = WalletBalance(
+      balanceAtomic: snap.balanceAtomic,
+      unlockedAtomic: snap.unlockedAtomic,
+    );
+    primaryAddress = WalletAddress(address: snap.address);
+    walletHeight = snap.walletHeight;
+    daemonBlockHeight = snap.daemonHeight;
     daemonStatus = 'Daemon height $daemonBlockHeight';
-    final list = await _wallet!.fetchTransfers();
+    walletScanHeight = snap.restoreHeight;
+    if (includeTransfers) {
+      final list = EmbeddedWalletService.transfersFromSnapshot(snap);
+      await _sortTransfersWithYield(list);
+      transfers = list;
+    }
+  }
+
+  /// Cake Wallet: yield so large tx lists do not freeze frames.
+  static Future<void> _sortTransfersWithYield(List<WalletTransfer> list) async {
     list.sort((a, b) {
       final ta = a.timestamp;
       final tb = b.timestamp;
       if (ta != tb) return tb.compareTo(ta);
       return b.height.compareTo(a.height);
     });
-    transfers = list;
-    walletScanHeight = _wallet!.fetchRestoreHeight();
+    if (list.length > 25) {
+      await Future<void>.delayed(Duration.zero);
+    }
+  }
+
+  bool _snapshotChanged(WalletNativeSnapshot snap, {required bool includeTransfers}) {
+    if (walletHeight != snap.walletHeight ||
+        daemonBlockHeight != snap.daemonHeight ||
+        balance?.balanceAtomic != snap.balanceAtomic) {
+      return true;
+    }
+    if (!includeTransfers) return false;
+    return transfers.length != snap.transfers.length;
   }
 
   void _clearWalletSnapshot() {
@@ -172,14 +207,18 @@ class WalletProvider extends ChangeNotifier {
     _storeTail = Future<void>.value();
     _pollInFlight = false;
     _zeroDaemonPolls = 0;
+    _pollCount = 0;
+    _lastSnapshotWalletHeight = -1;
+    _lastSnapshotBalance = -1;
     syncStatus = WalletSyncStatus.disconnected;
   }
 
-  void _startBlockchainSync() {
+  Future<void> _startBlockchainSync() async {
     if (_wallet == null || !_wallet!.isOpen) return;
     syncStatus = WalletSyncStatus.syncing;
+    await _wallet!.startBackgroundRefresh();
     _backgroundSync.start(
-      onNativeStart: () => _wallet!.startBackgroundRefresh(),
+      onNativeStart: () {},
       onPoll: _pollSnapshotFromBackground,
     );
     _autoStore.start(
@@ -204,16 +243,28 @@ class WalletProvider extends ChangeNotifier {
       await _blockchainJobs.run(() async {
         if (gen != _connectGeneration || _wallet == null || !_wallet!.isOpen) return;
         final wasSynced = isSynced;
-        if (daemonBlockHeight <= 0) {
+        _pollCount++;
+        final needTransfers = _pollCount == 1 ||
+            walletHeight != _lastSnapshotWalletHeight ||
+            balance?.balanceAtomic != _lastSnapshotBalance ||
+            _pollCount % 5 == 0 ||
+            (!wasSynced && blocksBehindDaemon < kWalletSyncedBlocksThreshold);
+        var snap = await _wallet!.fetchSnapshot(includeTransfers: needTransfers);
+        if (snap.daemonHeight <= 0) {
           _zeroDaemonPolls++;
-          // Background refresh alone may not update heights on Android; retry refresh periodically.
-          if (_zeroDaemonPolls == 1 || _zeroDaemonPolls % 5 == 0) {
+          // Rare: daemon height still 0 — refresh on worker isolate (not UI thread).
+          if (_zeroDaemonPolls == 3 || (_zeroDaemonPolls > 3 && _zeroDaemonPolls % 15 == 0)) {
             await _wallet!.refresh();
+            snap = await _wallet!.fetchSnapshot(includeTransfers: needTransfers);
           }
         } else {
           _zeroDaemonPolls = 0;
         }
-        await _applyWalletSnapshot();
+        if (gen != _connectGeneration) return;
+        final changed = _snapshotChanged(snap, includeTransfers: needTransfers);
+        await _applyNativeSnapshot(snap, includeTransfers: needTransfers);
+        _lastSnapshotWalletHeight = snap.walletHeight;
+        _lastSnapshotBalance = snap.balanceAtomic;
         if (gen != _connectGeneration) return;
         _updateSyncStatusFromHeights();
         if (!wasSynced && isSynced) {
@@ -221,11 +272,15 @@ class WalletProvider extends ChangeNotifier {
         } else {
           await _persistWalletFile(force: false);
         }
-      });
-      if (gen == _connectGeneration) {
-        if (daemonBlockHeight > 0) {
-          errorMessage = null;
+        if (gen == _connectGeneration && (changed || needTransfers)) {
+          if (daemonBlockHeight > 0) {
+            errorMessage = null;
+          }
+          notifyListeners();
         }
+      });
+      if (gen == _connectGeneration && daemonBlockHeight > 0 && errorMessage != null) {
+        errorMessage = null;
         notifyListeners();
       }
     } catch (e) {
@@ -351,16 +406,23 @@ class WalletProvider extends ChangeNotifier {
       if (_connectStale(gen)) return false;
       final password = passwordOverride ?? await _settings.loadWalletPassword() ?? '';
       syncStatus = WalletSyncStatus.connecting;
-      await _blockchainJobs.run(() async {
-        _wallet!.openWallet(filename: walletFilename!, password: password);
-      });
+      final trusted = EmbeddedWalletService.isTrustedDaemon(nodeSettings!.daemonAddress);
+      final handleAddr = await _blockchainJobs.run(() => WalletNativeWorker.openWallet(
+            walletDir: _walletDir!,
+            daemonAddress: nodeSettings!.daemonAddress,
+            trustedDaemon: trusted,
+            filename: walletFilename!,
+            password: password,
+            nettype: networkConfig!.type.index,
+          ));
       if (_connectStale(gen)) return false;
+      _wallet!.adoptHandle(WalletNativeWorker.pointerFromAddress(handleAddr));
       if (waitForInitialSync) {
         await _runInitialWalletRefresh();
         if (_connectStale(gen)) return false;
       }
       connectionState = WalletConnectionState.connected;
-      _startBlockchainSync();
+      await _startBlockchainSync();
       if (!waitForInitialSync) {
         syncStatus = WalletSyncStatus.syncing;
         unawaited(_runInitialWalletRefresh().catchError((Object e) {
@@ -446,7 +508,7 @@ class WalletProvider extends ChangeNotifier {
       return false;
     } finally {
       if (_wallet != null && _wallet!.isOpen) {
-        _startBlockchainSync();
+        await _startBlockchainSync();
       }
       notifyListeners();
     }
@@ -578,7 +640,7 @@ class WalletProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _runInitialWalletRefresh();
-      _startBlockchainSync();
+      await _startBlockchainSync();
       return true;
     } catch (e) {
       _disposeWalletOnFailure();
@@ -693,7 +755,7 @@ class WalletProvider extends ChangeNotifier {
     if (_wallet == null || !_wallet!.isOpen) return null;
     try {
       final addr = primaryAddress ?? await _wallet!.fetchPrimaryAddress();
-      final seed = _wallet!.fetchSeed();
+      final seed = await _wallet!.fetchSeed();
       return WalletBackupInfo(
         address: addr.address,
         seedPhrase: seed?.trim().isNotEmpty == true ? seed!.trim() : null,
