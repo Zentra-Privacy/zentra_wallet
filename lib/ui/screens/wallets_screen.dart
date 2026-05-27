@@ -108,7 +108,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 ],
               )
             : ListView(
-                padding: const EdgeInsets.only(bottom: 24),
+                padding: zentraPageScrollPadding.copyWith(top: 12),
                 children: [
                   const Padding(
                     padding: EdgeInsets.fromLTRB(20, 12, 20, 8),

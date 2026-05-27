@@ -134,7 +134,7 @@ class ZentraChoiceCard extends StatelessWidget {
         shape: border,
         child: InkWell(
           onTap: enabled ? onTap : null,
-          borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
+          borderRadius: BorderRadius.circular(ZentraTheme.radiusLg),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
             child: Column(
@@ -347,22 +347,51 @@ PreferredSizeWidget zentraAppBar(
     backgroundColor: ZentraTheme.background,
     surfaceTintColor: Colors.transparent,
     scrolledUnderElevation: 0,
-    leading: IconButton(
-      icon: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: ZentraTheme.surfaceContainer.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
-          border: Border.all(color: ZentraTheme.border.withValues(alpha: 0.5)),
-        ),
-        child: const Icon(Icons.arrow_back, size: 20),
-      ),
-      onPressed: () => Navigator.maybePop(context),
-    ),
+    leading: zentraAppBarBackButton(context),
     title: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
     actions: actions,
   );
 }
+
+Widget zentraAppBarBackButton(BuildContext context) {
+  return IconButton(
+    tooltip: 'Back',
+    icon: Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: ZentraTheme.surfaceContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
+        border: Border.all(color: ZentraTheme.border.withValues(alpha: 0.5)),
+      ),
+      child: const Icon(Icons.arrow_back, size: 20),
+    ),
+    onPressed: () => Navigator.maybePop(context),
+  );
+}
+
+/// App bar action matching [zentraAppBarBackButton] surface style.
+Widget zentraAppBarAction({
+  required IconData icon,
+  required VoidCallback? onPressed,
+  String? tooltip,
+}) {
+  return IconButton(
+    tooltip: tooltip,
+    onPressed: onPressed,
+    icon: Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: ZentraTheme.surfaceContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
+        border: Border.all(color: ZentraTheme.border.withValues(alpha: 0.5)),
+      ),
+      child: Icon(icon, size: 20, color: ZentraTheme.textMuted),
+    ),
+  );
+}
+
+/// Standard horizontal padding for scrollable secondary screens.
+const EdgeInsets zentraPageScrollPadding = EdgeInsets.fromLTRB(20, 8, 20, 24);
 
 /// Connection / sync status (Settings only — not shown on Home / History headers).
 class ZentraWalletStatusBanner extends StatelessWidget {
@@ -593,20 +622,20 @@ class ZentraDashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ZentraPageHeader(
-      title: title,
-      trailing: isRefreshing
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.primary),
-            )
-          : IconButton(
-              onPressed: onRefresh,
-              icon: const Icon(Icons.refresh, size: 22, color: ZentraTheme.textMuted),
-              tooltip: 'Refresh',
-            ),
-    );
+    Widget? trailing;
+    if (isRefreshing) {
+      trailing = const Padding(
+        padding: EdgeInsets.all(10),
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.primary),
+        ),
+      );
+    } else if (onRefresh != null) {
+      trailing = _TopBarIconButton(icon: Icons.refresh, onPressed: onRefresh, tooltip: 'Refresh');
+    }
+    return ZentraPageHeader(title: title, trailing: trailing);
   }
 }
 
@@ -615,7 +644,6 @@ void showZentraLockedBalanceInfo(BuildContext context) {
   showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
-      backgroundColor: ZentraTheme.card,
       title: const Text('Locked balance'),
       content: const SingleChildScrollView(
         child: Column(
@@ -995,6 +1023,8 @@ class ZentraEmptyState extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 48, color: ZentraTheme.textMuted.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
@@ -1081,12 +1111,12 @@ class ZentraAddressChip extends StatelessWidget {
     return Material(
       color: ZentraTheme.surface,
       borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
           Clipboard.setData(ClipboardData(text: address));
           zentraSnack(context, 'Address copied');
         },
-        borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -1315,7 +1345,7 @@ class ZentraSettingsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 20, 8),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
           child: Text(
             title.toUpperCase(),
             style: const TextStyle(
@@ -1357,9 +1387,12 @@ class ZentraSettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onTap != null;
     return Column(
       children: [
-        Material(
+        Opacity(
+          opacity: enabled ? 1 : 0.5,
+          child: Material(
           color: Colors.transparent,
           child: ListTile(
             onTap: onTap,
@@ -1376,8 +1409,9 @@ class ZentraSettingsTile extends StatelessWidget {
                 ? Text(subtitle!, style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12))
                 : null,
             trailing: trailing ??
-                (onTap != null ? const Icon(Icons.chevron_right_rounded, size: 22, color: ZentraTheme.textMuted) : null),
+                (enabled ? const Icon(Icons.chevron_right_rounded, size: 22, color: ZentraTheme.textMuted) : null),
           ),
+        ),
         ),
         if (showDivider) const Divider(height: 1, indent: 68, endIndent: 14),
       ],

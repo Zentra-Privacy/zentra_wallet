@@ -39,31 +39,30 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return ZentraScaffold(
+      gradient: false,
       appBar: zentraAppBar(
         context,
         title: 'Scan QR',
         actions: [
-          IconButton(
-            tooltip: 'Toggle flash',
-            onPressed: () => _controller.toggleTorch(),
-            icon: ValueListenableBuilder(
-              valueListenable: _controller,
-              builder: (context, state, _) {
-                switch (state.torchState) {
-                  case TorchState.on:
-                    return const Icon(Icons.flash_on);
-                  case TorchState.off:
-                    return const Icon(Icons.flash_off);
-                  default:
-                    return const Icon(Icons.flash_auto);
-                }
-              },
-            ),
+          ValueListenableBuilder(
+            valueListenable: _controller,
+            builder: (context, state, _) {
+              final torchIcon = switch (state.torchState) {
+                TorchState.on => Icons.flash_on,
+                TorchState.off => Icons.flash_off,
+                _ => Icons.flash_auto,
+              };
+              return zentraAppBarAction(
+                icon: torchIcon,
+                tooltip: 'Toggle flash',
+                onPressed: () => _controller.toggleTorch(),
+              );
+            },
           ),
-          IconButton(
+          zentraAppBarAction(
+            icon: Icons.cameraswitch,
             tooltip: 'Switch camera',
             onPressed: () => _controller.switchCamera(),
-            icon: const Icon(Icons.cameraswitch),
           ),
         ],
       ),
@@ -84,11 +83,11 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 24,
             right: 24,
-            bottom: 32,
-            child: Text(
+            bottom: 24 + MediaQuery.paddingOf(context).bottom,
+            child: const Text(
               'Point at a Zentra address or payment QR',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white70, fontSize: 13, shadows: [

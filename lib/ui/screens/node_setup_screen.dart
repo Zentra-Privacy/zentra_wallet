@@ -89,7 +89,7 @@ class _NodeSetupScreenState extends State<NodeSetupScreen> {
     return ZentraScaffold(
       appBar: zentraAppBar(context, title: 'Network node'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        padding: zentraPageScrollPadding,
         children: [
           const Text(
             'Your keys stay on this device. Blockchain sync uses a remote zentrad node on the network.',

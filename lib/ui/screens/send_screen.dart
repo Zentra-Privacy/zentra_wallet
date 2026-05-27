@@ -182,7 +182,7 @@ class _SendScreenState extends State<SendScreen> {
     return ZentraScaffold(
       appBar: zentraAppBar(context, title: 'Send ZTRA'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: zentraPageScrollPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/network/zentra_network.dart';
 import '../../core/native_wallet_messages.dart';
 import '../../providers/wallet_provider.dart' show WalletConnectionState, WalletProvider;
 import '../../theme/zentra_theme.dart';
@@ -137,34 +136,6 @@ class SettingsScreen extends StatelessWidget {
               title: 'Network',
               subtitle: wallet.networkConfig?.label ?? 'Mainnet',
               showDivider: !wallet.nativeAvailable,
-              trailing: DropdownButtonHideUnderline(
-                child: DropdownButton<ZentraNetType>(
-                  value: wallet.networkType,
-                  dropdownColor: ZentraTheme.surfaceContainerHigh,
-                  items: ZentraNetType.values
-                      .map(
-                        (n) => DropdownMenuItem(
-                          value: n,
-                          child: Text(
-                            n == ZentraNetType.mainnet
-                                ? ZentraNetworkConfig.fromType(n).label
-                                : '${ZentraNetworkConfig.fromType(n).label} (soon)',
-                            style: TextStyle(
-                              color: n == ZentraNetType.mainnet
-                                  ? ZentraTheme.textPrimary
-                                  : ZentraTheme.textMuted,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null || v == ZentraNetType.mainnet) return;
-                    final label = ZentraNetworkConfig.fromType(v).label;
-                    zentraSnack(context, '$label — coming soon');
-                  },
-                ),
-              ),
             ),
             if (!wallet.nativeAvailable)
               const ZentraSettingsTile(
@@ -220,7 +191,11 @@ class SettingsScreen extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const ZentraDashboardHeader(title: 'Settings'),
+          ZentraDashboardHeader(
+            title: 'Settings',
+            isRefreshing: wallet.isRefreshing,
+            onRefresh: wallet.refresh,
+          ),
           Expanded(child: list),
         ],
       );

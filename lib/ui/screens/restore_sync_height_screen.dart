@@ -85,7 +85,7 @@ class _RestoreSyncHeightScreenState extends State<RestoreSyncHeightScreen> {
     return ZentraScaffold(
       appBar: zentraAppBar(context, title: 'Restore / sync height'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        padding: zentraPageScrollPadding,
         children: [
           Text(
             connected
@@ -120,7 +120,7 @@ class _RestoreSyncHeightScreenState extends State<RestoreSyncHeightScreen> {
               child: const Text('Save default'),
             ),
             const SizedBox(height: 10),
-            FilledButton.tonal(
+            OutlinedButton(
               onPressed: canApply ? _applyToWallet : null,
               child: const Text('Apply to wallet'),
             ),

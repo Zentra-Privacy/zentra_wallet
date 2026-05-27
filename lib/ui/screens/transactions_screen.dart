@@ -27,12 +27,24 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     if (_filter == 2) list = list.where((t) => !t.isIncoming).toList();
 
     final listBody = list.isEmpty
-        ? ZentraEmptyState(
-            icon: Icons.history,
-            title: 'No transactions',
-            subtitle: _filter == 0
-                ? 'Your incoming and outgoing transfers will appear here.'
-                : 'Nothing in this filter yet.',
+        ? RefreshIndicator(
+            color: ZentraTheme.accent,
+            onRefresh: wallet.refresh,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.only(bottom: ZentraTheme.navBarHeight + MediaQuery.paddingOf(context).bottom + 24),
+              children: [
+                Center(
+                  child: ZentraEmptyState(
+                    icon: Icons.history,
+                    title: 'No transactions',
+                    subtitle: _filter == 0
+                        ? 'Your incoming and outgoing transfers will appear here.'
+                        : 'Nothing in this filter yet.',
+                  ),
+                ),
+              ],
+            ),
           )
         : RefreshIndicator(
             color: ZentraTheme.accent,
@@ -68,19 +80,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
           child: SegmentedButton<int>(
-            style: ButtonStyle(
-              side: WidgetStateProperty.all(const BorderSide(color: ZentraTheme.border)),
-              foregroundColor: WidgetStateProperty.resolveWith((s) {
-                return s.contains(WidgetState.selected)
-                    ? ZentraTheme.textPrimary
-                    : ZentraTheme.textMuted;
-              }),
-              backgroundColor: WidgetStateProperty.resolveWith((s) {
-                return s.contains(WidgetState.selected)
-                    ? ZentraTheme.primary.withValues(alpha: 0.22)
-                    : ZentraTheme.surfaceContainer;
-              }),
-            ),
             segments: const [
               ButtonSegment(value: 0, label: Text('All')),
               ButtonSegment(value: 1, label: Text('Received')),
@@ -101,7 +100,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         context,
         title: 'History',
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: wallet.refresh),
+          zentraAppBarAction(
+            icon: Icons.refresh,
+            onPressed: wallet.isRefreshing ? null : wallet.refresh,
+            tooltip: 'Refresh',
+          ),
         ],
       ),
       body: content,

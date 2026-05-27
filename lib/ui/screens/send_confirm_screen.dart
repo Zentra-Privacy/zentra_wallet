@@ -70,7 +70,7 @@ class _SendConfirmScreenState extends State<SendConfirmScreen> {
     return ZentraScaffold(
       appBar: zentraAppBar(context, title: 'Confirm send'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: zentraPageScrollPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

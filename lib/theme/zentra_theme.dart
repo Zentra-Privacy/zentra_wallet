@@ -171,6 +171,29 @@ class ZentraTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),
       ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: card,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusLg),
+          side: const BorderSide(color: border),
+        ),
+        titleTextStyle: textTheme.titleLarge,
+        contentTextStyle: textTheme.bodyMedium?.copyWith(color: textPrimary, height: 1.45),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          side: WidgetStateProperty.all(const BorderSide(color: border)),
+          foregroundColor: WidgetStateProperty.resolveWith((s) {
+            return s.contains(WidgetState.selected) ? textPrimary : textMuted;
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith((s) {
+            return s.contains(WidgetState.selected)
+                ? accent.withValues(alpha: 0.22)
+                : surfaceContainer;
+          }),
+        ),
+      ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surface,
         indicatorColor: accent.withValues(alpha: 0.2),

@@ -17,7 +17,7 @@ class ReceiveScreen extends StatelessWidget {
     return ZentraScaffold(
       appBar: zentraAppBar(context, title: 'Receive ZTRA'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        padding: zentraPageScrollPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
