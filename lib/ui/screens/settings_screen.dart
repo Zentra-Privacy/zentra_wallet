@@ -6,9 +6,9 @@ import '../../core/native_wallet_messages.dart';
 import '../../providers/wallet_provider.dart' show WalletConnectionState, WalletProvider;
 import '../../theme/zentra_theme.dart';
 import '../network_ui.dart';
-import '../widgets/restore_height_settings_panel.dart';
 import '../widgets/zentra_ui.dart';
 import 'node_setup_screen.dart';
+import 'restore_sync_height_screen.dart';
 import 'wallet_backup_screen.dart';
 import 'wallets_screen.dart';
 
@@ -86,7 +86,7 @@ class SettingsScreen extends StatelessWidget {
               subtitle: wallet.connectionState == WalletConnectionState.connected
                   ? 'View address and seed to copy'
                   : 'Connect wallet first',
-              showDivider: false,
+              showDivider: true,
               onTap: wallet.connectionState == WalletConnectionState.connected
                   ? () async {
                       final backup = await wallet.fetchBackupInfo();
@@ -107,11 +107,18 @@ class SettingsScreen extends StatelessWidget {
                     }
                   : null,
             ),
+            ZentraSettingsTile(
+              icon: Icons.height_outlined,
+              title: 'Restore / sync height',
+              subtitle: wallet.defaultRestoreHeight > 0
+                  ? 'Default block ${wallet.defaultRestoreHeight}'
+                  : 'Default block height and resync',
+              showDivider: false,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const RestoreSyncHeightScreen()),
+              ),
+            ),
           ],
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: RestoreHeightSettingsPanel(),
         ),
         ZentraSettingsSection(
           title: 'Network',
