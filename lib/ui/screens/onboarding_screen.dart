@@ -248,6 +248,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return ZentraGradientScaffold(
       appBar: _step > 0
           ? AppBar(
+              backgroundColor: ZentraTheme.background,
+              surfaceTintColor: Colors.transparent,
+              scrolledUnderElevation: 0,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: _loading ? null : () => setState(() => _step = 0),
@@ -264,14 +267,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ],
             )
           : null,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: switch (_step) {
-            0 => _welcomeStep(),
-            _ => _walletStep(),
-          },
-        ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: switch (_step) {
+          0 => _welcomeStep(),
+          _ => _walletStep(),
+        },
       ),
     );
   }
@@ -281,25 +282,40 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Spacer(flex: 2),
-        const Center(child: ZentraLogo(size: 88)),
-        const SizedBox(height: 24),
-        const Text(
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  ZentraTheme.accent.withValues(alpha: 0.2),
+                  ZentraTheme.card,
+                ],
+              ),
+              border: Border.all(color: ZentraTheme.accent.withValues(alpha: 0.35)),
+            ),
+            child: const ZentraLogo(size: 72),
+          ),
+        ),
+        const SizedBox(height: 28),
+        Text(
           'Zentra Wallet',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: -0.3),
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 30, fontWeight: FontWeight.w700),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         const Text(
           'Your keys stay on this device.\nOnly you control your ZTRA.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: ZentraTheme.textMuted, fontSize: 15, height: 1.45),
+          style: TextStyle(color: ZentraTheme.textMuted, fontSize: 15, height: 1.5),
         ),
         const SizedBox(height: 28),
         _WelcomeFeatureRow(
           items: const [
-            _WelcomeFeature(Icons.lock_outline, 'Encrypted'),
-            _WelcomeFeature(Icons.phone_android_outlined, 'On device'),
-            _WelcomeFeature(Icons.visibility_off_outlined, 'Private'),
+            _WelcomeFeature(Icons.lock_outline_rounded, 'Encrypted'),
+            _WelcomeFeature(Icons.phone_android_rounded, 'On device'),
+            _WelcomeFeature(Icons.visibility_off_rounded, 'Private'),
           ],
         ),
         const Spacer(flex: 3),
@@ -584,11 +600,11 @@ class _WelcomeFeatureRow extends StatelessWidget {
           if (i > 0) const SizedBox(width: 8),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-              decoration: ZentraTheme.flatCard(color: ZentraTheme.surface, radius: ZentraTheme.radiusSm),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              decoration: ZentraTheme.gradientCard(radius: ZentraTheme.radiusLg),
               child: Column(
                 children: [
-                  Icon(items[i].icon, size: 18, color: ZentraTheme.accent),
+                  Icon(items[i].icon, size: 20, color: ZentraTheme.primary),
                   const SizedBox(height: 6),
                   Text(
                     items[i].label,

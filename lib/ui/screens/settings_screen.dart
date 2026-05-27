@@ -22,13 +22,13 @@ class SettingsScreen extends StatelessWidget {
     final wallet = context.watch<WalletProvider>();
 
     final list = ListView(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.only(bottom: ZentraTheme.navBarHeight + MediaQuery.paddingOf(context).bottom + 24),
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
           child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: ZentraTheme.flatCard(),
+            padding: const EdgeInsets.all(18),
+            decoration: ZentraTheme.gradientCard(radius: ZentraTheme.radiusXl),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -42,9 +42,9 @@ class SettingsScreen extends StatelessWidget {
                     const Spacer(),
                     if (wallet.isRefreshing)
                       const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.accent),
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.primary),
                       ),
                   ],
                 ),
@@ -64,117 +64,137 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
-          child: Text('Wallet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ZentraTheme.textMuted)),
-        ),
-        ZentraSettingsTile(
-          icon: Icons.account_balance_wallet_outlined,
-          title: 'Wallets',
-          subtitle: wallet.walletFilename != null
-              ? 'Active: ${wallet.walletFilename}'
-              : 'Switch or add wallets',
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const WalletsScreen()),
-            );
-          },
-        ),
-        ZentraSettingsTile(
-          icon: Icons.lock_outline,
-          title: 'Backup & seed phrase',
-          subtitle: wallet.connectionState == WalletConnectionState.connected
-              ? 'View address and seed to copy'
-              : 'Connect wallet first',
-          onTap: wallet.connectionState == WalletConnectionState.connected
-              ? () async {
-                  final backup = await wallet.fetchBackupInfo();
-                  if (!context.mounted) return;
-                  if (backup == null) {
-                    zentraSnack(context, 'Could not read wallet backup', isError: true);
-                    return;
-                  }
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => WalletBackupScreen(
-                        backup: backup,
-                        requireSeedAcknowledgement: false,
-                        blockBack: false,
-                      ),
-                    ),
-                  );
-                }
-              : null,
-        ),
-        const RestoreHeightSettingsPanel(),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
-          child: Text('Network', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: ZentraTheme.textMuted)),
-        ),
-        ZentraSettingsTile(
-          icon: Icons.dns_outlined,
-          title: 'Node',
-          subtitle: NetworkUi.nodeSubtitle(wallet.nodeSettings),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const NodeSetupScreen()),
-          ),
-        ),
-        ZentraSettingsTile(
-          icon: Icons.hub_outlined,
-          title: 'Network',
-          subtitle: wallet.networkConfig?.label ?? 'Mainnet',
-          trailing: DropdownButtonHideUnderline(
-            child: DropdownButton<ZentraNetType>(
-              value: wallet.networkType,
-              dropdownColor: ZentraTheme.card,
-              items: ZentraNetType.values
-                  .map(
-                    (n) => DropdownMenuItem(
-                      value: n,
-                      child: Text(
-                        n == ZentraNetType.mainnet
-                            ? ZentraNetworkConfig.fromType(n).label
-                            : '${ZentraNetworkConfig.fromType(n).label} (soon)',
-                        style: TextStyle(
-                          color: n == ZentraNetType.mainnet
-                              ? ZentraTheme.textPrimary
-                              : ZentraTheme.textMuted,
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                if (v == null || v == ZentraNetType.mainnet) return;
-                final label = ZentraNetworkConfig.fromType(v).label;
-                zentraSnack(context, '$label — coming soon');
+        ZentraSettingsSection(
+          title: 'Wallet',
+          children: [
+            ZentraSettingsTile(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'Wallets',
+              subtitle: wallet.walletFilename != null
+                  ? 'Active: ${wallet.walletFilename}'
+                  : 'Switch or add wallets',
+              showDivider: true,
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const WalletsScreen()),
+                );
               },
             ),
-          ),
+            ZentraSettingsTile(
+              icon: Icons.lock_outline,
+              title: 'Backup & seed phrase',
+              subtitle: wallet.connectionState == WalletConnectionState.connected
+                  ? 'View address and seed to copy'
+                  : 'Connect wallet first',
+              showDivider: false,
+              onTap: wallet.connectionState == WalletConnectionState.connected
+                  ? () async {
+                      final backup = await wallet.fetchBackupInfo();
+                      if (!context.mounted) return;
+                      if (backup == null) {
+                        zentraSnack(context, 'Could not read wallet backup', isError: true);
+                        return;
+                      }
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => WalletBackupScreen(
+                            backup: backup,
+                            requireSeedAcknowledgement: false,
+                            blockBack: false,
+                          ),
+                        ),
+                      );
+                    }
+                  : null,
+            ),
+          ],
         ),
-        if (!wallet.nativeAvailable)
-          const ZentraSettingsTile(
-            icon: Icons.build_outlined,
-            title: NativeWalletMessages.title,
-            subtitle: NativeWalletMessages.subtitle,
-          ),
-        ZentraSettingsTile(
-          icon: Icons.refresh,
-          title: 'Reconnect',
-          subtitle: 'Sync with daemon again',
-          onTap: () async {
-            final ok = await wallet.connect();
-            if (context.mounted) {
-              zentraSnack(context, ok ? 'Connected to node' : wallet.errorMessage ?? 'Reconnect failed', isError: !ok);
-            }
-          },
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: RestoreHeightSettingsPanel(),
         ),
-        const SizedBox(height: 16),
+        ZentraSettingsSection(
+          title: 'Network',
+          children: [
+            ZentraSettingsTile(
+              icon: Icons.dns_outlined,
+              title: 'Node',
+              subtitle: NetworkUi.nodeSubtitle(wallet.nodeSettings),
+              showDivider: true,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NodeSetupScreen()),
+              ),
+            ),
+            ZentraSettingsTile(
+              icon: Icons.hub_outlined,
+              title: 'Network',
+              subtitle: wallet.networkConfig?.label ?? 'Mainnet',
+              showDivider: !wallet.nativeAvailable,
+              trailing: DropdownButtonHideUnderline(
+                child: DropdownButton<ZentraNetType>(
+                  value: wallet.networkType,
+                  dropdownColor: ZentraTheme.surfaceContainerHigh,
+                  items: ZentraNetType.values
+                      .map(
+                        (n) => DropdownMenuItem(
+                          value: n,
+                          child: Text(
+                            n == ZentraNetType.mainnet
+                                ? ZentraNetworkConfig.fromType(n).label
+                                : '${ZentraNetworkConfig.fromType(n).label} (soon)',
+                            style: TextStyle(
+                              color: n == ZentraNetType.mainnet
+                                  ? ZentraTheme.textPrimary
+                                  : ZentraTheme.textMuted,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v == null || v == ZentraNetType.mainnet) return;
+                    final label = ZentraNetworkConfig.fromType(v).label;
+                    zentraSnack(context, '$label — coming soon');
+                  },
+                ),
+              ),
+            ),
+            if (!wallet.nativeAvailable)
+              const ZentraSettingsTile(
+                icon: Icons.build_outlined,
+                title: NativeWalletMessages.title,
+                subtitle: NativeWalletMessages.subtitle,
+                showDivider: false,
+              ),
+          ],
+        ),
+        ZentraSettingsSection(
+          title: 'App',
+          children: [
+            ZentraSettingsTile(
+              icon: Icons.refresh_rounded,
+              title: 'Reconnect',
+              subtitle: 'Sync with daemon again',
+              showDivider: false,
+              onTap: () async {
+                final ok = await wallet.connect();
+                if (context.mounted) {
+                  zentraSnack(
+                    context,
+                    ok ? 'Connected to node' : wallet.errorMessage ?? 'Reconnect failed',
+                    isError: !ok,
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
         Center(
           child: Column(
             children: [
-              const ZentraLogo(size: 52),
-              const SizedBox(height: 10),
+              const ZentraLogo(size: 48),
+              const SizedBox(height: 12),
               Text(
                 'Zentra Wallet',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -185,7 +205,7 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
       ],
     );
 

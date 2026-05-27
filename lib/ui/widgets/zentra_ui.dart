@@ -121,16 +121,16 @@ class ZentraChoiceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final border = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
+      borderRadius: BorderRadius.circular(ZentraTheme.radiusLg),
       side: BorderSide(
-        color: selected ? ZentraTheme.accent : ZentraTheme.border,
+        color: selected ? ZentraTheme.primary : ZentraTheme.border,
         width: selected ? 1.5 : 1,
       ),
     );
 
     if (compact) {
       return Material(
-        color: selected ? ZentraTheme.accent.withValues(alpha: 0.12) : ZentraTheme.card,
+        color: selected ? ZentraTheme.primary.withValues(alpha: 0.12) : ZentraTheme.surfaceContainer,
         shape: border,
         child: InkWell(
           onTap: enabled ? onTap : null,
@@ -146,7 +146,7 @@ class ZentraChoiceCard extends StatelessWidget {
                   color: !enabled
                       ? ZentraTheme.textMuted.withValues(alpha: 0.5)
                       : selected
-                          ? ZentraTheme.accent
+                          ? ZentraTheme.primary
                           : ZentraTheme.textMuted,
                 ),
                 const SizedBox(height: 6),
@@ -285,24 +285,53 @@ class ZentraFormCard extends StatelessWidget {
   }
 }
 
+/// Full-screen gradient (Cake Wallet surface → surfaceDim).
+class ZentraGradientBackground extends StatelessWidget {
+  const ZentraGradientBackground({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [ZentraTheme.background, ZentraTheme.backgroundDeep],
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
 class ZentraScaffold extends StatelessWidget {
   const ZentraScaffold({
     super.key,
     required this.body,
     this.appBar,
     this.bottomNavigationBar,
+    this.gradient = true,
   });
 
   final Widget body;
   final PreferredSizeWidget? appBar;
   final Widget? bottomNavigationBar;
+  final bool gradient;
 
   @override
   Widget build(BuildContext context) {
+    final content = gradient ? ZentraGradientBackground(child: body) : body;
     return Scaffold(
       backgroundColor: ZentraTheme.background,
+      extendBody: bottomNavigationBar != null,
       appBar: appBar,
-      body: body,
+      body: SafeArea(
+        top: appBar == null,
+        bottom: bottomNavigationBar == null,
+        child: content,
+      ),
       bottomNavigationBar: bottomNavigationBar,
     );
   }
@@ -315,11 +344,22 @@ PreferredSizeWidget zentraAppBar(
   List<Widget>? actions,
 }) {
   return AppBar(
+    backgroundColor: ZentraTheme.background,
+    surfaceTintColor: Colors.transparent,
+    scrolledUnderElevation: 0,
     leading: IconButton(
-      icon: const Icon(Icons.arrow_back),
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: ZentraTheme.surfaceContainer.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
+          border: Border.all(color: ZentraTheme.border.withValues(alpha: 0.5)),
+        ),
+        child: const Icon(Icons.arrow_back, size: 20),
+      ),
       onPressed: () => Navigator.maybePop(context),
     ),
-    title: Text(title),
+    title: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
     actions: actions,
   );
 }
@@ -437,15 +477,104 @@ class ZentraPageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+      padding: const EdgeInsets.fromLTRB(20, 8, 12, 12),
       child: Row(
         children: [
           Expanded(
-            child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 18)),
+            child: Text(title, style: Theme.of(context).textTheme.titleLarge),
           ),
           ?trailing,
         ],
       ),
+    );
+  }
+}
+
+/// Home tab top bar — wallet name + refresh (Cake-style).
+class ZentraHomeTopBar extends StatelessWidget {
+  const ZentraHomeTopBar({
+    super.key,
+    this.walletName,
+    this.networkLabel,
+    this.onRefresh,
+    this.isRefreshing = false,
+    this.onSettings,
+  });
+
+  final String? walletName;
+  final String? networkLabel;
+  final VoidCallback? onRefresh;
+  final bool isRefreshing;
+  final VoidCallback? onSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 12, 8),
+      child: Row(
+        children: [
+          const ZentraLogo(size: 36),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  walletName ?? 'Zentra Wallet',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (networkLabel != null)
+                  Text(
+                    networkLabel!,
+                    style: const TextStyle(fontSize: 12, color: ZentraTheme.textMuted),
+                  ),
+              ],
+            ),
+          ),
+          if (isRefreshing)
+            const Padding(
+              padding: EdgeInsets.all(10),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.primary),
+              ),
+            )
+          else if (onRefresh != null)
+            _TopBarIconButton(icon: Icons.refresh, onPressed: onRefresh, tooltip: 'Refresh'),
+          if (onSettings != null) ...[
+            const SizedBox(width: 4),
+            _TopBarIconButton(icon: Icons.settings_outlined, onPressed: onSettings, tooltip: 'Settings'),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TopBarIconButton extends StatelessWidget {
+  const _TopBarIconButton({required this.icon, this.onPressed, this.tooltip});
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        fixedSize: const Size(ZentraTheme.minTouchTarget, ZentraTheme.minTouchTarget),
+        backgroundColor: ZentraTheme.surfaceContainer.withValues(alpha: 0.7),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
+          side: BorderSide(color: ZentraTheme.border.withValues(alpha: 0.5)),
+        ),
+      ),
+      icon: Icon(icon, size: 20, color: ZentraTheme.textMuted),
     );
   }
 }
@@ -470,7 +599,7 @@ class ZentraDashboardHeader extends StatelessWidget {
           ? const SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.accent),
+              child: CircularProgressIndicator(strokeWidth: 2, color: ZentraTheme.primary),
             )
           : IconButton(
               onPressed: onRefresh,
@@ -548,32 +677,39 @@ class ZentraHeroBalanceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: ZentraTheme.pagePadding,
-      padding: const EdgeInsets.all(20),
-      decoration: ZentraTheme.flatCard(),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      decoration: ZentraTheme.gradientCard(radius: ZentraTheme.radiusXl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text('Total balance', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 13)),
+              const Text('Total balance', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500)),
               const Spacer(),
               if (secondaryLabel != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: ZentraTheme.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: ZentraTheme.border),
+                    color: ZentraTheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(ZentraTheme.radiusPill),
+                    border: Border.all(color: ZentraTheme.primary.withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     secondaryLabel!,
-                    style: const TextStyle(fontSize: 11, color: ZentraTheme.textMuted),
+                    style: const TextStyle(fontSize: 11, color: ZentraTheme.primary, fontWeight: FontWeight.w600),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(amountZtr, style: Theme.of(context).textTheme.headlineLarge),
+          const SizedBox(height: 14),
+          Text(
+            amountZtr,
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                ),
+          ),
           if (unlockedZtr != null || lockedZtr != null) ...[
             const SizedBox(height: 12),
             const Divider(height: 1),
@@ -661,29 +797,38 @@ class ZentraQuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: ZentraTheme.card,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
-        side: const BorderSide(color: ZentraTheme.border),
-      ),
-      child: InkWell(
-        onTap: item.enabled ? item.onTap : null,
-        borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
-        child: Opacity(
-          opacity: item.enabled ? 1 : 0.45,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            child: Column(
-              children: [
-                Icon(item.icon, color: ZentraTheme.accent, size: 22),
-                const SizedBox(height: 8),
-                Text(
-                  item.label,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: ZentraTheme.textPrimary),
+    return Opacity(
+      opacity: item.enabled ? 1 : 0.45,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: item.enabled ? item.onTap : null,
+          borderRadius: BorderRadius.circular(ZentraTheme.radiusLg),
+          child: Column(
+            children: [
+              Container(
+                width: ZentraTheme.quickActionSize,
+                height: ZentraTheme.quickActionSize,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      ZentraTheme.accent.withValues(alpha: 0.28),
+                      ZentraTheme.card,
+                    ],
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: ZentraTheme.accent.withValues(alpha: 0.45)),
                 ),
-              ],
-            ),
+                child: Icon(item.icon, color: ZentraTheme.accent, size: ZentraTheme.navIconSize),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                item.label,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: ZentraTheme.textPrimary),
+              ),
+            ],
           ),
         ),
       ),
@@ -975,48 +1120,87 @@ class ZentraBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const items = [
-      (Icons.home_outlined, Icons.home, 'Home'),
-      (Icons.account_balance_wallet_outlined, Icons.account_balance_wallet, 'Assets'),
-      (Icons.receipt_long_outlined, Icons.receipt_long, 'History'),
-      (Icons.settings_outlined, Icons.settings, 'Settings'),
+      (Icons.home_outlined, Icons.home_rounded, 'Home'),
+      (Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Assets'),
+      (Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'History'),
+      (Icons.settings_outlined, Icons.settings_rounded, 'Settings'),
     ];
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: ZentraTheme.surface,
-        border: Border(top: BorderSide(color: ZentraTheme.border)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            children: [
-              for (var i = 0; i < items.length; i++)
-                Expanded(
-                  child: InkWell(
-                    onTap: () => onTap(i),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          currentIndex == i ? items[i].$2 : items[i].$1,
-                          size: 22,
-                          color: currentIndex == i ? ZentraTheme.accent : ZentraTheme.textMuted,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          items[i].$3,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: currentIndex == i ? FontWeight.w600 : FontWeight.w400,
-                            color: currentIndex == i ? ZentraTheme.textPrimary : ZentraTheme.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 0, 12, bottomPad > 0 ? bottomPad : 8),
+      child: Container(
+        height: ZentraTheme.navBarHeight,
+        decoration: BoxDecoration(
+          color: ZentraTheme.surface.withValues(alpha: 0.96),
+          borderRadius: BorderRadius.circular(ZentraTheme.radiusXl),
+          border: Border.all(color: ZentraTheme.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            for (var i = 0; i < items.length; i++)
+              Expanded(
+                child: _NavItem(
+                  label: items[i].$3,
+                  icon: currentIndex == i ? items[i].$2 : items[i].$1,
+                  selected: currentIndex == i,
+                  onTap: () => onTap(i),
                 ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? ZentraTheme.accent : ZentraTheme.textMuted;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(ZentraTheme.radiusLg),
+        child: SizedBox(
+          height: ZentraTheme.navBarHeight,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: ZentraTheme.navIconSize, color: color),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: ZentraTheme.navLabelSize,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  color: selected ? ZentraTheme.textPrimary : color,
+                  height: 1.1,
+                ),
+              ),
             ],
           ),
         ),
@@ -1049,23 +1233,25 @@ class ZentraTxRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isIncoming ? ZentraTheme.success : ZentraTheme.textPrimary;
+    final iconBg = isIncoming
+        ? ZentraTheme.success.withValues(alpha: 0.15)
+        : ZentraTheme.primary.withValues(alpha: 0.12);
     final row = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: ZentraTheme.listLeadingSize,
+            height: ZentraTheme.listLeadingSize,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: ZentraTheme.surface,
-              borderRadius: BorderRadius.circular(ZentraTheme.radiusSm),
-              border: Border.all(color: ZentraTheme.border),
+              color: iconBg,
+              borderRadius: BorderRadius.circular(ZentraTheme.radiusMd),
             ),
             child: Icon(
-              isIncoming ? Icons.arrow_downward : Icons.arrow_upward,
-              size: 18,
-              color: isIncoming ? ZentraTheme.success : ZentraTheme.textMuted,
+              isIncoming ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+              size: ZentraTheme.navIconSize,
+              color: isIncoming ? ZentraTheme.success : ZentraTheme.primary,
             ),
           ),
           const SizedBox(width: 14),
@@ -1116,6 +1302,41 @@ class ZentraTxRow extends StatelessWidget {
   }
 }
 
+/// Grouped settings section (Cake-style card).
+class ZentraSettingsSection extends StatelessWidget {
+  const ZentraSettingsSection({super.key, required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 20, 8),
+          child: Text(
+            title.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: ZentraTheme.textMuted,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: ZentraTheme.gradientCard(),
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: children),
+        ),
+      ],
+    );
+  }
+}
+
 class ZentraSettingsTile extends StatelessWidget {
   const ZentraSettingsTile({
     super.key,
@@ -1124,6 +1345,7 @@ class ZentraSettingsTile extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
+    this.showDivider = true,
   });
 
   final IconData icon;
@@ -1131,22 +1353,34 @@ class ZentraSettingsTile extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-        leading: Icon(icon, color: ZentraTheme.textMuted, size: 22),
-        title: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-        subtitle: subtitle != null
-            ? Text(subtitle!, style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12))
-            : null,
-        trailing:
-            trailing ?? (onTap != null ? const Icon(Icons.chevron_right, size: 20, color: ZentraTheme.textMuted) : null),
-      ),
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: ListTile(
+            onTap: onTap,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            leading: Container(
+              width: ZentraTheme.listLeadingSize,
+              height: ZentraTheme.listLeadingSize,
+              alignment: Alignment.center,
+              decoration: ZentraTheme.iconCircle(),
+              child: Icon(icon, color: ZentraTheme.primary, size: ZentraTheme.navIconSize),
+            ),
+            title: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+            subtitle: subtitle != null
+                ? Text(subtitle!, style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12))
+                : null,
+            trailing: trailing ??
+                (onTap != null ? const Icon(Icons.chevron_right_rounded, size: 22, color: ZentraTheme.textMuted) : null),
+          ),
+        ),
+        if (showDivider) const Divider(height: 1, indent: 68, endIndent: 14),
+      ],
     );
   }
 }

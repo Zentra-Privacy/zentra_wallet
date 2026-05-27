@@ -249,7 +249,7 @@ class _SendScreenState extends State<SendScreen> {
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(14),
-              decoration: ZentraTheme.flatCard(),
+              decoration: ZentraTheme.gradientCard(),
               child: Column(
                 children: [
                   Row(
@@ -292,12 +292,12 @@ class _SendScreenState extends State<SendScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: ZentraTheme.accent.withValues(alpha: 0.12),
+                  color: ZentraTheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   wallet.syncProgressLabel ?? 'Syncing — send disabled until caught up',
-                  style: const TextStyle(color: ZentraTheme.accent, fontSize: 12),
+                  style: const TextStyle(color: ZentraTheme.primary, fontSize: 12),
                 ),
               ),
             ],

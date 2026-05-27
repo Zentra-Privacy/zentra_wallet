@@ -28,7 +28,11 @@ class _HomeScreenState extends State<HomeScreen> {
       body: IndexedStack(
         index: _tab,
         children: [
-          _DashboardTab(wallet: wallet, onSeeAllTx: () => setState(() => _tab = 2)),
+          _DashboardTab(
+            wallet: wallet,
+            onSeeAllTx: () => setState(() => _tab = 2),
+            onOpenSettings: () => setState(() => _tab = 3),
+          ),
           _AssetsTab(wallet: wallet),
           const TransactionsScreen(embedded: true),
           const SettingsScreen(embedded: true),
@@ -43,10 +47,15 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _DashboardTab extends StatelessWidget {
-  const _DashboardTab({required this.wallet, required this.onSeeAllTx});
+  const _DashboardTab({
+    required this.wallet,
+    required this.onSeeAllTx,
+    required this.onOpenSettings,
+  });
 
   final WalletProvider wallet;
   final VoidCallback onSeeAllTx;
+  final VoidCallback onOpenSettings;
 
   void _openReceive(BuildContext context) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReceiveScreen()));
@@ -74,12 +83,14 @@ class _DashboardTab extends StatelessWidget {
       onRefresh: wallet.refresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: ZentraTheme.navBarHeight + MediaQuery.paddingOf(context).bottom + 24),
         children: [
-          ZentraDashboardHeader(
-            title: 'Home',
+          ZentraHomeTopBar(
+            walletName: wallet.walletFilename,
+            networkLabel: wallet.networkConfig?.label,
             isRefreshing: wallet.isRefreshing,
             onRefresh: wallet.refresh,
+            onSettings: onOpenSettings,
           ),
           ZentraHeroBalanceCard(
             amountZtr: balance != null
@@ -95,13 +106,13 @@ class _DashboardTab extends StatelessWidget {
           ),
           if (address.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Center(child: ZentraAddressChip(address: address)),
             ),
           ZentraQuickActionsRow(
             actions: [
-              ZentraQuickActionItem(icon: Icons.arrow_outward, label: 'Send', onTap: () => _openSend(context)),
-              ZentraQuickActionItem(icon: Icons.arrow_downward, label: 'Receive', onTap: () => _openReceive(context)),
+              ZentraQuickActionItem(icon: Icons.arrow_outward_rounded, label: 'Send', onTap: () => _openSend(context)),
+              ZentraQuickActionItem(icon: Icons.arrow_downward_rounded, label: 'Receive', onTap: () => _openReceive(context)),
             ],
           ),
           ZentraSectionHeader(title: 'Recent activity', actionLabel: 'See all', onAction: onSeeAllTx),
@@ -116,7 +127,8 @@ class _DashboardTab extends StatelessWidget {
           else
             Container(
               margin: ZentraTheme.pagePadding,
-              decoration: ZentraTheme.flatCard(),
+              decoration: ZentraTheme.gradientCard(),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   for (var i = 0; i < recent.length; i++)
@@ -162,37 +174,42 @@ class _AssetsTab extends StatelessWidget {
       onRefresh: wallet.refresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: ZentraTheme.navBarHeight + MediaQuery.paddingOf(context).bottom + 24),
         children: [
           const ZentraDashboardHeader(title: 'Assets'),
           ZentraHeroBalanceCard(
-          amountZtr: balance != null
-              ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA'
-              : '— ZTRA',
-          unlockedZtr: balance != null
-              ? '${wallet.formatAmount(balance.unlockedAtomic)} ZTRA'
-              : null,
-          lockedZtr: wallet.lockedBalanceAtomic > 0
-              ? '${wallet.formatAmount(wallet.lockedBalanceAtomic)} ZTRA'
-              : null,
-        ),
-          const SizedBox(height: 8),
-            ZentraCard(
-              margin: ZentraTheme.pagePadding,
-              child: Material(
-                color: Colors.transparent,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: const ZentraLogo(size: 40),
-                  title: const Text('Zentra', style: TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Native coin · ZTRA', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
-                  trailing: Text(
-                    balance != null ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA' : '0',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
+            amountZtr: balance != null
+                ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA'
+                : '— ZTRA',
+            unlockedZtr: balance != null
+                ? '${wallet.formatAmount(balance.unlockedAtomic)} ZTRA'
+                : null,
+            lockedZtr: wallet.lockedBalanceAtomic > 0
+                ? '${wallet.formatAmount(wallet.lockedBalanceAtomic)} ZTRA'
+                : null,
+          ),
+          const SizedBox(height: 12),
+          Container(
+            margin: ZentraTheme.pagePadding,
+            decoration: ZentraTheme.gradientCard(),
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              leading: Container(
+                width: 48,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: ZentraTheme.iconCircle(),
+                child: const ZentraLogo(size: 32),
+              ),
+              title: const Text('Zentra', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              subtitle: const Text('Native coin · ZTRA', style: TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
+              trailing: Text(
+                balance != null ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA' : '0',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: ZentraTheme.primary),
               ),
             ),
+          ),
         ],
       ),
     );

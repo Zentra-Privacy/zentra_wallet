@@ -369,11 +369,14 @@ class WalletProvider extends ChangeNotifier {
   /// Stop sync/polls, drain FFI jobs, then close native wallet (avoids switch crash).
   Future<void> _teardownActiveWallet() async {
     _connectGeneration++;
-    _stopBlockchainSync();
+    // Stop timers first; finish in-flight store + FFI before reset/close.
+    _stopBlockchainSync(keepJobQueue: true);
     await _blockchainJobs.awaitIdle();
     try {
       await _storeTail;
     } catch (_) {}
+    _blockchainJobs.reset();
+    _storeTail = Future<void>.value();
     final w = _wallet;
     if (w != null && w.isOpen) {
       try {
@@ -385,14 +388,16 @@ class WalletProvider extends ChangeNotifier {
     connectionState = WalletConnectionState.disconnected;
   }
 
-  void _stopBlockchainSync() {
+  void _stopBlockchainSync({bool keepJobQueue = false}) {
     _backgroundSync.stop();
     _autoStore.stop();
     _connectionWatchdog.stop();
     _syncCoordinator.reset();
     _lastSyncProgress = null;
-    _blockchainJobs.reset();
-    _storeTail = Future<void>.value();
+    if (!keepJobQueue) {
+      _blockchainJobs.reset();
+      _storeTail = Future<void>.value();
+    }
     _pollInFlight = false;
     _isUpdatingTransfers = false;
     _connectionUnhealthy = false;

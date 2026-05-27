@@ -39,11 +39,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             onRefresh: wallet.refresh,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 80),
+              padding: EdgeInsets.only(bottom: ZentraTheme.navBarHeight + MediaQuery.paddingOf(context).bottom + 24),
               children: [
                 Container(
                   margin: ZentraTheme.pagePadding,
-                  decoration: ZentraTheme.flatCard(),
+                  decoration: ZentraTheme.gradientCard(),
+                  clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
                       for (var i = 0; i < list.length; i++)
@@ -76,8 +77,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               }),
               backgroundColor: WidgetStateProperty.resolveWith((s) {
                 return s.contains(WidgetState.selected)
-                    ? ZentraTheme.accent.withValues(alpha: 0.18)
-                    : ZentraTheme.card;
+                    ? ZentraTheme.primary.withValues(alpha: 0.22)
+                    : ZentraTheme.surfaceContainer;
               }),
             ),
             segments: const [

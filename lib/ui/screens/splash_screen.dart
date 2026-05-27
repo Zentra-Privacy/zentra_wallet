@@ -80,18 +80,31 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const ZentraLogo(size: 88),
-            const SizedBox(height: 28),
-            const Text(
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    ZentraTheme.accent.withValues(alpha: 0.22),
+                    ZentraTheme.card,
+                  ],
+                ),
+                border: Border.all(color: ZentraTheme.accent.withValues(alpha: 0.4)),
+              ),
+              child: const ZentraLogo(size: 80),
+            ),
+            const SizedBox(height: 32),
+            Text(
               'Zentra Wallet',
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 28, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Private. Secure. Unstoppable.',
-              style: TextStyle(color: ZentraTheme.textMuted, fontSize: 14),
+              'Private · Secure · Self-custody',
+              style: TextStyle(color: ZentraTheme.textMuted, fontSize: 14, letterSpacing: 0.3),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 36),
             const CircularProgressIndicator(color: ZentraTheme.accent),
             if (_status != null) ...[
               const SizedBox(height: 16),
