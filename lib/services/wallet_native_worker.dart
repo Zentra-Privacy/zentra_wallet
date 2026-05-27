@@ -179,6 +179,22 @@ class WalletNativeWorker {
         ));
   }
 
+  static Future<void> setRestoreHeight({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+    required int height,
+  }) {
+    return Isolate.run(() => _setRestoreHeight(
+          handleAddress: handleAddress,
+          walletDir: walletDir,
+          daemonAddress: daemonAddress,
+          trustedDaemon: trustedDaemon,
+          height: height,
+        ));
+  }
+
   static Future<String?> fetchSeed({
     required int handleAddress,
     required String walletDir,
@@ -351,6 +367,17 @@ class WalletNativeWorker {
       amountAtomic,
       priority: priority,
     );
+  }
+
+  static void _setRestoreHeight({
+    required int handleAddress,
+    required String walletDir,
+    required String daemonAddress,
+    required bool trustedDaemon,
+    required int height,
+  }) {
+    final native = _loadNative(walletDir, daemonAddress, trustedDaemon);
+    native.setRestoreHeight(_ptr(handleAddress), height);
   }
 
   static String? _fetchSeed({

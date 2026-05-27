@@ -68,9 +68,15 @@ class EmbeddedWalletService {
     return _native.restoreHeight(_handle!);
   }
 
-  void setRestoreHeight(int height) {
+  Future<void> setRestoreHeight(int height) async {
     _requireOpen();
-    _native.setRestoreHeight(_handle!, height);
+    await WalletNativeWorker.setRestoreHeight(
+      handleAddress: _handleAddress!,
+      walletDir: walletDir,
+      daemonAddress: daemonAddress,
+      trustedDaemon: _trustedDaemon,
+      height: height,
+    );
   }
 
   void openWallet({required String filename, required String password}) {

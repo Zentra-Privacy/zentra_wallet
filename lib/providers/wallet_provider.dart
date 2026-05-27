@@ -168,7 +168,8 @@ class WalletProvider extends ChangeNotifier {
   bool _snapshotChanged(WalletNativeSnapshot snap, {required bool includeTransfers}) {
     if (walletHeight != snap.walletHeight ||
         daemonBlockHeight != snap.daemonHeight ||
-        balance?.balanceAtomic != snap.balanceAtomic) {
+        balance?.balanceAtomic != snap.balanceAtomic ||
+        balance?.unlockedAtomic != snap.unlockedAtomic) {
       return true;
     }
     if (!includeTransfers) return false;
@@ -261,18 +262,20 @@ class WalletProvider extends ChangeNotifier {
           _zeroDaemonPolls = 0;
         }
         if (gen != _connectGeneration) return;
+        final prevSyncStatus = syncStatus;
         final changed = _snapshotChanged(snap, includeTransfers: needTransfers);
         await _applyNativeSnapshot(snap, includeTransfers: needTransfers);
         _lastSnapshotWalletHeight = snap.walletHeight;
         _lastSnapshotBalance = snap.balanceAtomic;
         if (gen != _connectGeneration) return;
         _updateSyncStatusFromHeights();
+        final syncStateChanged = wasSynced != isSynced || prevSyncStatus != syncStatus;
         if (!wasSynced && isSynced) {
           await _persistWalletFile(force: true);
         } else {
           await _persistWalletFile(force: false);
         }
-        if (gen == _connectGeneration && (changed || needTransfers)) {
+        if (gen == _connectGeneration && (changed || syncStateChanged)) {
           if (daemonBlockHeight > 0) {
             errorMessage = null;
           }
@@ -424,13 +427,8 @@ class WalletProvider extends ChangeNotifier {
       connectionState = WalletConnectionState.connected;
       await _startBlockchainSync();
       if (!waitForInitialSync) {
+        // Background sync + polls only — avoid blocking refresh racing native refresh thread.
         syncStatus = WalletSyncStatus.syncing;
-        unawaited(_runInitialWalletRefresh().catchError((Object e) {
-          if (gen == _connectGeneration) {
-            errorMessage = _userMessage(e);
-            notifyListeners();
-          }
-        }));
       }
       if (_connectStale(gen)) return false;
       errorMessage = null;
@@ -495,9 +493,9 @@ class WalletProvider extends ChangeNotifier {
     }
     _stopBlockchainSync();
     try {
-      _wallet!.setRestoreHeight(height);
       await updateDefaultRestoreHeight(height);
       await _blockchainJobs.run(() async {
+        await _wallet!.setRestoreHeight(height);
         await _wallet!.refresh();
         await _applyWalletSnapshot();
       });
@@ -626,7 +624,7 @@ class WalletProvider extends ChangeNotifier {
       final daemonH = await _wallet!.fetchDaemonHeight();
       final tip = RestoreHeightUtils.scanHeightFromDaemonTip(daemonH);
       if (tip > 0) {
-        _wallet!.setRestoreHeight(tip);
+        await _wallet!.setRestoreHeight(tip);
       }
     } catch (_) {
       // First refresh may still proceed from height 0.
