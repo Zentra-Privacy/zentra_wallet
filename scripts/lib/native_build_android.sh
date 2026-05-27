@@ -103,9 +103,11 @@ native_build_android() {
     local build64="$(_abi_build64 "$abi")"
     local arm_arch="$(_abi_arm_arch "$abi")"
     local toolchain="$DEPENDS_DIR/$host/share/toolchain.cmake"
+    local prefix="$DEPENDS_DIR/$host"
     local zbuild="$ZENTRA_ROOT/build/android-$abi/release"
 
     echo "==> Zentra wallet_api for $abi ($host)"
+    rm -rf "$zbuild/CMakeCache.txt" "$zbuild/CMakeFiles" 2>/dev/null || true
     mkdir -p "$zbuild"
     local -a cmake_args=(
       -S "$ZENTRA_ROOT" -B "$zbuild"
@@ -118,6 +120,9 @@ native_build_android() {
       -DANDROID=ON
       -DUSE_DEVICE_TREZOR=OFF
       -DBUILD_64="$build64"
+      -DOPENSSL_ROOT_DIR="$prefix"
+      -DOPENSSL_INCLUDE_DIR="$prefix/include"
+      -DOPENSSL_LIBRARIES="$prefix/lib/libssl.a;$prefix/lib/libcrypto.a"
     )
     if [[ -n "$arm_arch" ]]; then
       cmake_args+=(-DARCH="$arm_arch")

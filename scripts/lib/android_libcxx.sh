@@ -9,14 +9,30 @@ android_find_libcxx_shared() {
   local lib="" sdks="$zentra_root/contrib/depends/SDKs"
 
   # NDK r17b (Zentra depends android_ndk): sources/cxx-stl layout
-  lib="$(find "$sdks" -path "*/sources/cxx-stl/llvm-libc++/libs/${abi}/libc++_shared.so" 2>/dev/null | head -1)"
+  if [[ -d "$sdks" ]]; then
+    lib="$(find "$sdks" -path "*/sources/cxx-stl/llvm-libc++/libs/${abi}/libc++_shared.so" 2>/dev/null | head -1)"
+    if [[ -f "$lib" ]]; then
+      echo "$lib"
+      return 0
+    fi
+
+    # Newer NDK sysroot layout (if depends ever bumps NDK)
+    lib="$(find "$sdks" -path "*/$triple/libc++_shared.so" 2>/dev/null | head -1)"
+    if [[ -f "$lib" ]]; then
+      echo "$lib"
+      return 0
+    fi
+  fi
+
+  # Depends work tree (android_ndk package; SDKs/ may be absent on local builds)
+  lib="$(find "$zentra_root/contrib/depends/work" -path "*/sources/cxx-stl/llvm-libc++/libs/${abi}/libc++_shared.so" 2>/dev/null | head -1)"
   if [[ -f "$lib" ]]; then
     echo "$lib"
     return 0
   fi
 
-  # Newer NDK sysroot layout (if depends ever bumps NDK)
-  lib="$(find "$sdks" -path "*/$triple/libc++_shared.so" 2>/dev/null | head -1)"
+  # Per-host native sysroot shipped with depends prefix
+  lib="$(find "$zentra_root/contrib/depends" -maxdepth 6 -path "*/native/${triple}/lib/libc++_shared.so" 2>/dev/null | head -1)"
   if [[ -f "$lib" ]]; then
     echo "$lib"
     return 0
@@ -28,8 +44,11 @@ android_find_libcxx_shared() {
 android_has_depends_ndk() {
   local zentra_root="$1"
   local sdks="$zentra_root/contrib/depends/SDKs"
-  [[ -d "$sdks" ]] || return 1
-  find "$sdks" -maxdepth 1 -type d -name 'android-ndk-*' 2>/dev/null | grep -q .
+  if [[ -d "$sdks" ]] && find "$sdks" -maxdepth 1 -type d -name 'android-ndk-*' 2>/dev/null | grep -q .; then
+    return 0
+  fi
+  find "$zentra_root/contrib/depends/work" -path '*/android-ndk-*/sources/cxx-stl/llvm-libc++' 2>/dev/null | grep -q . \
+    || find "$zentra_root/contrib/depends" -maxdepth 6 -name 'libc++_shared.so' 2>/dev/null | grep -q .
 }
 
 # Optional Flutter/SDK NDK fallback — only when Zentra depends NDK was not built.
