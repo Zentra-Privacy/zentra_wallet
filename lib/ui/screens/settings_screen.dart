@@ -48,10 +48,14 @@ class SettingsScreen extends StatelessWidget {
                       ),
                   ],
                 ),
-                if (wallet.syncProgressLabel != null) ...[
-                  const SizedBox(height: 10),
-                  Text(wallet.syncProgressLabel!, style: const TextStyle(color: ZentraTheme.textMuted, fontSize: 12)),
-                ],
+                ZentraWalletStatusBanner(
+                  compact: true,
+                  errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
+                  isConnecting: wallet.isOpeningWallet,
+                  isSyncing: wallet.showSyncBanner,
+                  syncSubtitle: wallet.syncBannerSubtitle,
+                  syncProgress: wallet.syncProgressFraction,
+                ),
                 if (wallet.primaryAddress != null) ...[
                   const SizedBox(height: 12),
                   ZentraAddressChip(address: wallet.primaryAddress!.address),
@@ -190,13 +194,6 @@ class SettingsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const ZentraDashboardHeader(title: 'Settings'),
-          ZentraWalletStatusBanner(
-            errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
-            isConnecting: wallet.isOpeningWallet,
-            isSyncing: wallet.showSyncBanner,
-            syncSubtitle: wallet.syncBannerSubtitle,
-            syncProgress: wallet.syncProgressFraction,
-          ),
           Expanded(child: list),
         ],
       );

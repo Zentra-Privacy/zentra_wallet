@@ -81,13 +81,6 @@ class _DashboardTab extends StatelessWidget {
             isRefreshing: wallet.isRefreshing,
             onRefresh: wallet.refresh,
           ),
-          ZentraWalletStatusBanner(
-            errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
-            isConnecting: wallet.isOpeningWallet,
-            isSyncing: wallet.showSyncBanner,
-            syncSubtitle: wallet.syncBannerSubtitle,
-            syncProgress: wallet.syncProgressFraction,
-          ),
           ZentraHeroBalanceCard(
             amountZtr: balance != null
                 ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA'
@@ -172,13 +165,6 @@ class _AssetsTab extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           const ZentraDashboardHeader(title: 'Assets'),
-          ZentraWalletStatusBanner(
-            errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
-            isConnecting: wallet.isOpeningWallet,
-            isSyncing: wallet.showSyncBanner,
-            syncSubtitle: wallet.syncBannerSubtitle,
-            syncProgress: wallet.syncProgressFraction,
-          ),
           ZentraHeroBalanceCard(
           amountZtr: balance != null
               ? '${wallet.formatAmount(balance.balanceAtomic)} ZTRA'

@@ -64,13 +64,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             isRefreshing: wallet.isRefreshing,
             onRefresh: wallet.refresh,
           ),
-        ZentraWalletStatusBanner(
-          errorMessage: zentraStatusErrorMessage(wallet.errorMessage),
-          isConnecting: wallet.isOpeningWallet,
-          isSyncing: wallet.showSyncBanner,
-          syncSubtitle: wallet.syncBannerSubtitle,
-          syncProgress: wallet.syncProgressFraction,
-        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
           child: SegmentedButton<int>(

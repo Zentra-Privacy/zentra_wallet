@@ -324,7 +324,7 @@ PreferredSizeWidget zentraAppBar(
   );
 }
 
-/// Connection / sync status shown below dashboard headers.
+/// Connection / sync status (Settings only — not shown on Home / History headers).
 class ZentraWalletStatusBanner extends StatelessWidget {
   const ZentraWalletStatusBanner({
     super.key,
@@ -333,6 +333,7 @@ class ZentraWalletStatusBanner extends StatelessWidget {
     this.isSyncing = false,
     this.syncSubtitle,
     this.syncProgress,
+    this.compact = false,
   });
 
   final String? errorMessage;
@@ -340,24 +341,29 @@ class ZentraWalletStatusBanner extends StatelessWidget {
   final bool isSyncing;
   final String? syncSubtitle;
   final double? syncProgress;
+  /// Tighter layout inside Settings status card (no page horizontal margin).
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final margin = compact ? const EdgeInsets.only(top: 10) : null;
     if (errorMessage != null && errorMessage!.isNotEmpty) {
       return ZentraSyncBanner(
         message: errorMessage!,
         isError: true,
         subtitle: 'Check node settings or reconnect',
+        margin: margin,
       );
     }
     if (isConnecting) {
-      return const ZentraSyncBanner(message: 'Opening wallet…');
+      return ZentraSyncBanner(message: 'Opening wallet…', margin: margin);
     }
     if (isSyncing) {
       return ZentraSyncBanner(
         message: 'Syncing with network',
         subtitle: syncSubtitle ?? 'Scanning blocks in the background',
         progress: syncProgress,
+        margin: margin,
       );
     }
     return const SizedBox.shrink();
@@ -726,18 +732,20 @@ class ZentraSyncBanner extends StatelessWidget {
     this.isError = false,
     this.progress,
     this.subtitle,
+    this.margin,
   });
 
   final String message;
   final bool isError;
   final double? progress;
   final String? subtitle;
+  final EdgeInsetsGeometry? margin;
 
   @override
   Widget build(BuildContext context) {
     final color = isError ? ZentraTheme.danger : ZentraTheme.accent;
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      margin: margin ?? const EdgeInsets.fromLTRB(20, 0, 20, 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
