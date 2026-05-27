@@ -52,10 +52,22 @@ class _WalletsScreenState extends State<WalletsScreen> {
       }
     }
 
-    final ok = await provider.switchToWallet(
+    var ok = await provider.switchToWallet(
       filename: info.filename,
       password: password,
     );
+    if (!ok &&
+        mounted &&
+        info.hasStoredPassword &&
+        provider.errorMessage != null) {
+      final retry = await showWalletPasswordDialog(context, walletName: info.filename);
+      if (retry != null && mounted) {
+        ok = await provider.switchToWallet(
+          filename: info.filename,
+          password: retry,
+        );
+      }
+    }
     if (!mounted) return;
     setState(() => _switchingTo = null);
 

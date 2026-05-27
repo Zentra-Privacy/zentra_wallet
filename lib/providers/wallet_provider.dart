@@ -117,7 +117,9 @@ class WalletProvider extends ChangeNotifier {
         : addr;
     final list = <LocalWalletInfo>[];
     for (final name in names) {
-      final isActive = active != null && name.toLowerCase() == active;
+      final isActive = active != null &&
+          name.toLowerCase() == active &&
+          connectionState == WalletConnectionState.connected;
       final net = await _settings.loadWalletNetworkFor(name);
       list.add(LocalWalletInfo(
         filename: name,
@@ -156,6 +158,8 @@ class WalletProvider extends ChangeNotifier {
 
     final pwd = password ?? await _settings.loadWalletPasswordFor(filename);
     if (pwd == null || pwd.isEmpty) {
+      errorMessage = 'Wallet password required';
+      notifyListeners();
       return false;
     }
 
@@ -165,10 +169,11 @@ class WalletProvider extends ChangeNotifier {
 
     final savedNet =
         await _settings.loadWalletNetworkFor(filename) ?? walletNetworkType ?? networkType;
-    if (savedNet != networkType) {
+    final networkChanged = savedNet != previousNetworkType;
+    if (networkChanged) {
+      await _settings.saveNetwork(savedNet);
       networkType = savedNet;
       networkConfig = ZentraNetworkConfig.fromType(savedNet);
-      await _settings.saveNetwork(savedNet);
       if (savedNet == ZentraNetType.mainnet) {
         final node = ZentraPublicNode.seedPrimary;
         nodeSettings = node.toNodeSettings();
@@ -198,13 +203,43 @@ class WalletProvider extends ChangeNotifier {
       await _persistWalletSession(filename, pwd);
       errorMessage = null;
     } else {
-      walletFilename = previousFilename;
-      walletNetworkType = previousNetwork;
-      networkType = previousNetworkType;
-      networkConfig = ZentraNetworkConfig.fromType(networkType);
+      await _restoreWalletSessionAfterFailedSwitch(
+        previousFilename: previousFilename,
+        previousNetwork: previousNetwork,
+        previousNetworkType: previousNetworkType,
+        networkWasChanged: networkChanged,
+      );
     }
     notifyListeners();
     return ok;
+  }
+
+  Future<void> _restoreWalletSessionAfterFailedSwitch({
+    required String? previousFilename,
+    required ZentraNetType? previousNetwork,
+    required ZentraNetType previousNetworkType,
+    required bool networkWasChanged,
+  }) async {
+    walletFilename = previousFilename;
+    walletNetworkType = previousNetwork;
+    if (networkWasChanged) {
+      await _settings.saveNetwork(previousNetworkType);
+      networkType = previousNetworkType;
+      networkConfig = ZentraNetworkConfig.fromType(previousNetworkType);
+      nodeSettings = await _settings.loadNode();
+      selectedPublicNode = ZentraPublicNode.byId(nodeSettings?.publicNodeId);
+    }
+
+    if (previousFilename == null || previousFilename.isEmpty) return;
+    _walletDir ??= await _resolveWalletDir();
+    if (!await WalletDirectory.walletKeysExist(_walletDir!, previousFilename)) return;
+
+    final prevPwd = await _settings.loadWalletPasswordFor(previousFilename);
+    if (prevPwd == null || prevPwd.isEmpty) return;
+
+    walletFilename = previousFilename;
+    walletNetworkType = previousNetwork ?? previousNetworkType;
+    await connect(passwordOverride: prevPwd, waitForInitialSync: false);
   }
 
   /// Returns [desired] or the next free name (`my_wallet` → `my_wallet1`, …).
@@ -845,15 +880,7 @@ class WalletProvider extends ChangeNotifier {
     required String filename,
     required String password,
   }) async {
-    final previousFilename = walletFilename;
-    walletFilename = filename;
-    final ok = await connect(passwordOverride: password);
-    if (ok) {
-      await _persistWalletSession(filename, password);
-    } else {
-      walletFilename = previousFilename;
-    }
-    return ok;
+    return switchToWallet(filename: filename, password: password);
   }
 
   static bool isValidWalletFilename(String name) {
