@@ -78,4 +78,5 @@
 	<string>Zentra Wallet connects to your node on the local network to sync balance and transactions.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Scan QR codes to fill recipient addresses when sending ZTRA or to import node settings.</string>
+</dict>
 </plist>
