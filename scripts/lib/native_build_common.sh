@@ -25,10 +25,10 @@ native_apply_zentra_source_patches() {
     return 0
   fi
   echo "==> Patching Zentra sources: ringdb Apple sandbox (macOS + iOS)"
-  if patch -p0 -R --dry-run -d "$zentra_root" < "$patch" >/dev/null 2>&1; then
+  if patch -p1 -R --batch --dry-run -d "$zentra_root" < "$patch" >/dev/null 2>&1; then
     return 0
   fi
-  patch -p0 -d "$zentra_root" < "$patch" || return 1
+  patch -p1 --batch -d "$zentra_root" < "$patch" || return 1
 }
 
 native_ensure_zentra_depends_patched() {
