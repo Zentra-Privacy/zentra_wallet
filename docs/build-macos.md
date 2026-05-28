@@ -1,4 +1,4 @@
-# Build guide — macOS (manual, no CI)
+# Build guide — macOS
 
 Build the **macOS desktop** app with the full **wallet2** engine.
 

@@ -1,4 +1,4 @@
-# Build guide — Android (manual, no CI)
+# Build guide — Android
 
 Build a **release APK** with the full **wallet2** engine on every supported CPU ABI.
 
@@ -184,12 +184,13 @@ export SKIP_DEPENDS=1    # only if toolchain already built
 | `libtinfo.so.5` missing | `sudo apt install libtinfo5` |
 | `libwallet_api.a not found` | Let Zentra finish; inspect `zentra/build/android-*/release/lib/` |
 | APK: engine unavailable | See below |
+| Emulator ABI mismatch | Build `x86_64` or use an arm64 emulator image |
 
 ### “Wallet engine unavailable” on a real phone
 
 The app could not load `libzentra_wallet_ffi.so` (missing from APK, wrong CPU type, or load error).
 
-1. **Use the latest CI APK** (after a green Release pipeline), not an old draft or a local `flutter build apk` without `./wallet.sh build-android`.
+1. Run **`./wallet.sh build-android`** before **`flutter build apk`**. Do not install an APK built without the native libs.
 2. **Check the APK** (on a PC):
    ```bash
    unzip -l app-release.apk | grep zentra
@@ -199,8 +200,7 @@ The app could not load `libzentra_wallet_ffi.so` (missing from APK, wrong CPU ty
 4. **Android version:** **7.0+** (API 24).
 5. Reinstall: uninstall old app → install new APK.
 
-CI bundles `libc++_shared.so` from the **same Zentra depends SDK** used to link `libzentra_wallet_ffi.so` (not the newer Flutter/SDK NDK). A mismatched `libc++_shared` can crash on wallet create with `__gxx_personality_v0` in the tombstone.
-| Emulator ABI mismatch | Build `x86_64` or use an arm64 emulator image |
+The build scripts bundle `libc++_shared.so` from the **same Zentra depends SDK** used to link `libzentra_wallet_ffi.so` (not the newer Flutter/SDK NDK). A mismatched `libc++_shared` can crash on wallet create with `__gxx_personality_v0` in the tombstone.
 
 ---
 
@@ -208,4 +208,3 @@ CI bundles `libc++_shared.so` from the **same Zentra depends SDK** used to link 
 
 - [build-linux.md](build-linux.md)
 - [building.md](building.md)
-- [download-builds.md](download-builds.md)

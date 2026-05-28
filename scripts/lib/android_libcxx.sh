@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Find and verify Android libc++_shared.so (Zentra depends NDK r17b layout).
-# Sourced by native_build_android.sh and ci-verify-*.sh — do not execute directly.
+# Sourced by native_build_android.sh — do not execute directly.
 
 # Zentra Android depends (NDK r17b) require libtinfo.so.5 on the Linux host.
 android_has_libtinfo5() {

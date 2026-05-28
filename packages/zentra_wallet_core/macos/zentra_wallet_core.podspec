@@ -1,5 +1,5 @@
 #
-# FFI plugin — zentra_core helpers + vendored libzentra_wallet_ffi.dylib (after build-macos / CI).
+# FFI plugin — zentra_core helpers + vendored libzentra_wallet_ffi.dylib (after build-macos).
 #
 Pod::Spec.new do |s|
   s.name             = 'zentra_wallet_core'

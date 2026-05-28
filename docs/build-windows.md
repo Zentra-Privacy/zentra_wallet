@@ -1,8 +1,8 @@
-# Build guide — Windows (manual, no CI)
+# Build guide — Windows
 
 Build the **Windows x64** desktop app with the full **wallet2** engine.
 
-**Important:** The **native DLL** is cross-compiled on **Linux** (MinGW + Zentra `contrib/depends`). The **Flutter Windows app** is built on **Windows** (or you can copy the built folder from CI).
+**Important:** The **native DLL** is cross-compiled on **Linux** (MinGW + Zentra `contrib/depends`). The **Flutter Windows app** must be built on a **Windows PC**.
 
 **Output:**
 
@@ -157,10 +157,9 @@ flutter run -d windows
 
 Same message as Android: `libzentra_wallet_ffi.dll` is missing or failed to load.
 
-1. **Official CI zip** — must include `libzentra_wallet_ffi.dll` next to `zentra_wallet.exe` (unzip and check).
-2. **Local build** — run `./wallet.sh build-windows` **before** `flutter build windows`.
-3. **MinGW runtimes** — the wallet DLL is built with MinGW; these may be required beside the exe:
-   `libstdc++-6.dll`, `libgcc_s_seh-1.dll`, `libwinpthread-1.dll` (CI bundles them when building the engine on Ubuntu).
+1. **Release folder** — must include `libzentra_wallet_ffi.dll` next to `zentra_wallet.exe`.
+2. **Build order** — run `./wallet.sh build-windows` on Linux **before** `flutter build windows` on Windows.
+3. **MinGW runtimes** — copy beside the exe if needed: `libstdc++-6.dll`, `libgcc_s_seh-1.dll`, `libwinpthread-1.dll` (from the same MinGW toolchain that built the DLL).
 4. After updating DLLs: `flutter clean && flutter build windows --release`.
 
 ---
@@ -180,4 +179,3 @@ export ZENTRA_ROOT="$PWD/third_party/zentra"
 
 - [build-linux.md](build-linux.md) — same host used for MinGW cross-compile
 - [building.md](building.md)
-- [download-builds.md](download-builds.md) — pre-built Windows zip from CI

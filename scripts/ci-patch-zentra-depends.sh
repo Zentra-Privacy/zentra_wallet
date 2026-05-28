@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply wallet-repo patches to pinned Zentra v0.1.0 depends (CI / local engine builds).
+# Apply wallet-repo patches to pinned Zentra v0.1.0 depends (local engine builds).
 # Usage: ./scripts/ci-patch-zentra-depends.sh [zentra_root]
 set -euo pipefail
 

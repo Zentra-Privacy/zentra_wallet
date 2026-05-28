@@ -89,7 +89,7 @@ class ZentraNativeWallet {
       return ffi.DynamicLibrary.open('libzentra_wallet_ffi.so');
     }
     if (Platform.isWindows) {
-      // MinGW runtimes must sit beside the wallet DLL (bundled by build-windows / CI).
+      // MinGW runtimes must sit beside the wallet DLL (bundled by build-windows).
       for (final dep in <String>[
         'libwinpthread-1.dll',
         'libgcc_s_seh-1.dll',

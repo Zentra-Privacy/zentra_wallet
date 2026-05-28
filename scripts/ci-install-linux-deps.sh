@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Install Ubuntu packages for Zentra Wallet.
-#   flutter — CI / flutter build linux (ci.yml, build-artifacts.yml)
-#   native  — local ./wallet.sh build (Zentra source; matches Zentra install-deps.sh)
+# Install Ubuntu packages for Zentra Wallet (local builds).
+#   flutter — flutter build linux
+#   native  — ./wallet.sh build (Zentra source; matches Zentra install-deps.sh)
 #   all     — both (recommended for full local dev)
 # Usage: sudo ./scripts/ci-install-linux-deps.sh [flutter|native|all]
 set -euo pipefail
@@ -16,9 +16,9 @@ _flutter_deps() {
 }
 
 # Matches Zentra scripts/install-deps.sh (required to build wallet_api + zentrad).
-# MinGW: required for Phase 1 Windows DLL (contrib/depends HOST=x86_64-w64-mingw32).
+# MinGW: required for Windows DLL cross-compile (contrib/depends HOST=x86_64-w64-mingw32).
 _configure_mingw_posix() {
-  # protobuf / C++11 need posix threading, not win32 (see docs/ci-troubleshooting.md).
+  # protobuf / C++11 need posix threading, not win32 (see docs/build-windows.md).
   if [[ -x "$(dirname "$0")/ci-configure-mingw-posix.sh" ]]; then
     bash "$(dirname "$0")/ci-configure-mingw-posix.sh"
   fi

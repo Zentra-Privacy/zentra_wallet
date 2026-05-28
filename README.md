@@ -1,7 +1,5 @@
 # Zentra Wallet
 
-[![CI](https://github.com/Zentra-Privacy/zentra_wallet/actions/workflows/ci.yml/badge.svg)](https://github.com/Zentra-Privacy/zentra_wallet/actions/workflows/ci.yml)
-
 Self-custody mobile/desktop wallet for [Zentra](https://github.com/Zentra-Privacy/zentra) — same model as **Cake Wallet** / Monero GUI: **wallet2 runs inside the app**, only the public **daemon** (`zentrad`) is remote.
 
 ## What you do NOT need
@@ -41,7 +39,7 @@ Wallet files: app data dir `…/zentra_wallets/`.
 
 ## How to build and run (Linux)
 
-Follow these steps on **Ubuntu 22.04** (or similar Debian/Ubuntu). That is the supported dev platform. GitHub CI also builds the Linux app on **ubuntu-22.04** so it matches the native `.so`.
+Follow these steps on **Ubuntu 22.04** (or similar Debian/Ubuntu). Build and run on the same Linux machine you ship from so the native `.so` matches your glibc.
 
 ### 1. Prerequisites
 
@@ -135,7 +133,7 @@ Menu: build native lib, run app, status, clean test data.
 | Reset local test wallets | `./wallet.sh clean-data` |
 | Help | `./wallet.sh help` |
 
-### Run without rebuilding native (CI / quick UI)
+### Run without rebuilding native (quick UI)
 
 The repo may already include `packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so`. Then:
 
@@ -157,41 +155,25 @@ Build the `.so` on the same OS/glibc you ship on:
 
 ---
 
-## CI/CD (GitHub Actions)
+## Build on each platform (local)
 
-| Workflow | When | What it does |
-|----------|------|----------------|
-| [**CI**](.github/workflows/ci.yml) | Pull requests to `main` | Analyze, test, Linux debug (committed engine) |
-| [**Release pipeline**](.github/workflows/build-artifacts.yml) | Push to `main`, tag `v*`, manual | **Phase 1:** engine from [Zentra v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0) → **Phase 2:** all apps → draft/published release |
+Build on the **same OS** you target. There is no GitHub Actions pipeline — release binaries come from your machine.
 
-### Download built apps (Linux / Windows / APK from CI)
+| Platform | Where to build | Guide |
+|----------|----------------|-------|
+| **Linux** | Linux (Ubuntu 22.04+) | [docs/build-linux.md](docs/build-linux.md) |
+| **Windows** | Windows PC (+ native DLL from Linux MinGW — see guide) | [docs/build-windows.md](docs/build-windows.md) |
+| **Android** | Linux host for native `.so`, then APK | [docs/build-android.md](docs/build-android.md) |
+| **macOS** | Mac | [docs/build-macos.md](docs/build-macos.md) |
+| **iOS** | Mac + Xcode | [docs/build-ios.md](docs/build-ios.md) |
 
-**Full guide:** **[docs/download-builds.md](docs/download-builds.md)**
+Overview and `wallet.sh` commands: **[docs/building.md](docs/building.md)**
 
-Quick steps:
-
-1. GitHub → **Actions** → **Release pipeline** → latest green run.
-2. Scroll down → **Artifacts** → download (e.g. `zentra-wallet-linux-x64`, `zentra-wallet-android-apk`).
-3. After push to `main`: **Releases** → **Draft** (`draft-42`) → test → **Publish release** when ready.
-4. For official version: `git tag v1.0.0 && git push origin v1.0.0` → **Releases** → `v1.0.0`.
-
-GitHub **Artifacts** are wrapped in an extra `.zip` — unzip once after download (see [download guide](docs/download-builds.md)).
-
-| Artifact | Platform |
-|----------|----------|
-| `zentra-wallet-linux-x64` | Linux `.tar.gz` — **full wallet** |
-| `zentra-wallet-windows-x64` | Windows `.zip` |
-| `zentra-wallet-android-apk` | Android `.apk` |
-> **Note:** Release CI builds **Linux / Windows / Android** from Zentra **v0.1.0** on Ubuntu. macOS/iOS: on your Mac — [docs/ci-pipeline.md](docs/ci-pipeline.md).
-
-> Manual builds (all OS): [docs/building.md](docs/building.md) — [Linux](docs/build-linux.md) · [Windows](docs/build-windows.md) · [Android](docs/build-android.md) · [macOS](docs/build-macos.md) · [iOS](docs/build-ios.md)
-
-Local parity with CI:
+Quick checks after changes:
 
 ```bash
 flutter analyze
 flutter test
-flutter build linux --debug
 ```
 
 ---
@@ -220,7 +202,6 @@ Full guides (architecture, security, build, user guide, FAQ):
 - `native/zentra_wallet_ffi/` — C API over `wallet2`
 - `docs/` — guides in English
 - `wallet.sh` — build and run (single entry point)
-- `.github/workflows/` — CI/CD
 
 ---
 

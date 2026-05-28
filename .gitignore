@@ -83,11 +83,11 @@ third_party/zentra/
 app.*.symbols
 app.*.map.json
 
-# CI / release packaging at repo root
+# Local release packaging at repo root
 zentra-wallet-*.tar.gz
 zentra-wallet-*.zip
 
-# Native wallet FFI per platform (build locally or via CI; do not commit binaries)
+# Native wallet FFI per platform (build locally; do not commit binaries)
 packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so
 packages/zentra_wallet_core/android/src/main/jniLibs/**/*.so
 packages/zentra_wallet_core/windows/*.dll

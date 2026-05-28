@@ -14,10 +14,8 @@ Welcome to the Zentra Wallet docs. These guides explain what the app is, how it 
 | [Architecture](architecture.md) | Developers — layers, data flow, components |
 | [Self-custody model](self-custody-model.md) | Privacy-minded users — keys, RPC, Cake Wallet comparison |
 | [Getting started](getting-started.md) | New users and developers — first run on Linux |
-| [Download builds (CI)](download-builds.md) | Everyone — install from GitHub Actions / Releases |
-| [CI/CD pipeline](ci-pipeline.md) | Maintainers — automated two-phase release |
 
-### Manual build (per OS, no CI)
+### Build from source (per OS)
 
 | OS | Full guide |
 |----|------------|

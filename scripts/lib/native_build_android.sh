@@ -143,7 +143,7 @@ native_build_android() {
       fi
       lib="$(android_find_libcxx_shared_fallback "$triple" || true)"
       if [[ -f "$lib" ]]; then
-        echo "::warning::Using SDK NDK libc++ (build Zentra depends for production/CI)"
+        echo "::warning::Using SDK NDK libc++ (build Zentra depends for production)"
       fi
     fi
     if [[ ! -f "$lib" ]]; then

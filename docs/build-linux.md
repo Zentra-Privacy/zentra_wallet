@@ -1,6 +1,6 @@
-# Build guide — Linux (manual, no CI)
+# Build guide — Linux
 
-End-to-end steps to build **Zentra Wallet** on **Linux x64** from source, without GitHub Actions.
+End-to-end steps to build **Zentra Wallet** on **Linux x64** from source on your Linux machine.
 
 **Output:** `packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so` + runnable Linux desktop app.
 

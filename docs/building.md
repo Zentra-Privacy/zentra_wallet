@@ -1,6 +1,6 @@
 # Building from source (overview)
 
-Manual build guides for **every platform** — no GitHub Actions required. Each OS has its own step-by-step doc from prerequisites through a runnable app.
+Build guides for **every platform** on your own hardware. Each OS has a step-by-step doc from prerequisites through a runnable app.
 
 **Recommended Zentra version:** [v0.1.0](https://github.com/Zentra-Privacy/zentra/releases/tag/v0.1.0)
 
@@ -36,8 +36,8 @@ Details: [build-linux.md](build-linux.md)
 
 ### You are on Windows
 
-1. Build **DLL** on Linux (or download from CI) — [build-windows.md](build-windows.md)
-2. On Windows: `flutter build windows --release`
+1. Build **DLL** on a Linux host (MinGW cross-compile) — [build-windows.md](build-windows.md)
+2. On your **Windows PC**: `flutter build windows --release`
 
 ### You are on macOS
 
@@ -96,15 +96,6 @@ Must contain: `src/wallet/api/wallet2_api.h`
 git clone -b v0.1.0 --recurse-submodules \
   https://github.com/Zentra-Privacy/zentra.git third_party/zentra
 ```
-
----
-
-## Prefer pre-built binaries?
-
-Use CI artifacts or releases instead of compiling:
-
-- [download-builds.md](download-builds.md)
-- [ci-pipeline.md](ci-pipeline.md) — how automated builds work
 
 ---
 

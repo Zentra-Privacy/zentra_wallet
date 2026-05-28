@@ -58,7 +58,7 @@ Swap is not implemented in this version — no integrated exchange or swap API.
 
 ## Can I use this on iPhone or Windows today?
 
-The Flutter project includes those platforms, but the **full native wallet library** is only set up for **Linux** (and Android when the `.so` is packaged). Other platforms need additional native build work.
+Yes, if you **build from source** on the right machine. See [Building overview](building.md): Linux desktop on Linux, Windows app on Windows (native DLL from Linux MinGW first), Android APK from a Linux host, macOS/iOS on a Mac with Xcode.
 
 ---
 

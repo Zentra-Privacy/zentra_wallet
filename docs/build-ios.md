@@ -1,4 +1,4 @@
-# Build guide — iOS (manual, no CI)
+# Build guide — iOS
 
 Build **iPhone / iPad** app with the full **wallet2** engine.
 
@@ -116,7 +116,7 @@ flutter run -d "iPhone 16"   # pick simulator from flutter devices
 
 ### Physical iPhone / iPad (signing required)
 
-1. Build native engine first (required — CI does not do this):
+1. Build native engine first (required on a Mac):
 
    ```bash
    ./wallet.sh build-ios
@@ -150,7 +150,7 @@ flutter run -d "iPhone 16"   # pick simulator from flutter devices
 
 5. First launch on device: **Settings → General → VPN & Device Management** → trust the developer cert if iOS asks.
 
-### Unsigned release (CI-style / sideload prep)
+### Unsigned release (sideload prep)
 
 ```bash
 flutter build ios --release --no-codesign
@@ -233,4 +233,3 @@ You can run both on the same Mac. They share Zentra source but use different too
 
 - [build-macos.md](build-macos.md)
 - [building.md](building.md)
-- [download-builds.md](download-builds.md)
