@@ -8,6 +8,7 @@ source "$_LIB_DIR/native_build_common.sh"
 source "$_LIB_DIR/native_build_ios_deps.sh"
 
 native_build_ios() {
+  _ios_deps_ensure_path
   local ZENTRA_ROOT="${1:-}"
   local ROOT="${WALLET_ROOT:?}"
   local JOBS="${JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || echo 4)}"
@@ -36,6 +37,7 @@ native_build_ios() {
 
   for sdk in iphoneos iphonesimulator; do
     local PREFIX="$DEPS_BASE/$sdk"
+    _ios_deps_boost_symlinks "$PREFIX"
     local PLATFORM_TAG="ios-${sdk}"
     local ZBUILD="$ZENTRA_ROOT/build/${PLATFORM_TAG}/release"
     local FFIBUILD="$ROOT/build/native_ffi/${PLATFORM_TAG}"
@@ -44,8 +46,7 @@ native_build_ios() {
     [[ "$sdk" == "iphonesimulator" ]] && IOS_PLATFORM="SIMULATOR64"
 
     local PROTOC
-    PROTOC="$(command -v protoc || true)"
-    [[ -n "$PROTOC" ]] || {
+    PROTOC="$(_ios_deps_find_tool protoc)" || {
       echo "Error: host protoc required for Zentra (brew install protobuf)"
       return 1
     }

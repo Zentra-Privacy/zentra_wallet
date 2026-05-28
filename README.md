@@ -128,6 +128,9 @@ Menu: build native lib, run app, status, clean test data.
 | Check setup | `./wallet.sh status` |
 | Build native `.so` only | `./wallet.sh build` |
 | Run app | `./wallet.sh run` |
+| **All apps (this Mac)** | `./wallet.sh build-apps` (macOS + iOS; long first time) |
+| macOS app only | `./wallet.sh build-app-macos` |
+| iOS app only | `./wallet.sh build-app-ios` |
 | Build + run | `./wallet.sh full` |
 | List Flutter devices | `./wallet.sh devices` |
 | Reset local test wallets | `./wallet.sh clean-data` |

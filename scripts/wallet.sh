@@ -29,6 +29,8 @@ source "$LIB/native_build_ios.sh"
 source "$LIB/flutter_run.sh"
 # shellcheck source=lib/clean_data.sh
 source "$LIB/clean_data.sh"
+# shellcheck source=lib/build_apps.sh
+source "$LIB/build_apps.sh"
 
 SO_PATH="$ROOT/packages/zentra_wallet_core/linux/libzentra_wallet_ffi.so"
 
@@ -125,6 +127,34 @@ cmd_build_ios() {
   if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then z="$1"; else z="$(_resolve_zentra)"; fi
   [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
   native_build_ios "$z"
+}
+
+cmd_build_apps() {
+  local z=""
+  if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then z="$1"; else z="$(_resolve_zentra)"; fi
+  [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
+  build_apps_auto "$z"
+}
+
+cmd_build_app_macos() {
+  local z=""
+  if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then z="$1"; else z="$(_resolve_zentra)"; fi
+  [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
+  build_apps_macos_native "$z" && build_apps_macos_flutter
+}
+
+cmd_build_app_ios() {
+  local z=""
+  if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then z="$1"; else z="$(_resolve_zentra)"; fi
+  [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
+  build_apps_ios_native "$z" && build_apps_ios_flutter
+}
+
+cmd_build_apple_production() {
+  local z=""
+  if [[ -n "${1:-}" && -d "${1}/src/wallet/api" ]]; then z="$1"; else z="$(_resolve_zentra)"; fi
+  [[ -z "$z" ]] && { _err "Zentra source not found"; return 1; }
+  build_apple_production "$z"
 }
 
 cmd_build_android() {
@@ -252,6 +282,10 @@ case "${1:-}" in
   build-macos|build-darwin) shift; cmd_build_macos "${1:-}" ;;
   build-ios) shift; cmd_build_ios "${1:-}" ;;
   build-all-native) shift; cmd_build_all_native "${1:-}" ;;
+  build-apps|build-all-apps) shift; cmd_build_apps "${1:-}" ;;
+  build-app-macos) shift; cmd_build_app_macos "${1:-}" ;;
+  build-app-ios) shift; cmd_build_app_ios "${1:-}" ;;
+  build-apple-production|build-production-apple) shift; cmd_build_apple_production "${1:-}" ;;
   run|start) shift; cmd_run_app "$@" ;;
   devices) cmd_devices ;;
   clean-data) shift; cmd_clean_data "$@" ;;
@@ -267,6 +301,10 @@ Zentra Wallet — ./wallet.sh
   ./wallet.sh build-macos     macOS dylib (run on Mac)
   ./wallet.sh build-ios       iOS XCFramework (run on Mac + Xcode)
   ./wallet.sh build-all-native  Linux + Android + Windows (+ macOS/iOS on Mac)
+  ./wallet.sh build-apps     Native + Flutter apps for this host (macOS+iOS on Mac; Linux+APK on Linux)
+  ./wallet.sh build-app-macos   macOS dylib + .app only
+  ./wallet.sh build-app-ios     iOS XCFramework + simulator/device app
+  ./wallet.sh build-apple-production  Mac + iPhone/iPad release files → dist/apple/
   ./wallet.sh run          Run Linux app
   ./wallet.sh full         build + run
   ./wallet.sh status       Zentra / native lib / Flutter

@@ -19,16 +19,17 @@ native_resolve_zentra() {
 
 native_apply_zentra_source_patches() {
   local zentra_root="$1"
-  local patch="${WALLET_ROOT:?}/scripts/patches/zentra/ringdb-macos-sandbox.patch"
-  [[ -f "$patch" ]] || return 0
-  if grep -q 'MDB_NOLOCK' "$zentra_root/src/wallet/ringdb.cpp" 2>/dev/null; then
-    return 0
-  fi
-  echo "==> Patching Zentra sources: ringdb Apple sandbox (macOS + iOS)"
-  if patch -p1 -R --batch --dry-run -d "$zentra_root" < "$patch" >/dev/null 2>&1; then
-    return 0
-  fi
-  patch -p1 --batch -d "$zentra_root" < "$patch" || return 1
+  local patch_dir="${WALLET_ROOT:?}/scripts/patches/zentra"
+  local patch name
+  for patch in "$patch_dir"/*.patch; do
+    [[ -f "$patch" ]] || continue
+    name="$(basename "$patch")"
+    if patch -p1 -R --batch --dry-run -d "$zentra_root" < "$patch" >/dev/null 2>&1; then
+      continue
+    fi
+    echo "==> Patching Zentra sources: $name"
+    patch -p1 --batch -d "$zentra_root" < "$patch" || return 1
+  done
 }
 
 native_ensure_zentra_depends_patched() {

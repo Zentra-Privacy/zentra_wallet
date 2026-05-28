@@ -42,11 +42,15 @@ Details: [build-linux.md](build-linux.md)
 ### You are on macOS
 
 ```bash
-./wallet.sh build-macos        # macOS desktop
-./wallet.sh build-ios          # iPhone/iPad (long)
-flutter build macos --release
-flutter build ios --release    # needs signing for device
+./wallet.sh build-apps         # macOS .app + iOS simulator (native + Flutter; long first time)
+# or step by step:
+./wallet.sh build-macos        # macOS desktop dylib
+./wallet.sh build-ios          # iPhone/iPad XCFramework (long)
+./wallet.sh build-app-macos    # dylib + flutter macos
+./wallet.sh build-app-ios      # XCFramework + flutter ios --simulator
 ```
+
+**Android APK** and **Windows .exe** are not built on macOS — use a **Linux** host (`./wallet.sh build-android`, `build-windows`).
 
 Details: [build-macos.md](build-macos.md), [build-ios.md](build-ios.md)
 
@@ -78,6 +82,8 @@ Entry script: **`./wallet.sh`** (see `scripts/wallet.sh`).
 | `build-windows` | Windows `.dll` (MinGW on Linux) |
 | `build-macos` | macOS `.dylib` |
 | `build-ios` | iOS `.xcframework` |
+| `build-apps` | Native + Flutter apps for current OS (Mac: macOS+iOS; Linux: desktop+APK) |
+| `build-app-macos` / `build-app-ios` | Single platform native + app |
 | `build-all-native` | Linux + Android + Windows (+ macOS/iOS on Mac) |
 
 ---
